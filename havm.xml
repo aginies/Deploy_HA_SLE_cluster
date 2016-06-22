@@ -1,0 +1,255 @@
+<?xml version="1.0"?>
+<!DOCTYPE profile>
+<profile xmlns="http://www.suse.com/1.0/yast2ns" xmlns:config="http://www.suse.com/1.0/configns">
+  <add-on>
+    <add_on_products config:type="list">
+      <listentry>
+        <media_url><![CDATA[dvd:///?devices=/dev/sr0]]></media_url>
+        <product>sle-ha</product>
+        <product_dir>/</product_dir>
+      </listentry>
+    </add_on_products>
+  </add-on>
+  <bootloader>
+    <global>
+      <activate>true</activate>
+      <append>quiet splash=silent splash=silent quiet showopts</append>
+      <boot_boot>true</boot_boot>
+      <boot_extended>false</boot_extended>
+      <boot_mbr>true</boot_mbr>
+      <boot_root>true</boot_root>
+      <generic_mbr>true</generic_mbr>
+      <gfxmode>auto</gfxmode>
+      <hiddenmenu>false</hiddenmenu>
+      <os_prober>false</os_prober>
+      <terminal>gfxterm</terminal>
+      <timeout config:type="integer">8</timeout>
+      <trusted_grub>false</trusted_grub>
+    </global>
+    <loader_type>grub2</loader_type>
+  </bootloader>
+  <general>
+    <ask-list config:type="list"/>
+    <mode>
+      <confirm config:type="boolean">false</confirm>
+    </mode>
+    <signature-handling/>
+  </general>
+  <cluster>
+    <autoid config:type="boolean">true</autoid>
+    <bindnetaddr1>192.168.1.0</bindnetaddr1>
+    <bindnetaddr2/>
+    <cluster_name>cluster</cluster_name>
+    <csync2_host config:type="list"/>
+    <csync2_include config:type="list"/>
+    <enable2 config:type="boolean">false</enable2>
+    <expected_votes/>
+    <ip_version>ipv4</ip_version>
+    <mcastaddr1>239.255.1.1</mcastaddr1>
+    <mcastaddr2/>
+    <mcastport1>5405</mcastport1>
+    <mcastport2/>
+    <memberaddr config:type="list"/>
+    <rrpmode>none</rrpmode>
+    <secauth config:type="boolean">false</secauth>
+    <transport>udp</transport>
+    <two_node/>
+  </cluster>
+  <deploy_image>
+    <image_installation config:type="boolean">false</image_installation>
+  </deploy_image>
+  <keyboard>
+    <keymap>french</keymap>
+  </keyboard>
+  <login_settings/>
+  <networking>
+    <dhcp_options>
+      <dhclient_client_id/>
+      <dhclient_hostname_option>AUTO</dhclient_hostname_option>
+    </dhcp_options>
+    <dns>
+      <dhcp_hostname config:type="boolean">true</dhcp_hostname>
+      <domain>HAnet</domain>
+      <resolv_conf_policy>auto</resolv_conf_policy>
+      <write_hostname config:type="boolean">false</write_hostname>
+    </dns>
+    <interfaces config:type="list">
+      <interface>
+        <bootproto>dhcp</bootproto>
+        <device>eth0</device>
+        <dhclient_set_default_route>yes</dhclient_set_default_route>
+        <startmode>auto</startmode>
+      </interface>
+      <interface>
+        <bootproto>static</bootproto>
+        <device>lo</device>
+        <firewall>no</firewall>
+        <ipaddr>127.0.0.1</ipaddr>
+        <netmask>255.0.0.0</netmask>
+        <network>127.0.0.0</network>
+        <prefixlen>8</prefixlen>
+        <startmode>nfsroot</startmode>
+        <usercontrol>no</usercontrol>
+      </interface>
+    </interfaces>
+    <ipv6 config:type="boolean">true</ipv6>
+    <keep_install_network config:type="boolean">false</keep_install_network>
+    <managed config:type="boolean">false</managed>
+    <net-udev config:type="list">
+      <rule>
+        <name>eth0</name>
+        <rule>KERNELS</rule>
+        <value>0000:00:03.0</value>
+      </rule>
+    </net-udev>
+    <routing>
+      <ipv4_forward config:type="boolean">false</ipv4_forward>
+      <ipv6_forward config:type="boolean">false</ipv6_forward>
+    </routing>
+  </networking>
+  <partitioning config:type="list">
+  <drive>
+    <use>all</use>
+  </drive>
+</partitioning>
+  <services-manager>
+    <default_target>graphical</default_target>
+    <services>
+      <disable config:type="list"/>
+      <enable config:type="list">
+        <service>btrfsmaintenance-refresh</service>
+        <service>corosync</service>
+        <service>cron</service>
+        <service>display-manager</service>
+        <service>getty@tty1</service>
+        <service>getty@tty7</service>
+        <service>haveged</service>
+        <service>irqbalance</service>
+        <service>iscsi</service>
+        <service>mcelog</service>
+        <service>nscd</service>
+        <service>postfix</service>
+        <service>purge-kernels</service>
+        <service>rollback</service>
+        <service>rsyslog</service>
+        <service>smartd</service>
+        <service>sshd</service>
+        <service>ntpd</service>
+        <service>wicked</service>
+        <service>wickedd-auto4</service>
+        <service>wickedd-dhcp4</service>
+        <service>wickedd-dhcp6</service>
+        <service>wickedd-nanny</service>
+        <service>YaST2-Firstboot</service>
+        <service>YaST2-Second-Stage</service>
+      </enable>
+    </services>
+  </services-manager>
+  <timezone>
+    <hwclock>UTC</hwclock>
+    <timezone>Europe/Paris</timezone>
+  </timezone>
+  <user_defaults>
+    <expire/>
+    <group>100</group>
+    <groups/>
+    <home>/home</home>
+    <inactive>-1</inactive>
+    <no_groups config:type="boolean">true</no_groups>
+    <shell>/bin/bash</shell>
+    <skel>/etc/skel</skel>
+    <umask>022</umask>
+  </user_defaults>
+  <users config:type="list">
+    <user>
+      <encrypted config:type="boolean">true</encrypted>
+      <fullname>aginies</fullname>
+      <gid>100</gid>
+      <home>/home/aginies</home>
+      <password_settings>
+        <expire/>
+        <flag/>
+        <inact/>
+        <max>99999</max>
+        <min>0</min>
+        <warn>7</warn>
+      </password_settings>
+      <shell>/bin/bash</shell>
+      <uid>1000</uid>
+      <user_password>$6$xY17NdMS0M9R$d3F8dm3B/.T4jhi3n/XWNhyRO9I6HthxdBBMxZ9LCIuKtI3wSVavBW64G86tOAAc0CklvsPViyT9lOuaHxc5L0</user_password>
+      <username>aginies</username>
+    </user>
+    <user>
+      <encrypted config:type="boolean">true</encrypted>
+      <fullname>root</fullname>
+      <gid>0</gid>
+      <home>/root</home>
+      <password_settings>
+        <expire/>
+        <flag/>
+        <inact/>
+        <max/>
+        <min/>
+        <warn/>
+      </password_settings>
+      <shell>/bin/bash</shell>
+      <uid>0</uid>
+      <user_password>$6$Wa9BNOQh5cjJ$0G99sgb1WtqYaCZulBBkPzHrmEj49zumisslpcitXmasNeFj63Yl97w.ODcxhNWix.XWYhbf9BLsnJjNZOdO8/</user_password>
+      <username>root</username>
+    </user>
+</users>
+  <software>
+    <!--
+	<install_recommended config:type="boolean">false</install_recommended>
+	-->
+    <patterns config:type="list">
+      <pattern>Minimal</pattern>
+      <pattern>gnome-basic</pattern>
+      <pattern>x11</pattern>
+    </patterns>
+    <packages config:type="list">
+      <package>openssh</package>
+      <package>gnome-terminal</package>
+      <package>vim</package>
+      <package>gdm</package>
+      <package>ntp</package>
+      <package>autoyast2</package>
+      <package>patterns-ha-ha_sles</package>
+    </packages>
+</software>
+ <host>
+    <hosts config:type="list">
+      <hosts_entry>
+        <host_address>192.168.12.101</host_address>
+        <names config:type="list">
+          <name>ha1.testing.com ha1</name>
+        </names>
+      </hosts_entry>
+      <hosts_entry>
+        <host_address>192.168.12.102</host_address>
+        <names config:type="list">
+          <name>ha2.testing.com ha2</name>
+        </names>
+      </hosts_entry>
+      <hosts_entry>
+        <host_address>192.168.12.103</host_address>
+        <names config:type="list">
+          <name>ha3.testing.com ha3</name>
+        </names>
+      </hosts_entry>
+      <hosts_entry>
+        <host_address>192.168.12.104</host_address>
+        <names config:type="list">
+          <name>ha4.testing.com ha4</name>
+        </names>
+      </hosts_entry>
+    </hosts>
+  </host>
+  <sysconfig config:type="list">
+    <sysconfig_entry>
+      <sysconfig_key>SBD_DEVICE</sysconfig_key>
+      <sysconfig_path>/etc/sysconfig/sbd</sysconfig_path>
+      <sysconfig_value>/dev/vdb</sysconfig_value>
+    </sysconfig_entry>
+  </sysconfig>
+</profile>
