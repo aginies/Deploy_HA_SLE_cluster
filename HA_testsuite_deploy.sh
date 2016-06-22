@@ -14,7 +14,6 @@ else
 fi
 
 # global VAR
-DISTRO="SLE12SP2"
 LIBVIRTPOOL="hapool"
 DISKHAVM="${STORAGEP}/havm_xml.raw"
 EXTRAARGS="autoyast=device://vdc/havm.xml"
