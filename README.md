@@ -6,7 +6,7 @@ This will configure:
 - 4 HA nodes
 
 please report any bugs or improvment:
-gitlab@gitlab.suse.de:aginies/HA_QA_semi_auto.git
+https://github.com/aginies/Deploy_HA_SLE_cluster.git
 
 default root password: "a"
 
