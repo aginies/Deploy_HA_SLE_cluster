@@ -55,7 +55,7 @@ hapool_creation() {
     if [ $? == "1" ]; then
         echo "- ${LIBVIRTPOOL} not present, will create one"
         mkdir ${STORAGEP}/${LIBVIRTPOOL}
-        virsh pool-create-as --name ${LIBVIRTPOOL} dir --target ${STORAGEP}/${LIBVIRTPOOL}
+        virsh pool-define-as --name ${LIBVIRTPOOL} --type dir --target ${STORAGEP}/${LIBVIRTPOOL}
         virsh pool-start ${LIBVIRTPOOL}
         virsh pool-autostart ${LIBVIRTPOOL}
     else
