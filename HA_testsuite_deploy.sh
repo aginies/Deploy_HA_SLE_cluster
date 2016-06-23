@@ -21,7 +21,7 @@ EXTRAARGS="autoyast=device://vdc/havm.xml"
 
 # clean up previous VM
 cleanup_vm() {
-    HANAME="SLE12SP2HA"
+    HANAME="${DISTRO}HA"
     echo "############ START cleanup_vm #############"
     echo "  !! WARNING !! "
     echo "  !! WARNING !! "
@@ -34,7 +34,7 @@ cleanup_vm() {
     read
     for nb in `seq 1 4`
     do 
-    NAME="SLE12SP2HA${nb}"
+    NAME="${HANAME}${nb}"
     virsh list --all | grep ${NAME} > /dev/null
     if [ $? == "0" ]; then
     	echo "- Destroy current VM: ${NAME}"
