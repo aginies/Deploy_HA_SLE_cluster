@@ -24,8 +24,8 @@ IPB=`host ${NODEB} | awk -F "address " '{print $2}' | head -1`
 install_packages() {
 	echo "############ START install_packages"yy
     # ADD VIP on ha2 (will be used later for HAproxy)
-    exec_on_node ${NODEA} "zypper -y in drbd-kmp-default nfs-kernel-server"
-    exec_on_node ${NODEB} "zypper -y in drbd-kmp-default nfs-kernel-server"
+    exec_on_node ${NODEA} "zypper in -y drbd-kmp-default nfs-kernel-server"
+    exec_on_node ${NODEB} "zypper in -y drbd-kmp-default nfs-kernel-server"
 }
 
 pacemaker_configuration() {
@@ -39,6 +39,11 @@ disable_drbd() {
 	echo "############ START disable_drbd"
     exec_on_node ${NODEA} "systemctl disable drbd"
     exec_on_node ${NODEB} "systemctl disable drbd"
+}
+
+create_vol_vdd() {
+    echo "############ START create_vol_vdd"
+    virsh vol-create-as VDD VDD.qcow2 --format qcow2 --allocation 1G --capacity 1G
 }
 
 create_nfs_resource() {
@@ -85,8 +90,18 @@ finalize_DRBD_setup() {
 ##########################
 ##########################
 
+echo "############ NFS / DRBD SCENARIO #############"
+echo "  !! WARNING !! "
+echo "  !! WARNING !! "
+echo
+echo " press [ENTER] twice OR Ctrl+C to abort"
+read
+read
+
+
 install_packages
 create_pool VDD
+create_vol_vdd
 pacemaker_configuration
 disable_drbd
 create_nfs_resource
