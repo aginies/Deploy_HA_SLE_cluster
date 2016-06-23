@@ -75,7 +75,7 @@ resource nfs {
     }
 }
 EOF
-    scp_on_node ${NODEA} "/tmp/nfs.res" "/etc/drbd.d/"
+    scp_on_node "/tmp/nfs.res" "${NODEA}:/etc/drbd.d/"
 }
 
 update_csync2() {
