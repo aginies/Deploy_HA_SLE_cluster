@@ -2,7 +2,7 @@
 # execute a command on a NODE
 
 check_config_file() {
-if [ -f haqasemi.conf ]; then
+if [ -f `pwd`/haqasemi.conf ]; then
     source `pwd`/haqasemi.conf
 else
     echo "!! haqasemi.conf not found in current path !!"

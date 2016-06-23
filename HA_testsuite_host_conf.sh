@@ -6,7 +6,6 @@
 ## HOST CONFIGURATION
 #########################################################
 
-check_config_file
 
 # Install all needed Hypervisors tools
 install_virtualization_stack() {

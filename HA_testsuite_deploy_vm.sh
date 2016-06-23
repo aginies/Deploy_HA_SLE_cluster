@@ -6,12 +6,12 @@
 ## INSTALL HA Guest (and checks)
 #########################################################
 
-check_config_file
 if [ -f `pwd`/functions ] ; then
     . `pwd`/functions
 else
     echo "! need functions in current path; Exiting"; exit 1
 fi
+check_config_file
 
 
 # global VAR

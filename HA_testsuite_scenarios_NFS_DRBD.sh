@@ -7,13 +7,13 @@
 ## NFS + DRBD
 #########################################################
 
-check_config_file
 if [ -f `pwd`/functions ] ; then
     . `pwd`/functions
 else
     echo "! need functions in current path; Exiting"
     exit 1
 fi
+check_config_file
 
 NODEA=ha1
 NODEB=ha2
@@ -79,10 +79,14 @@ EOF"
 
 update_csync2() {
 	echo "############ START update_csync2"
-	exec_on_node ${NODEA} "perl -pi -e 's|}|\tinclude include /etc/drbd.conf;\n\tinclude /etc/drbd.d;
-;\n}|' /etc/csync2/csync2.cfg"
-	exec_on_node ${NODEA} "csync2 -f /etc/haproxy/haproxy.cfg"
-	exec_on_node ${NODEA} "csync2 -xv"
+    grep "/etc/drbd.conf" /etc/csync2/csync2.cfg
+    if [ $? -eq 1 ]; then
+    	exec_on_node ${NODEA} "perl -pi -e 's|}|\tinclude include /etc/drbd.conf;\n\tinclude /etc/drbd.d;\n}|' /etc/csync2/csync2.cfg"
+    	exec_on_node ${NODEA} "csync2 -f /etc/haproxy/haproxy.cfg"
+    	exec_on_node ${NODEA} "csync2 -xv"
+    else
+        echo "- /etc/csync2/csync2.cfg already contains drbd files to sync"
+    fi
 }
 
 finalize_DRBD_setup() {
