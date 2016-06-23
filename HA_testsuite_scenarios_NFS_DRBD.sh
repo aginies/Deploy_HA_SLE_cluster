@@ -80,7 +80,7 @@ EOF
 
 update_csync2() {
 	echo "############ START update_csync2"
-    grep "/etc/drbd.conf" /etc/csync2/csync2.cfg
+    exec_on_node ${NODEA} "grep /etc/drbd.conf /etc/csync2/csync2.cfg"
     if [ $? -eq 1 ]; then
     	exec_on_node ${NODEA} "perl -pi -e 's|}|\tinclude /etc/drbd.conf;\n\tinclude /etc/drbd.d;\n}|' /etc/csync2/csync2.cfg"
     	exec_on_node ${NODEA} "csync2 -f /etc/haproxy/haproxy.cfg"

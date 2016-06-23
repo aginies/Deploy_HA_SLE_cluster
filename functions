@@ -26,16 +26,15 @@ exec_on_node() {
 
 scp_on_node() {
     # first arg is SOURCE file, last arg is NODE:/destination_dir
-    if [ $# -lt 2 ]
-    then
+    if [ $# -lt 2 ];then
 	echo "! 2 args needed (FILE NODE:DEST); Exiting"
         exit 1
     fi
     FILE="$1"
     DEST="$2"
     # avoid: No pseudo-tty detected! Use -t option to ssh if calling remotely
-    echo "${NODE}: scp -t -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no ${FILE} ${NODE}:${DEST}"
-    scp -t -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no ${FILE} ${DEST}
+    echo "${NODE}: scp -o StrictHostKeyChecking=no ${FILE} ${DEST}"
+    scp -o StrictHostKeyChecking=no ${FILE} ${DEST}
 }
 
 
