@@ -123,11 +123,11 @@ cp -avf /dev/null /root/.ssh/known_hosts"
 ##########################
 ##########################
 
-# create the pool
-hapool_creation
-
 # CLEAN everything
 cleanup_vm
+
+# create the pool
+hapool_creation
 
 # verify everything is available
 check_before_install
