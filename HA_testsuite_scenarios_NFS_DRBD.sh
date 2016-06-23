@@ -62,7 +62,7 @@ EOF
 
 create_nfs_resource() {
 	echo "############ START create_nfs_resource"
-    cat >/tmp/nfs.res<<EOF
+    cat >>/tmp/nfs.res<EOF
 resource nfs {
     device /dev/drbd0;
     disk /dev/vdd;
@@ -75,7 +75,7 @@ resource nfs {
     }
 }
 EOF
-    scp_on_node ${NODEA} /tmp/nfs.res /etc/drbd.d/nfs.res
+    scp_on_node ${NODEA} "/tmp/nfs.res" "/etc/drbd.d/nfs.res"
 }
 
 update_csync2() {
