@@ -32,7 +32,7 @@ install_virtualization_stack() {
 ssh_root_key() {
     echo "############ START ssh_root_key #############"
     ssh-keygen -t rsa -f ~/.ssh/${IDRSAHA} -N ""
-    cat > .ssh/config<<EOF
+    cat > /root/.ssh/config<<EOF
 host ha1 ha2 ha3 ha4
 IdentityFile /root/.ssh/${IDRSAHA}
 EOF
@@ -166,6 +166,8 @@ echo " press [ENTER] twice OR Ctrl+C to abort"
 read
 read
 
+
+ssh_root_key
 install_virtualization_stack
 prepare_remote_pssh
 prepare_etc_hosts
