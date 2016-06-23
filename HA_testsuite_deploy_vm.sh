@@ -13,12 +13,13 @@ else
 fi
 check_config_file
 
-
 # global VAR
 LIBVIRTPOOL="hapool"
 DISKHAVM="${STORAGEP}/havm_xml.raw"
 EXTRAARGS="autoyast=device://vdc/havm.xml"
 
+if [ ! -f ${HACDROM} ]; then echo "! ${HACDROM} can not be found, needed for installation! fix this in haqasemi.conf. Exiting!" ; exit 1; fi
+if [ ! -f ${SLECDROM} ]; then echo "! ${SLECDROM} can not be found, needed for installation! fix this in haqasemi.conf. Exiting!" ; exit 1; fi
 
 # clean up previous VM
 cleanup_vm() {
