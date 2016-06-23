@@ -189,7 +189,7 @@ case "$1" in
     Init the cluster on node HA1
 
  addremove
-    ADD all other NODES
+ ADD all other NODES (you need to enter root password for all nodes)
     Remove node HA3
     Re-add node HA3
 
