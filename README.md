@@ -56,3 +56,6 @@ You should adjust path to ISO for installation. Currently this is using local or
 
 If you want to specify another way to ISO (like http etc...) you maybe need to adjust
 install_vm() function in HA_testsuite_deploy_vm.sh script.
+
+## functions
+contains needed functions for scripts
