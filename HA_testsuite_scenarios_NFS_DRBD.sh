@@ -43,21 +43,31 @@ disable_drbd() {
 
 create_vol_vdd() {
     echo "############ START create_vol_vdd"
-    virsh vol-create-as ${POOLVDD} ${POOLVDD}.qcow2 --format qcow2 --allocation 1G --capacity 1G
+    virsh vol-create-as ${POOLVDD} ${POOLVDD}A.qcow2 --format qcow2 --allocation 1G --capacity 1G
+    virsh vol-create-as ${POOLVDD} ${POOLVDD}B.qcow2 --format qcow2 --allocation 1G --capacity 1G
 }
 
 
 attach_storage_to_node() {
     echo "############ START attach_storage_to_node"
-    cat >/etc/libvirt/storage/vdd.xml<<EOF
+    cat >/etc/libvirt/storage/drbda.xml<<EOF
 <disk type='file' device='disk'>
   <driver name='qemu' type='qcow2' cache='none'/>
-  <source file='${STORAGEP}/${POOLVDD}/${POOLVDD}.qcow2'/>
+  <source file='${STORAGEP}/${POOLVDD}/${POOLVDD}A.qcow2'/>
   <target dev='vdd'/>
 </disk>
 EOF
-    virsh attach-device --config ${DISTRO}HA1 /etc/libvirt/storage/vdd.xml
-    virsh attach-disk ${DISTRO}HA1 ${STORAGEP}/${POOLVDD}/${POOLVDD}.qcow2 vdd --cache none
+    cat >/etc/libvirt/storage/drbdb.xml<<EOF
+<disk type='file' device='disk'>
+  <driver name='qemu' type='qcow2' cache='none'/>
+  <source file='${STORAGEP}/${POOLVDD}/${POOLVDD}B.qcow2'/>
+  <target dev='vdd'/>
+</disk>
+EOF
+    virsh attach-device --config ${DISTRO}HA1 /etc/libvirt/storage/drbda.xml
+    virsh attach-device --config ${DISTRO}HA2 /etc/libvirt/storage/drbdb.xml
+    virsh attach-disk ${DISTRO}HA1 ${STORAGEP}/${POOLVDD}/${POOLVDD}A.qcow2 vdd --cache none
+    virsh attach-disk ${DISTRO}HA2 ${STORAGEP}/${POOLVDD}/${POOLVDD}B.qcow2 vdd --cache none
 }
 
 create_nfs_resource() {
@@ -96,7 +106,7 @@ finalize_DRBD_setup() {
 	exec_on_node ${NODEB} "drbdadm create-md nfs"
 	exec_on_node ${NODEA} "drbdadm up nfs"
 	exec_on_node ${NODEB} "drbdadm up nfs"
-	exec_on_node ${NODEA} "drbdadm new-current-uuid --zeroout-devices nfs/0"
+	exec_on_node ${NODEA} "drbdadm new-current-uuid"
 	exec_on_node ${NODEA} "drbdadm primary nfs"
 	exec_on_node ${NODEA} "cat /proc/drbd"
 	exec_on_node ${NODEA} "drbdadm -- --overwrite-data-of-peer primary nfs"
@@ -127,4 +137,3 @@ disable_drbd
 create_nfs_resource
 update_csync2
 finalize_DRBD_setup
-
