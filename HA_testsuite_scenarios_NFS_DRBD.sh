@@ -46,6 +46,19 @@ create_vol_vdd() {
     virsh vol-create-as VDD VDD.qcow2 --format qcow2 --allocation 1G --capacity 1G
 }
 
+
+attach_storage_to_node() {
+    echo "############ START attach_storage_to_node"
+    cat >/etc/libvirt/storage/vdd.xml<<EOF
+<disk type='file' device='disk'>
+  <driver name='qemu' type='qcow2' cache='none'/>
+  <source file='/var/lib/libvirt/images/VDD/VDD.qcow2'/>
+  <target dev='vdd'/>
+</disk>
+EOF
+    virsh attach-device ${DISTRO}HA1 /etc/libvirt/storage/vdd.xml
+}
+
 create_nfs_resource() {
 	echo "############ START create_nfs_resource"
     exec_on_node ${NODEA} "cat >/etc/drbd.d/nfs.res<<EOF
@@ -102,6 +115,7 @@ read
 install_packages
 create_pool VDD
 create_vol_vdd
+attach_storage_to_node
 pacemaker_configuration
 disable_drbd
 create_nfs_resource
