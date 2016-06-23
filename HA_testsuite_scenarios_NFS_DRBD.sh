@@ -62,7 +62,7 @@ EOF
 
 create_nfs_resource() {
 	echo "############ START create_nfs_resource"
-    exec_on_node ${NODEA} "cat >/etc/drbd.d/nfs.res<<EOF
+    cat >/tmp/nfs.res<<EOF
 resource nfs {
     device /dev/drbd0;
     disk /dev/vdd;
@@ -74,14 +74,15 @@ resource nfs {
       address ${IPB}:7790;
     }
 }
-EOF"
+EOF
+    scp_on_node ${NODEA} /tmp/nfs.res /etc/drbd.d/nfs.res
 }
 
 update_csync2() {
 	echo "############ START update_csync2"
     grep "/etc/drbd.conf" /etc/csync2/csync2.cfg
     if [ $? -eq 1 ]; then
-    	exec_on_node ${NODEA} "perl -pi -e 's|}|\tinclude include /etc/drbd.conf;\n\tinclude /etc/drbd.d;\n}|' /etc/csync2/csync2.cfg"
+    	exec_on_node ${NODEA} "perl -pi -e 's|}|\tinclude /etc/drbd.conf;\n\tinclude /etc/drbd.d;\n}|' /etc/csync2/csync2.cfg"
     	exec_on_node ${NODEA} "csync2 -f /etc/haproxy/haproxy.cfg"
     	exec_on_node ${NODEA} "csync2 -xv"
     else
