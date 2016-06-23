@@ -15,9 +15,9 @@ else
 fi
 check_config_file
 
-NODEA=ha1
-NODEB=ha2
-POOLVDD=VDD
+NODEA="ha1"
+NODEB="ha2"
+POOLVDD="VDD"
 IPA=`grep ${NODEA} /var/lib/libvirt/dnsmasq/${NETWORK}.hostsfile | cut -d , -f 2`
 IPB=`grep ${NODEB} /var/lib/libvirt/dnsmasq/${NETWORK}.hostsfile | cut -d , -f 2`
 
@@ -43,8 +43,10 @@ disable_drbd() {
 
 create_vol_vdd() {
     echo "############ START create_vol_vdd"
-    virsh vol-create-as --pool ${POOLVDD} --name ${POOLVDD}A.qcow2 --format qcow2 --allocation 1G --capacity 1G
-    virsh vol-create-as --pool ${POOLVDD} --name ${POOLVDD}B.qcow2 --format qcow2 --allocation 1G --capacity 1G
+    qemu-img create ${STORAGEP}/${POOLVDD}/${POOLVDD}A.qcow2 1G -f qcow2
+    qemu-img create ${STORAGEP}/${POOLVDD}/${POOLVDD}B.qcow2 1G -f qcow2
+    #virsh vol-create-as --pool ${POOLVDD} --name ${POOLVDD}A.qcow2 --format qcow2 --capacity 1G
+    #virsh vol-create-as --pool ${POOLVDD} --name ${POOLVDD}B.qcow2 --format qcow2 --capacity 1G
 }
 
 
