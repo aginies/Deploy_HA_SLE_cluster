@@ -62,7 +62,7 @@ EOF
 
 create_nfs_resource() {
 	echo "############ START create_nfs_resource"
-    cat >>/tmp/nfs.res<EOF
+    cat >/tmp/nfs.res<<EOF
 resource nfs {
     device /dev/drbd0;
     disk /dev/vdd;

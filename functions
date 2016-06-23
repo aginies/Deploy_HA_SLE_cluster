@@ -35,8 +35,8 @@ scp_on_node() {
     FILE="$2"
     DEST="$3"
     # avoid: No pseudo-tty detected! Use -t option to ssh if calling remotely
-    echo "${NODE}: scp -t -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no ${NODE} ${FILE} ${DEST}"
-    ssh -t -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no ${NODE} ${FILE} ${DEST}
+    echo "${NODE}: scp -t -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no ${NODE} ${FILE} ${NODE}:${DEST}"
+    ssh -t -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no ${FILE} ${NODE}:${DEST}
 }
 
 
