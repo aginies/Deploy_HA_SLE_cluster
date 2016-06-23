@@ -43,15 +43,6 @@ disable_drbd() {
 
 create_vol_vdd() {
     echo "############ START create_vol_vdd"
-    qemu-img create ${STORAGEP}/${POOLVDD}/${POOLVDD}A.qcow2 1G -f qcow2
-    qemu-img create ${STORAGEP}/${POOLVDD}/${POOLVDD}B.qcow2 1G -f qcow2
-    #virsh vol-create-as --pool ${POOLVDD} --name ${POOLVDD}A.qcow2 --format qcow2 --capacity 1G
-    #virsh vol-create-as --pool ${POOLVDD} --name ${POOLVDD}B.qcow2 --format qcow2 --capacity 1G
-}
-
-
-attach_storage_to_node() {
-    echo "############ START attach_storage_to_node"
     cat >/etc/libvirt/storage/drbda.xml<<EOF
 <disk type='file' device='disk'>
   <driver name='qemu' type='qcow2' cache='none'/>
@@ -66,8 +57,20 @@ EOF
   <target dev='vdd'/>
 </disk>
 EOF
-    virsh attach-device --config ${DISTRO}HA1 /etc/libvirt/storage/drbda.xml
-    virsh attach-device --config ${DISTRO}HA2 /etc/libvirt/storage/drbdb.xml
+    qemu-img create ${STORAGEP}/${POOLVDD}/${POOLVDD}A.qcow2 1G -f qcow2
+    qemu-img create ${STORAGEP}/${POOLVDD}/${POOLVDD}B.qcow2 1G -f qcow2
+    #virsh vol-create-as --pool ${POOLVDD} --name ${POOLVDD}A.qcow2 --format qcow2 --capacity 1G
+    #virsh vol-create-as --pool ${POOLVDD} --name ${POOLVDD}B.qcow2 --format qcow2 --capacity 1G
+    virsh pool-refresh --pool ${POOLVDD}
+}
+
+
+attach_storage_to_node() {
+    echo "############ START attach_storage_to_node"
+    #virsh attach-device --config ${DISTRO}HA1 /etc/libvirt/storage/drbda.xml
+    #virsh attach-device --config ${DISTRO}HA2 /etc/libvirt/storage/drbdb.xml
+    virsh detach-disk ${DISTRO}HA1 vdd
+    virsh detach-disk ${DISTRO}HA2 vdd
     virsh attach-disk ${DISTRO}HA1 ${STORAGEP}/${POOLVDD}/${POOLVDD}A.qcow2 vdd --cache none
     virsh attach-disk ${DISTRO}HA2 ${STORAGEP}/${POOLVDD}/${POOLVDD}B.qcow2 vdd --cache none
 }

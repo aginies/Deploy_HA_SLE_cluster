@@ -42,14 +42,16 @@ create_pool() {
 	POOL=$1
     echo "############ START create a pool ${POOL} #############"
     virsh pool-list --all | grep ${POOL} > /dev/null
-    if [ $? == "1" ]; then
-        echo "- ${POOL} not present, will create one"
-        mkdir ${STORAGEP}/${POOL}
-        virsh pool-define-as --name ${POOL} --type dir --target ${STORAGEP}/${POOL}
-        virsh pool-start ${POOL}
-        virsh pool-autostart ${POOL}
-    else
-        echo "- ${POOL} already present, skipping"
+    if [ $? == "0" ]; then
+        echo "- ${POOL} already present, deleting it"
+        virsh pool-destroy ${POOL}
+        virsh pool-undefine ${POOL}
+        rm -rvf ${STORAGEP}/${POOL}
     fi
+    echo "- Create ${POOL}"
+    mkdir ${STORAGEP}/${POOL}
+    virsh pool-define-as --name ${POOL} --type dir --target ${STORAGEP}/${POOL}
+    virsh pool-start ${POOL}
+    virsh pool-autostart ${POOL}
 }
 
