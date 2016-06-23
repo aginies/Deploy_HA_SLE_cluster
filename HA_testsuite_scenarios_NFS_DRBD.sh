@@ -18,8 +18,8 @@ check_config_file
 NODEA=ha1
 NODEB=ha2
 POOLVDD=VDD
-IPA=`host ${NODEA} | awk -F "address " '{print $2}' | head -1`
-IPB=`host ${NODEB} | awk -F "address " '{print $2}' | head -1`
+IPA=`grep ${NODEA} /var/lib/libvirt/dnsmasq/${NETWORK}.hostsfile | cut -d , -f 2`
+IPB=`grep ${NODEB} /var/lib/libvirt/dnsmasq/${NETWORK}.hostsfile | cut -d , -f 2`
 
 install_packages() {
 	echo "############ START install_packages"yy
