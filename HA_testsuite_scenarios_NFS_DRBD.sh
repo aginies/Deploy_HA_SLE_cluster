@@ -115,7 +115,7 @@ finalize_DRBD_setup() {
 
 create_lvm_on_drbd() {
     echo "############ START create_lvm_on_drbd"
-    exec_on_node ${NODEA} "perl -pi -e 's|write_cache_state.*|;write_cache_state = 0|' /etc/lvm/lvm.conf"
+    exec_on_node ${NODEA} "perl -pi -e 's|write_cache_state.*|write_cache_state = 0|' /etc/lvm/lvm.conf"
     exec_on_node ${NODEA} "csync2 -xv"
     exec_on_node ${NODEA} "pvcreate /dev/drbd/by-res/nfs/0"
     exec_on_node ${NODEA} "vgcreate nfs /dev/drbd/by-res/nfs/0"
