@@ -28,14 +28,14 @@ Configure the host:
 * create an SBD pool
 * prepapre an image (raw) which contains autoyast file
 
-## HA_testsuite_deploy.sh
+## HA_testsuite_deploy_vm.sh
 Install all nodes with needed data
 * clean-up all previous data: VM definition, VM images
 * create an hapool to store VM images
 * install all HA VM (using screen)
 * display information how to copy host root key to HA nodes (VM)
 
-## HA_testsuite_runtests.sh
+## HA_testsuite_init_cluster.sh
 Finish the nodes installation and run some tests
 
 ## havm.xml
@@ -53,4 +53,4 @@ You should adjust path to ISO for installation. Currently this is using local or
 * SLECDROM="/var/lib/libvirt/images/nasin/nasin/SLE-12-SP2-Server-DVD-x86_64-Buildxxxx-Media1.iso"
 
 If you want to specify another way to ISO (like http etc...) you maybe need to adjust
-install_vm() function in HA_testsuite_deploy.sh script.
+install_vm() function in HA_testsuite_deploy_vm.sh script.
