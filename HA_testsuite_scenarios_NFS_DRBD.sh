@@ -43,8 +43,8 @@ disable_drbd() {
 
 create_vol_vdd() {
     echo "############ START create_vol_vdd"
-    virsh vol-create-as ${POOLVDD} ${POOLVDD}A.qcow2 --format qcow2 --allocation 1G --capacity 1G
-    virsh vol-create-as ${POOLVDD} ${POOLVDD}B.qcow2 --format qcow2 --allocation 1G --capacity 1G
+    virsh vol-create-as --pool ${POOLVDD} --name ${POOLVDD}A.qcow2 --format qcow2 --allocation 1G --capacity 1G
+    virsh vol-create-as --pool ${POOLVDD} --name ${POOLVDD}B.qcow2 --format qcow2 --allocation 1G --capacity 1G
 }
 
 
@@ -106,7 +106,7 @@ finalize_DRBD_setup() {
 	exec_on_node ${NODEB} "drbdadm create-md nfs"
 	exec_on_node ${NODEA} "drbdadm up nfs"
 	exec_on_node ${NODEB} "drbdadm up nfs"
-	exec_on_node ${NODEA} "drbdadm new-current-uuid"
+	exec_on_node ${NODEA} "drbdadm new-current-uuid nfs/0"
 	exec_on_node ${NODEA} "drbdadm primary nfs"
 	exec_on_node ${NODEA} "cat /proc/drbd"
 	exec_on_node ${NODEA} "drbdadm -- --overwrite-data-of-peer primary nfs"

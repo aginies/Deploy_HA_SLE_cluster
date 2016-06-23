@@ -94,24 +94,24 @@ EOF
 prepare_SBD_pool() {
     echo "############ START prepare_SBD_pool"
 # Create a pool SBD
-    virsh pool-list --all | grep SBD > /dev/null
+    virsh pool-list --all | grep ${SBDNAME} > /dev/null
     if [ $? == "0" ]; then
-    	echo "- Destroy current pool SBD"
-    	virsh pool-destroy SBD
-    	echo "- Undefine current pool SBD"
-    	virsh pool-undefine SBD
+    	echo "- Destroy current pool ${SBDNAME}"
+    	virsh pool-destroy ${SBDNAME}
+    	echo "- Undefine current pool ${SBDNAME}"
+    	virsh pool-undefine ${SBDNAME}
         rm -vf ${SBDDISK}
     else
-        echo "- SBD pool is not present"
+        echo "- ${SBDNAME} pool is not present"
     fi
-    echo "- Define pool SBD"
-    virsh pool-define-as --name SBD --type dir --target ${STORAGEP}/SBD
-    virsh pool-start SBD
-    virsh pool-autostart SBD
+    echo "- Define pool ${SBDNAME}"
+    virsh pool-define-as --name ${SBDNAME} --type dir --target ${STORAGEP}/${SBDNAME}
+    virsh pool-start ${SBDNAME}
+    virsh pool-autostart ${SBDNAME}
 
 # Create the VOLUME SBD.img
-    echo "- Create SBD.img"
-    virsh vol-create-as SBD SBD.img --format raw --allocation 1G --capacity 1G
+    echo "- Create ${SBDNAME}.img"
+    virsh vol-create-as --pool ${SBDNAME} --name ${SBDNAME}.img --format raw --allocation 10M --capacity 10M
 }
 
 # Create a RAW file which contains auto install file for deployment
@@ -135,7 +135,7 @@ check_host_config() {
     echo "############ START check_host_config #############"
     virsh net-list
     virsh pool-list
-    virsh vol-list SBD
+    virsh vol-list ${SBDNAME}
 }
 
 ###########################
