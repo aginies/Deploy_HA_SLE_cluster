@@ -25,8 +25,8 @@ cleanup_vm() {
     echo "############ START cleanup_vm #############"
     echo "  !! WARNING !! "
     echo "  !! WARNING !! "
-    echo "- This will remove previous HA VM guest image (in ${STORAGEP} dir)"
-    cd ${STORAGEP}/${LIBVIRTPOOL}/
+    echo "- This will remove previous HA VM guest image (in ${STORAGEP}/${LIBVIRTPOOL} dir)"
+    cd ${STORAGEP}/${LIBVIRTPOOL}
     ls -1 ${HANAME}*.qcow2
     echo
     echo " press [ENTER] twice OR Ctrl+C to abort"
