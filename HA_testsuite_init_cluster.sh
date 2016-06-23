@@ -7,15 +7,13 @@
 #########################################################
 # all is done from the Host
 
-# execute a command on a NODE
-exec_on_node() {
-    # first arg is NODE name, second arg is command
-    NODE="$1"
-    CMD="$2"
-    # avoid: No pseudo-tty detected! Use -t option to ssh if calling remotely
-    echo "${NODE}: ssh -t -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no ${NODE} ${CMD}"
-    ssh -t -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no ${NODE} ${CMD}
-}
+
+if [ -f `pwd`/functions ] ; then
+    . `pwd`/functions
+else
+    echo "! need functions in current path; Exiting"
+    exit 1
+fi
 
 # ON HA1 NODE
 # Create an SBD device

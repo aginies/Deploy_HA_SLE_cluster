@@ -6,6 +6,12 @@
 ## HA SCENARIO
 #########################################################
 
+if [ -f `pwd`/functions ] ; then
+    . `pwd`/functions
+else
+    echo "! need functions in current path; Exiting"
+    exit 1
+fi
 
 vip_test() {
     # ADD VIP on ha2 (will be used later for HAproxy)
