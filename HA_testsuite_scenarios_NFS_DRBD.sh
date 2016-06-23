@@ -43,7 +43,7 @@ disable_drbd() {
 
 create_vol_vdd() {
     echo "############ START create_vol_vdd"
-    virsh vol-create-as VDD VDD.qcow2 --format qcow2 --allocation 1G --capacity 1G
+    virsh vol-create-as ${POOLVDD} ${POOLVDD}.qcow2 --format qcow2 --allocation 1G --capacity 1G
 }
 
 
@@ -52,11 +52,12 @@ attach_storage_to_node() {
     cat >/etc/libvirt/storage/vdd.xml<<EOF
 <disk type='file' device='disk'>
   <driver name='qemu' type='qcow2' cache='none'/>
-  <source file='/var/lib/libvirt/images/VDD/VDD.qcow2'/>
+  <source file='${STORAGEP}/${POOLVDD}/${POOLVDD}.qcow2'/>
   <target dev='vdd'/>
 </disk>
 EOF
-    virsh attach-device ${DISTRO}HA1 /etc/libvirt/storage/vdd.xml
+    virsh attach-device --config ${DISTRO}HA1 /etc/libvirt/storage/vdd.xml
+    virsh attach-disk ${DISTRO}HA1 ${STORAGEP}/${POOLVDD}/${POOLVDD}.qcow2 vdd --cache none
 }
 
 create_nfs_resource() {
@@ -113,7 +114,7 @@ read
 
 
 install_packages
-create_pool VDD
+create_pool ${POOLVDD}
 create_vol_vdd
 attach_storage_to_node
 pacemaker_configuration
