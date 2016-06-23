@@ -6,12 +6,13 @@
 ## INSTALL HA Guest (and checks)
 #########################################################
 
-if [ -f haqasemi.conf ]; then
-    source `pwd`/haqasemi.conf
+check_config_file
+if [ -f `pwd`/functions ] ; then
+    . `pwd`/functions
 else
-    echo "!! haqasemi.conf not found in current path !!"
-    exit 1
+    echo "! need functions in current path; Exiting"; exit 1
 fi
+
 
 # global VAR
 LIBVIRTPOOL="hapool"
@@ -47,20 +48,6 @@ cleanup_vm() {
     echo "- Remove previous image file for VM ${NAME} (${NAME}.qcow2)"
     rm -rvf ${STORAGEP}/${LIBVIRTPOOL}/${NAME}.qcow2
     done
-}
-
-hapool_creation() {
-    echo "############ START hapool_creation #############"
-    virsh pool-list --all | grep ${LIBVIRTPOOL} > /dev/null
-    if [ $? == "1" ]; then
-        echo "- ${LIBVIRTPOOL} not present, will create one"
-        mkdir ${STORAGEP}/${LIBVIRTPOOL}
-        virsh pool-define-as --name ${LIBVIRTPOOL} --type dir --target ${STORAGEP}/${LIBVIRTPOOL}
-        virsh pool-start ${LIBVIRTPOOL}
-        virsh pool-autostart ${LIBVIRTPOOL}
-    else
-        echo "- ${LIBVIRTPOOL} already present, skipping"
-    fi
 }
 
 # Install HA1 VM  
@@ -127,7 +114,7 @@ cp -avf /dev/null /root/.ssh/known_hosts"
 cleanup_vm
 
 # create the pool
-hapool_creation
+create_pool ${LIBVIRTPOOL}
 
 # verify everything is available
 check_before_install

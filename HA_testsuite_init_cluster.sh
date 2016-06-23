@@ -11,8 +11,7 @@
 if [ -f `pwd`/functions ] ; then
     . `pwd`/functions
 else
-    echo "! need functions in current path; Exiting"
-    exit 1
+    echo "! need functions in current path; Exiting"; exit 1
 fi
 
 # ON HA1 NODE

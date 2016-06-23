@@ -1,5 +1,15 @@
 #!/bin/sh
 # execute a command on a NODE
+
+check_config_file() {
+if [ -f haqasemi.conf ]; then
+    source `pwd`/haqasemi.conf
+else
+    echo "!! haqasemi.conf not found in current path !!"
+    exit 1
+fi
+}
+
 exec_on_node() {
     # first arg is NODE name, second arg is command
     if [ $# -lt 2 ]
@@ -12,5 +22,20 @@ exec_on_node() {
     # avoid: No pseudo-tty detected! Use -t option to ssh if calling remotely
     echo "${NODE}: ssh -t -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no ${NODE} ${CMD}"
     ssh -t -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no ${NODE} ${CMD}
+}
+
+create_pool() {
+	POOL=$1
+    echo "############ START create a pool ${POOL} #############"
+    virsh pool-list --all | grep ${POOL} > /dev/null
+    if [ $? == "1" ]; then
+        echo "- ${POOL} not present, will create one"
+        mkdir ${STORAGEP}/${POOL}
+        virsh pool-define-as --name ${POOL} --type dir --target ${STORAGEP}/${POOL}
+        virsh pool-start ${POOL}
+        virsh pool-autostart ${POOL}
+    else
+        echo "- ${POOL} already present, skipping"
+    fi
 }
 

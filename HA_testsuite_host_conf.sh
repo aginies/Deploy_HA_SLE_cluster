@@ -6,12 +6,7 @@
 ## HOST CONFIGURATION
 #########################################################
 
-if [ -f haqasemi.conf ]; then
-    source `pwd`/haqasemi.conf
-else
-    echo "!! haqasemi.conf not found in current path !!"
-    exit 1
-fi
+check_config_file
 
 # Install all needed Hypervisors tools
 install_virtualization_stack() {

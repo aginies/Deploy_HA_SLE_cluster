@@ -7,6 +7,7 @@
 ## NFS + DRBD
 #########################################################
 
+check_config_file
 if [ -f `pwd`/functions ] ; then
     . `pwd`/functions
 else
@@ -16,9 +17,9 @@ fi
 
 NODEA=ha1
 NODEB=ha2
+POOLVDD=VDD
 IPA=`host ${NODEA} | awk -F "address " '{print $2}' | head -1`
 IPB=`host ${NODEB} | awk -F "address " '{print $2}' | head -1`
-
 
 install_packages() {
 	echo "############ START install_packages"yy
@@ -85,8 +86,10 @@ finalize_DRBD_setup() {
 ##########################
 
 install_packages
+create_pool VDD
 pacemaker_configuration
 disable_drbd
 create_nfs_resource
 update_csync2
 finalize_DRBD_setup
+
