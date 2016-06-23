@@ -68,7 +68,7 @@ EOF
 # Define HAnet private HA network (NAT)
 # NETWORK will be 192.168.12.0/24 gw/dns 192.168.12.1
 prepare_virtual_HAnetwork() {
-    echo "############ START prepapre_virtual_HAnetwork #############"
+    echo "############ START prepare_virtual_HAnetwork #############"
     echo "- Prepare virtual HAnetwork"
     cat > /etc/libvirt/qemu/networks/${NETWORK}.xml << EOF
 <network>
