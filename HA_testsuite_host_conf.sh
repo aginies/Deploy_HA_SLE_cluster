@@ -6,6 +6,9 @@
 ## HOST CONFIGURATION
 #########################################################
 
+# ie: ISO as source of RPM:
+#zypper addrepo "iso:/?iso=SLE-12-SP2-Server-DVD-x86_64-Buildxxxx-Media1.iso&url=nfs://10.0.1.99/volume1/install/ISO/SP2devel/" ISOSLE
+#zypper addrepo "iso:/?iso=SLE-12-SP2-HA-DVD-x86_64-Buildxxxx-Media1.iso&url=nfs://10.0.1.99/volume1/install/ISO/SP2devel/" ISOHA
 
 # Install all needed Hypervisors tools
 install_virtualization_stack() {

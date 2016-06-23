@@ -14,7 +14,7 @@ https://github.com/aginies/Deploy_HA_SLE_cluster.git
 *NOTE*: default root password for Virtual Machine is: "a"
 
 * *WARNING* All guest installation will be done at the same time;
-* *NOTE* you need an HA DVD rom and an SLE12SPX ISO DVD rom.
+* *NOTE* you need an HA DVD rom and an SLE12SPX ISO DVD rom as source for Zypper (or a repo)
 * *NOTE* Host server should be a SLE or an openSUSE (will use zypper)
 * *WARNING* running the script will erase all previous configuration
 
