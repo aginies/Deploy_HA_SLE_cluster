@@ -113,6 +113,19 @@ finalize_DRBD_setup() {
 }
 
 
+create_lvm_on_drbd() {
+    echo "############ START create_lvm_on_drbd"
+    exec_on_node ${NODEA} "perl -pi -e 's|write_cache_state.*|;write_cache_state = 0|' /etc/lvm/lvm.conf"
+    exec_on_node ${NODEA} "csync2 -xv"
+    exec_on_node ${NODEA} "pvcreate /dev/drbd/by-res/nfs/0"
+    exec_on_node ${NODEA} "vgcreate nfs /dev/drbd/by-res/nfs/0"
+    exec_on_node ${NODEA} "lvcreate -n sales -L 512M nfs"
+    exec_on_node ${NODEA} "lvcreate -n devel -L 500M nfs"
+    exec_on_node ${NODEA} "vgchange -ay nfs"
+    exec_on_node ${NODEA} "mkfs.ext3 /dev/nfs/sales"
+    exec_on_node ${NODEA} "mkfs.ext3 /dev/nfs/devel"
+}
+
 ##########################
 ##########################
 ### MAIN
@@ -137,3 +150,4 @@ disable_drbd
 create_nfs_resource
 update_csync2
 finalize_DRBD_setup
+create_lvm_on_drbd
