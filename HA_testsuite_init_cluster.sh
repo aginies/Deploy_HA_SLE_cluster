@@ -29,10 +29,9 @@ enable_sbd_all_nodes() {
     pssh -h hanodes -P "systemctl enable sbd"
 }
 
-
-# Init the cluster on node HA1
-init_ha_cluster() {
-    echo "############ START init the cluster"
+# Check cluster Active
+check_cluster_status() {
+    echo "############ START check_cluster_status"
     exec_on_node ha1 "systemctl -q is-active corosync.service"
     if [ $? -eq 0 ]; then
         echo
@@ -50,7 +49,23 @@ init_ha_cluster() {
         echo "- Then relaunch this script"
         exit 1
     fi
+}
+
+# Init the cluster on node HA1
+init_ha_cluster() {
+    echo "############ START init the cluster"
     exec_on_node ha1 "ha-cluster-init -s /dev/vdb -y"
+}
+
+copy_ssh_key_on_nodes() {
+    echo "############ START copy_ssh_key_on_nodes"
+    scp root@ha1:~/.ssh/id_rsa.pub .
+    scp_on_node "id_rsa.pub" "ha2:/tmp"
+    scp_on_node "id_rsa.pub" "ha3:/tmp"
+    scp_on_node "id_rsa.pub" "ha4:/tmp"
+    exec_on_node ha2 "grep 'Cluster Internal' /root/.ssh/authorized_keys || cat /tmp/id_rsa.pub >> /root/.ssh/authorized_keys"
+    exec_on_node ha3 "grep 'Cluster Internal' /root/.ssh/authorized_keys || cat /tmp/id_rsa.pub >> /root/.ssh/authorized_keys"
+    exec_on_node ha4 "grep 'Cluster Internal' /root/.ssh/authorized_keys || cat /tmp/id_rsa.pub >> /root/.ssh/authorized_keys"
 }
 
 # ADD all other NODES (from HOST)
@@ -143,6 +158,9 @@ case "$1" in
     init)
 	init_ha_cluster
 	;;
+    sshkeynode)
+	copy_ssh_key_on_nodes
+	;;
     addremove)
 	add_remove_node_test
 	;;
@@ -165,6 +183,7 @@ case "$1" in
 	create_sbd_dev
 	enable_sbd_all_nodes
 	init_ha_cluster
+	copy_ssh_key_on_nodes
 	add_remove_node_test
 	sbd_test
 	list_ra_stonith
@@ -176,7 +195,10 @@ case "$1" in
 	;;
     *)
         echo "
-     Usage: $0 {sbd|init|addremove|sbdtest|somechecks|maintenance|crmhist|all}
+     Usage: $0 {status|sbd|init|sshkeynode|addremove|sbdtest|somechecks|maintenance|crmhist|all}
+
+ status
+	Check that the cluster is not running before config
 
  sbd
     Create an SBD device
@@ -185,8 +207,11 @@ case "$1" in
  init
     Init the cluster on node HA1
 
+ sshkeynode
+    Copy Cluster Internal key (from HA1) to all other HA nodes
+
  addremove
- ADD all other NODES (you need to enter root password for all nodes)
+    ADD all other NODES (you need to enter root password for all nodes)
     Remove node HA3
     Re-add node HA3
 
