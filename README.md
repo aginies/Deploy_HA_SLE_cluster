@@ -39,8 +39,6 @@ Install all nodes with needed data
 ## HA_testsuite_init_cluster.sh
 Finish the nodes installation and run some tests.
 
-*WARNING* You need to enter root password to add all nodes to the cluster
-
 ## havm.xml
 autoyast profile with Graphical interface
 
