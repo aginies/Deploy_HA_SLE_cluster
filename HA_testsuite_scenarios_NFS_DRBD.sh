@@ -24,6 +24,7 @@ IPB=`grep ${NODEB} /var/lib/libvirt/dnsmasq/${NETWORK}.hostsfile | cut -d , -f 2
 install_packages() {
 	echo "############ START install_packages"yy
     # ADD VIP on ha2 (will be used later for HAproxy)
+    echo "- Install on ${NODEA} ${NODEB} drbd-kmp-default nfs-kernel-server"
     exec_on_node ${NODEA} "zypper in -y drbd-kmp-default nfs-kernel-server"
     exec_on_node ${NODEB} "zypper in -y drbd-kmp-default nfs-kernel-server"
 }
@@ -59,8 +60,8 @@ EOF
 EOF
     qemu-img create ${STORAGEP}/${POOLVDD}/${POOLVDD}A.qcow2 1G -f qcow2
     qemu-img create ${STORAGEP}/${POOLVDD}/${POOLVDD}B.qcow2 1G -f qcow2
-    #virsh vol-create-as --pool ${POOLVDD} --name ${POOLVDD}A.qcow2 --format qcow2 --capacity 1G
-    #virsh vol-create-as --pool ${POOLVDD} --name ${POOLVDD}B.qcow2 --format qcow2 --capacity 1G
+    virsh vol-create-as --pool ${POOLVDD} --name ${POOLVDD}A.qcow2 --format qcow2 --capacity 1G --allocation 1G
+    virsh vol-create-as --pool ${POOLVDD} --name ${POOLVDD}B.qcow2 --format qcow2 --capacity 1G --allocation 1G
     virsh pool-refresh --pool ${POOLVDD}
 }
 
@@ -69,6 +70,7 @@ attach_storage_to_node() {
     echo "############ START attach_storage_to_node"
     #virsh attach-device --config ${DISTRO}HA1 /etc/libvirt/storage/drbda.xml
     #virsh attach-device --config ${DISTRO}HA2 /etc/libvirt/storage/drbdb.xml
+    echo "- Detach and attach the vdd disk to HA nodes"
     virsh detach-disk ${DISTRO}HA1 vdd
     virsh detach-disk ${DISTRO}HA2 vdd
     virsh attach-disk ${DISTRO}HA1 ${STORAGEP}/${POOLVDD}/${POOLVDD}A.qcow2 vdd --cache none
@@ -107,26 +109,40 @@ update_csync2() {
 
 finalize_DRBD_setup() {
 	echo "############ START finalize_DRBD_setup"
+    echo "- Initializes the metadata storage"
 	exec_on_node ${NODEA} "drbdadm create-md nfs"
 	exec_on_node ${NODEB} "drbdadm create-md nfs"
+    echo "- Create the /dev/drb"
 	exec_on_node ${NODEA} "drbdadm up nfs"
 	exec_on_node ${NODEB} "drbdadm up nfs"
+    echo "- Create a new UUID to shorten the initial resynchronization of the DRBD resource"
 	exec_on_node ${NODEA} "drbdadm new-current-uuid nfs/0"
+    echo "- Make ${NODEA} primary"
 	exec_on_node ${NODEA} "drbdadm primary nfs"
+    echo "- Check the DRBD status"
 	exec_on_node ${NODEA} "cat /proc/drbd"
+    echo "- Start the resynchronization process on your intended primary node"
 	exec_on_node ${NODEA} "drbdadm -- --overwrite-data-of-peer primary nfs"
 }
 
 
 create_lvm_on_drbd() {
     echo "############ START create_lvm_on_drbd"
+    echo "- adjust /etc/lvm/lvm.conf"
     exec_on_node ${NODEA} "perl -pi -e 's|write_cache_state.*|write_cache_state = 0|' /etc/lvm/lvm.conf"
+    exec_on_node ${NODEA} "perl -pi -e 's|filter.*|filter = \[ \"a\|\/dev\/drbd\.\*\|\", \"r\|\.\*\|\" \]|' /etc/lvm/lvm.conf"
+    echo "- corosync2 on all nodes"
     exec_on_node ${NODEA} "csync2 -xv"
+    echo "- Create an LVM volume group by initializing the DRBD resource as an LVM physical volume"
     exec_on_node ${NODEA} "pvcreate /dev/drbd/by-res/nfs/0"
+    echo "- Create an LVM Volume Group nfs that includes this physical volume"
     exec_on_node ${NODEA} "vgcreate nfs /dev/drbd/by-res/nfs/0"
+    echo "- Create logical volumes in the volume group"
     exec_on_node ${NODEA} "lvcreate -n sales -L 512M nfs"
     exec_on_node ${NODEA} "lvcreate -n devel -L 500M nfs"
+    echo "- Activate the volume groups"
     exec_on_node ${NODEA} "vgchange -ay nfs"
+    echo "- Create file systems on the new logical volumes"
     exec_on_node ${NODEA} "mkfs.ext3 /dev/nfs/sales"
     exec_on_node ${NODEA} "mkfs.ext3 /dev/nfs/devel"
 }
