@@ -59,10 +59,12 @@ init_ha_cluster() {
 
 copy_ssh_key_on_nodes() {
     echo "############ START copy_ssh_key_on_nodes"
-    scp root@ha1:~/.ssh/id_rsa.pub .
-    scp_on_node "id_rsa.pub" "ha2:/tmp"
-    scp_on_node "id_rsa.pub" "ha3:/tmp"
-    scp_on_node "id_rsa.pub" "ha4:/tmp"
+    scp -o StrictHostKeyChecking=no root@ha1:~/.ssh/id_rsa.pub /tmp/
+    scp -o StrictHostKeyChecking=no root@ha1:~/.ssh/id_rsa /tmp/
+    scp_on_node "/tmp/id_rsa*" "ha2:/root/.ssh/"
+    scp_on_node "/tmp/id_rsa*" "ha3:/root/.ssh/"
+    scp_on_node "/tmp/id_rsa*" "ha4:/root/.ssh/"
+    rm -vf /tmp/id_rsa*
     exec_on_node ha2 "grep 'Cluster Internal' /root/.ssh/authorized_keys || cat /tmp/id_rsa.pub >> /root/.ssh/authorized_keys"
     exec_on_node ha3 "grep 'Cluster Internal' /root/.ssh/authorized_keys || cat /tmp/id_rsa.pub >> /root/.ssh/authorized_keys"
     exec_on_node ha4 "grep 'Cluster Internal' /root/.ssh/authorized_keys || cat /tmp/id_rsa.pub >> /root/.ssh/authorized_keys"
@@ -151,7 +153,7 @@ crm_history() {
 
 
 case "$1" in
-    check)
+    status)
     check_cluster_status
     ;;
     sbd)

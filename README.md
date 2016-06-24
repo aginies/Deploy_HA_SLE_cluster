@@ -16,6 +16,7 @@ https://github.com/aginies/Deploy_HA_SLE_cluster.git
 * *WARNING* All guest installation will be done at the same time
 * *NOTE* you need an HA DVD rom and an SLE12SPX ISO DVD rom as source for Zypper (or a repo)
 * *NOTE* Host server should be a SLE or an openSUSE (will use zypper)
+* *NOTE* HA1 will be the node where ha-cluster-init will be launched
 * *WARNING* running the script will erase all previous configuration
 
 ## HA_testsuite_host_conf.sh
