@@ -17,7 +17,8 @@ check_config_file
 
 NODEA="ha1"
 NODEB="ha2"
-POOLVDD="VDD"
+POOLVDX="VDX"
+VDXNAME="vdd"
 IPA=`grep ${NODEA} /var/lib/libvirt/dnsmasq/${NETWORK}.hostsfile | cut -d , -f 2`
 IPB=`grep ${NODEB} /var/lib/libvirt/dnsmasq/${NETWORK}.hostsfile | cut -d , -f 2`
 
@@ -42,39 +43,39 @@ disable_drbd() {
     exec_on_node ${NODEB} "systemctl disable drbd"
 }
 
-create_vol_vdd() {
-    echo "############ START create_vol_vdd"
+create_vol_vdx() {
+    echo "############ START create_vol_vdx"
     cat >/etc/libvirt/storage/drbda.xml<<EOF
 <disk type='file' device='disk'>
   <driver name='qemu' type='qcow2' cache='none'/>
-  <source file='${STORAGEP}/${POOLVDD}/${POOLVDD}A.qcow2'/>
-  <target dev='vdd'/>
+  <source file='${STORAGEP}/${POOLVDX}/${POOLVDX}A.qcow2'/>
+  <target dev='${VDXNAME}'/>
 </disk>
 EOF
     cat >/etc/libvirt/storage/drbdb.xml<<EOF
 <disk type='file' device='disk'>
   <driver name='qemu' type='qcow2' cache='none'/>
-  <source file='${STORAGEP}/${POOLVDD}/${POOLVDD}B.qcow2'/>
-  <target dev='vdd'/>
+  <source file='${STORAGEP}/${POOLVDX}/${POOLVDX}B.qcow2'/>
+  <target dev='${VDXNAME}'/>
 </disk>
 EOF
-    qemu-img create ${STORAGEP}/${POOLVDD}/${POOLVDD}A.qcow2 1G -f qcow2
-    qemu-img create ${STORAGEP}/${POOLVDD}/${POOLVDD}B.qcow2 1G -f qcow2
-    virsh vol-create-as --pool ${POOLVDD} --name ${POOLVDD}A.qcow2 --format qcow2 --capacity 1G --allocation 1G
-    virsh vol-create-as --pool ${POOLVDD} --name ${POOLVDD}B.qcow2 --format qcow2 --capacity 1G --allocation 1G
-    virsh pool-refresh --pool ${POOLVDD}
+    qemu-img create ${STORAGEP}/${POOLVDX}/${POOLVDX}A.qcow2 1G -f qcow2
+    qemu-img create ${STORAGEP}/${POOLVDX}/${POOLVDX}B.qcow2 1G -f qcow2
+#    virsh vol-create-as --pool ${POOLVDD} --name ${POOLVDD}A.qcow2 --format qcow2 --capacity 1G --allocation 1G
+#    virsh vol-create-as --pool ${POOLVDD} --name ${POOLVDD}B.qcow2 --format qcow2 --capacity 1G --allocation 1G
+    virsh pool-refresh --pool ${POOLVDX}
 }
 
 
 attach_storage_to_node() {
     echo "############ START attach_storage_to_node"
-    #virsh attach-device --config ${DISTRO}HA1 /etc/libvirt/storage/drbda.xml
-    #virsh attach-device --config ${DISTRO}HA2 /etc/libvirt/storage/drbdb.xml
-    echo "- Detach and attach the vdd disk to HA nodes"
-    virsh detach-disk ${DISTRO}HA1 vdd
-    virsh detach-disk ${DISTRO}HA2 vdd
-    virsh attach-disk ${DISTRO}HA1 ${STORAGEP}/${POOLVDD}/${POOLVDD}A.qcow2 vdd --cache none
-    virsh attach-disk ${DISTRO}HA2 ${STORAGEP}/${POOLVDD}/${POOLVDD}B.qcow2 vdd --cache none
+    virsh attach-device --config ${DISTRO}HA1 /etc/libvirt/storage/drbda.xml
+    virsh attach-device --config ${DISTRO}HA2 /etc/libvirt/storage/drbdb.xml
+    echo "- Detach and attach the ${VDXNAME} disk to HA nodes"
+    virsh detach-disk ${DISTRO}HA1 ${VDXNAME}
+    virsh detach-disk ${DISTRO}HA2 ${VDXNAME}
+    virsh attach-disk ${DISTRO}HA1 ${STORAGEP}/${POOLVDX}/${POOLVDX}A.qcow2 ${VDXNAME} --cache none
+    virsh attach-disk ${DISTRO}HA2 ${STORAGEP}/${POOLVDX}/${POOLVDX}B.qcow2 ${VDXNAME} --cache none
 }
 
 create_nfs_resource() {
@@ -82,7 +83,7 @@ create_nfs_resource() {
     cat >/tmp/nfs.res<<EOF
 resource nfs {
     device /dev/drbd0;
-    disk /dev/vdd;
+    disk /dev/${VDXNAME};
     meta-disk internal;
     on ${NODEA} {
       address ${IPA}:7790;
@@ -163,8 +164,8 @@ read
 
 
 install_packages
-create_pool ${POOLVDD}
-create_vol_vdd
+create_pool ${POOLVDX}
+create_vol_vdx
 attach_storage_to_node
 pacemaker_configuration
 disable_drbd
