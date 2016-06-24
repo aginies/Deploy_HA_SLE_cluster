@@ -151,6 +151,9 @@ crm_history() {
 
 
 case "$1" in
+    check)
+    check_cluster_status
+    ;;
     sbd)
     create_sbd_dev
 	enable_sbd_all_nodes
@@ -180,6 +183,7 @@ case "$1" in
 	crm_history
 	;;
     all)
+    check_cluster_status
 	create_sbd_dev
 	enable_sbd_all_nodes
 	init_ha_cluster
