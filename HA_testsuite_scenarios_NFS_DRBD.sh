@@ -13,7 +13,7 @@ else
     echo "! need functions in current path; Exiting"
     exit 1
 fi
-check_config_file
+check_load_config_file
 
 NODEA="ha1"
 NODEB="ha2"

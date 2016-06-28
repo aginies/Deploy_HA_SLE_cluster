@@ -15,7 +15,7 @@ if [ -f `pwd`/functions ] ; then
 else
     echo "! need functions in current path; Exiting"; exit 1
 fi
-check_config_file
+check_load_config_file
 
 
 # Install all needed Hypervisors tools

@@ -1,7 +1,6 @@
 #!/bin/sh
-# execute a command on a NODE
 
-check_config_file() {
+check_load_config_file() {
 if [ -f `pwd`/haqasemi.conf ]; then
     source `pwd`/haqasemi.conf
 else
@@ -10,6 +9,7 @@ else
 fi
 }
 
+# execute a command on a NODE from host
 exec_on_node() {
     # first arg is NODE name, second arg is command
     if [ $# -lt 2 ]
@@ -24,6 +24,7 @@ exec_on_node() {
     ssh -t -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no ${NODE} ${CMD}
 }
 
+# scp a file to a NODE from host
 scp_on_node() {
     # first arg is SOURCE file, last arg is NODE:/destination_dir
     if [ $# -lt 2 ];then
@@ -37,7 +38,7 @@ scp_on_node() {
     scp -o StrictHostKeyChecking=no ${FILE} ${DEST}
 }
 
-
+# create a pool (on host)
 create_pool() {
 	POOL=$1
     echo "############ START create a pool ${POOL} #############"

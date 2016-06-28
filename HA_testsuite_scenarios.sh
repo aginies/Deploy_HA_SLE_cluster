@@ -12,7 +12,7 @@ else
     echo "! need functions in current path; Exiting"
     exit 1
 fi
-check_config_file
+check_load_config_file
 
 vip_test() {
     # ADD VIP on ha2 (will be used later for HAproxy)
