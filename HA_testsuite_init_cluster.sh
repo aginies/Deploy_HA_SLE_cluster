@@ -34,22 +34,26 @@ enable_sbd_all_nodes() {
 # Check cluster Active
 check_cluster_status() {
     echo "############ START check_cluster_status"
-    exec_on_node ha1 "systemctl -q is-active corosync.service"
-    if [ $? -eq 0 ]; then
-        echo
-        echo "! Cluster is active, need to stop it and reboot !"
-        echo " This can not been done automatically"
-        echo
-        echo "- Login on each node and disable pacemaker and corosync service"
-        echo "- Reboot all nodes"
-        echo
-        echo "IE: on all nodes ha1 ha2 ha3 ha4, do:"
-        echo "systemctl disable pacemaker"
-        echo "systemctl disable corosync"
-        echo "reboot"
-        echo
-        echo "- Then relaunch this script"
-        exit 1
+    if [ "$1" != "force" ]; then
+	exec_on_node ha1 "systemctl -q is-active corosync.service"
+	if [ $? -eq 0 ]; then
+            echo
+            echo "! Cluster is active, need to stop it and reboot !"
+            echo " This can not been done automatically"
+            echo
+            echo "- Login on each node and disable pacemaker and corosync service"
+            echo "- Reboot all nodes"
+            echo
+            echo "IE: on all nodes ha1 ha2 ha3 ha4, do:"
+            echo "systemctl disable pacemaker"
+            echo "systemctl disable corosync"
+            echo "reboot"
+            echo
+            echo "- Then relaunch this script"
+            exit 1
+	fi
+    else
+	echo "- Bypassing cluster check (corosync is running)"
     fi
 }
 
@@ -156,7 +160,7 @@ crm_history() {
 
 case "$1" in
     status)
-    check_cluster_status
+    check_cluster_status $2
     ;;
     sbd)
     create_sbd_dev
@@ -187,7 +191,7 @@ case "$1" in
 	crm_history
 	;;
     all)
-    check_cluster_status
+    check_cluster_status $2
 	create_sbd_dev
 	enable_sbd_all_nodes
 	init_ha_cluster
@@ -203,7 +207,7 @@ case "$1" in
 	;;
     *)
         echo "
-     Usage: $0 {status|sbd|init|sshkeynode|addremove|sbdtest|somechecks|maintenance|crmhist|all}
+     Usage: $0 {status|sbd|init|sshkeynode|addremove|sbdtest|somechecks|maintenance|crmhist|all} [force]
 
  status
 	Check that the cluster is not running before config
@@ -241,6 +245,9 @@ case "$1" in
 
  all 
     run all in this order
+
+ [force]
+    use force option to bypass cluster check (dangerous)
 "
         exit 1
 esac
