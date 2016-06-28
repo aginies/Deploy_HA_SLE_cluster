@@ -28,7 +28,7 @@ create_sbd_dev() {
 # Enable SBD on all HA nodes
 enable_sbd_all_nodes() {
     echo "############ START enable SBD on all HA nodes"
-    pssh -h /etc/hanodes -P "systemctl enable sbd"
+    pssh -h /etc/hanodes "systemctl enable sbd"
 }
 
 # Check cluster Active
@@ -50,6 +50,7 @@ check_cluster_status() {
             echo "reboot"
             echo
             echo "- Then relaunch this script"
+            echo "- or use the [force] option to bypass this check"
             exit 1
 	fi
     else
@@ -60,11 +61,13 @@ check_cluster_status() {
 # Init the cluster on node HA1
 init_ha_cluster() {
     echo "############ START init the cluster"
+    echo "- run ha-cluster-init on node HA1"
     exec_on_node ha1 "ha-cluster-init -s /dev/vdb -y"
 }
 
 copy_ssh_key_on_nodes() {
     echo "############ START copy_ssh_key_on_nodes"
+    echo "- Copy ssh root key from node HA1 to all nodes"
     scp -o StrictHostKeyChecking=no root@ha1:~/.ssh/id_rsa.pub /tmp/
     scp -o StrictHostKeyChecking=no root@ha1:~/.ssh/id_rsa /tmp/
     scp_on_node "/tmp/id_rsa*" "ha2:/root/.ssh/"
@@ -93,8 +96,10 @@ add_remove_node_test() {
 # Test if SBD is usable (from an HA node)
 sbd_test() {
     echo "############ START test SBD on HA1 (from HA2), reset HA3"
+    echo "- Send a test messaage from HA2 to HA1"
     exec_on_node ha2 "sbd -d /dev/vdb message ha1 test"
     exec_on_node ha1 "journalctl -u sbd --lines 10"
+    echo "- Reset node HA3 from node HA1"
     exec_on_node ha1 "sbd -d /dev/vdb message ha3 reset"
     echo "- Waiting node back (30s) ...."
     sleep 30
@@ -132,9 +137,9 @@ ocf_check() {
 maintenance_mode_check() {
     echo "############ START try Maintenance on node HA1"
     exec_on_node ha2 "crm node maintenance ha1"
-    exec_on_node ha2 "crm status"
+    crm_status
     exec_on_node ha2 "crm node ready ha1"
-    exec_on_node ha2 "crm status"
+    crm_status
 }
 
 health_test() {

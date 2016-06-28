@@ -24,6 +24,7 @@ install_virtualization_stack() {
     echo "- patterns-sles-kvm_server patterns-sles-kvm_tools and restart libvirtd"
     zypper in -y patterns-sles-kvm_server
     zypper in -y patterns-sles-kvm_tools
+    echo "- Restart libvirtd"
     systemctl restart libvirtd
 }
 
@@ -31,7 +32,9 @@ install_virtualization_stack() {
 # should be without password to speed up command on HA NODE
 ssh_root_key() {
     echo "############ START ssh_root_key #############"
+    echo "- Generate ~/.ssh/${IDRSAHA} without password"
     ssh-keygen -t rsa -f ~/.ssh/${IDRSAHA} -N ""
+    echo "- Create /root/.ssh/config for HA nodes access"
     cat > /root/.ssh/config<<EOF
 host ha1 ha2 ha3 ha4
 IdentityFile /root/.ssh/${IDRSAHA}
@@ -43,7 +46,7 @@ EOF
 # Command from Host
 prepare_remote_pssh() {
     echo "############ START prepare_remote_pssh #############"
-    echo "- pssh and network /etc/hanodes"
+    echo "- Install pssh and create /etc/hanodes"
     zypper in -y pssh
     cat > /etc/hanodes<<EOF
 ha1
@@ -74,7 +77,7 @@ EOF
 # NETWORK will be ${NETWORK}.0/24 gw/dns ${NETWORK}.1
 prepare_virtual_HAnetwork() {
     echo "############ START prepare_virtual_HAnetwork #############"
-    echo "- Prepare virtual HAnetwork"
+    echo "- Prepare virtual HAnetwork (/etc/libvirt/qemu/networks/${NETWORKNAME}.xml)"
     cat > /etc/libvirt/qemu/networks/${NETWORKNAME}.xml << EOF
 <network>
   <name>${NETWORKNAME}</name>
@@ -118,6 +121,7 @@ prepare_SBD_pool() {
     echo "- Define pool ${SBDNAME}"
     mkdir ${STORAGEP}/${SBDNAME}
     virsh pool-define-as --name ${SBDNAME} --type dir --target ${STORAGEP}/${SBDNAME}
+    echo "- Start and Autostart the pool"
     virsh pool-start ${SBDNAME}
     virsh pool-autostart ${SBDNAME}
 
@@ -129,7 +133,7 @@ prepare_SBD_pool() {
 # Create a RAW file which contains auto install file for deployment
 prepare_auto_deploy_image() {
     echo "############ START prepare_auto_deploy_image #############"
-    echo "- Prepare the autoyast image for VM guest installation"
+    echo "- Prepare the autoyast image for VM guest installation (havm_xml.raw)"
     WDIR=`pwd`
     WDIR2="/tmp/tmp_ha"
     WDIRMOUNT="/mnt/tmp_ha"
@@ -150,8 +154,11 @@ prepare_auto_deploy_image() {
 
 check_host_config() {
     echo "############ START check_host_config #############"
+    echo "- Show net-list"
     virsh net-list
+    echo "- Display pool available"
     virsh pool-list
+    echo "- List volume available in ${SBDNAME}"
     virsh vol-list ${SBDNAME}
 }
 
@@ -170,7 +177,6 @@ echo
 echo " press [ENTER] twice OR Ctrl+C to abort"
 read
 read
-
 
 ssh_root_key
 install_virtualization_stack

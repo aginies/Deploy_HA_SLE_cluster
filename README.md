@@ -38,6 +38,7 @@ Install all nodes with needed data
 
 ## HA_testsuite_init_cluster.sh
 Finish the nodes installation and run some tests.
+Use the [force] option to bypass the HA cluster check.
 
 ## havm.xml
 autoyast profile with Graphical interface

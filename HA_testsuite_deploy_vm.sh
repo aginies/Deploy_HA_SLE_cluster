@@ -62,7 +62,7 @@ install_vm() {
     virsh vol-create-as --pool ${LIBVIRTPOOL} --name ${NAME}.qcow2 --capacity ${IMAGESIZE} --allocation ${IMAGESIZE} --format qcow2
     virsh pool-refresh ${LIBVIRTPOOL}
     if [ ! -f ${VMDISK} ]; then echo "- ${VMDISK} NOT present"; exit 1; fi
-
+    echo "- Start VM guest installation in a screen"
     screen -d -m -S "install_HA_VM_guest_${NAME}" virt-install --name ${NAME} \
 	   --ram ${RAM} \
 	   --vcpus ${VCPU} \
