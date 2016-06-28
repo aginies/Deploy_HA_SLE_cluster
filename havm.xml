@@ -37,7 +37,7 @@
   </general>
   <cluster>
     <autoid config:type="boolean">true</autoid>
-    <bindnetaddr1>192.168.1.0</bindnetaddr1>
+    <bindnetaddr1>NETWORK.0</bindnetaddr1>
     <bindnetaddr2/>
     <cluster_name>cluster</cluster_name>
     <csync2_host config:type="list"/>
@@ -220,25 +220,25 @@
  <host>
     <hosts config:type="list">
       <hosts_entry>
-        <host_address>192.168.12.101</host_address>
+          <host_address>NETWORK.101</host_address>
         <names config:type="list">
           <name>ha1.testing.com ha1</name>
         </names>
       </hosts_entry>
       <hosts_entry>
-        <host_address>192.168.12.102</host_address>
+        <host_address>NETWORK.102</host_address>
         <names config:type="list">
           <name>ha2.testing.com ha2</name>
         </names>
       </hosts_entry>
       <hosts_entry>
-        <host_address>192.168.12.103</host_address>
+        <host_address>NETWORK.103</host_address>
         <names config:type="list">
           <name>ha3.testing.com ha3</name>
         </names>
       </hosts_entry>
       <hosts_entry>
-        <host_address>192.168.12.104</host_address>
+        <host_address>NETWORK.104</host_address>
         <names config:type="list">
           <name>ha4.testing.com ha4</name>
         </names>

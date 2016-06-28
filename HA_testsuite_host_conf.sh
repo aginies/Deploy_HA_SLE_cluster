@@ -60,10 +60,10 @@ prepare_etc_hosts() {
     if [ $? == "1" ]; then
         echo "- Prepare /etc/hosts (adding HA nodes)"
     cat >> /etc/hosts <<EOF
-192.168.12.101  ha1.testing.com ha1
-192.168.12.102  ha2.testing.com ha2
-192.168.12.103  ha3.testing.com ha3
-192.168.12.104  ha4.testing.com ha4
+${NETWORK}.101  ha1.testing.com ha1
+${NETWORK}.102  ha2.testing.com ha2
+${NETWORK}.103  ha3.testing.com ha3
+${NETWORK}.104  ha4.testing.com ha4
 EOF
     else
         echo "- /etc/hosts already ok"
@@ -71,34 +71,34 @@ EOF
 }
 
 # Define HAnet private HA network (NAT)
-# NETWORK will be 192.168.12.0/24 gw/dns 192.168.12.1
+# NETWORK will be ${NETWORK}.0/24 gw/dns ${NETWORK}.1
 prepare_virtual_HAnetwork() {
     echo "############ START prepare_virtual_HAnetwork #############"
     echo "- Prepare virtual HAnetwork"
-    cat > /etc/libvirt/qemu/networks/${NETWORK}.xml << EOF
+    cat > /etc/libvirt/qemu/networks/${NETWORKNAME}.xml << EOF
 <network>
-  <name>${NETWORK}</name>
+  <name>${NETWORKNAME}</name>
   <uuid>851e50f1-db72-475a-895f-28304baf8e8c</uuid>
   <forward mode='nat'/>
   <bridge name='virbr1' stp='on' delay='0'/>
   <mac address='52:54:00:89:a0:b9'/>
-  <domain name='${NETWORK}'/>
-  <ip address='192.168.12.1' netmask='255.255.255.0'>
+  <domain name='${NETWORKNAME}'/>
+  <ip address='${NETWORK}.1' netmask='255.255.255.0'>
     <dhcp>
-      <range start='192.168.12.128' end='192.168.12.254'/>
-      <host mac="52:54:00:c7:92:da" name="ha1.testing.com" ip="192.168.12.101" />
-      <host mac="52:54:00:c7:92:db" name="ha2.testing.com" ip="192.168.12.102" />
-      <host mac="52:54:00:c7:92:dc" name="ha3.testing.com" ip="192.168.12.103" />
-      <host mac="52:54:00:c7:92:dd" name="ha4.testing.com" ip="192.168.12.104" />
+      <range start='${NETWORK}.128' end='${NETWORK}.254'/>
+      <host mac="52:54:00:c7:92:da" name="ha1.testing.com" ip="${NETWORK}.101" />
+      <host mac="52:54:00:c7:92:db" name="ha2.testing.com" ip="${NETWORK}.102" />
+      <host mac="52:54:00:c7:92:dc" name="ha3.testing.com" ip="${NETWORK}.103" />
+      <host mac="52:54:00:c7:92:dd" name="ha4.testing.com" ip="${NETWORK}.104" />
     </dhcp>
   </ip>
 </network>
 EOF
 
-    echo "- Start ${NETWORK}"
+    echo "- Start ${NETWORKNAME}"
     systemctl restart libvirtd
-    virsh net-autostart ${NETWORK}
-    virsh net-start ${NETWORK}
+    virsh net-autostart ${NETWORKNAME}
+    virsh net-start ${NETWORKNAME}
 }
 
 # Create an SBD pool on the host 
@@ -131,8 +131,12 @@ prepare_auto_deploy_image() {
     echo "############ START prepare_auto_deploy_image #############"
     echo "- Prepare the autoyast image for VM guest installation"
     WDIR=`pwd`
+    WDIR2="/tmp/tmp_ha"
     WDIRMOUNT="/mnt/tmp_ha"
     cd ${STORAGEP}
+    cp -avf havm*.xml ${WDIR2}
+    perl -pi -e "s/NETWORK/${NETWORK}/g" ${WDIR2}/havm.xml
+    perl -pi -e "s/NETWORK/${NETWORK}/g" ${WDIR2}/havm_mini.xml
     qemu-img create havm_xml.raw -f raw 64K
     mkfs.ext3 havm_xml.raw
     mkdir ${WDIRMOUNT}

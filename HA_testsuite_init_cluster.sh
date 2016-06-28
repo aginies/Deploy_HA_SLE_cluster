@@ -73,14 +73,14 @@ copy_ssh_key_on_nodes() {
 # ADD all other NODES (from HOST)
 add_remove_node_test() {
     echo "############ START other HA nodes join the cluster"
-    exec_on_node ha2 "ha-cluster-join -y -c 192.168.12.101"
-    exec_on_node ha3 "ha-cluster-join -y -c 192.168.12.101"
-    exec_on_node ha4 "ha-cluster-join -y -c 192.168.12.101"
+    exec_on_node ha2 "ha-cluster-join -y -c ${NETWORK}.101"
+    exec_on_node ha3 "ha-cluster-join -y -c ${NETWORK}.101"
+    exec_on_node ha4 "ha-cluster-join -y -c ${NETWORK}.101"
     echo "############ START remove node HA3 from cluster"
-    exec_on_node ha1 "ha-cluster-remove -c 192.168.12.103"
+    exec_on_node ha1 "ha-cluster-remove -c ${NETWORK}.103"
     crm_status
     echo "############ START re-add node HA3 to cluster"
-    exec_on_node ha3 "ha-cluster-join -y -c 192.168.12.101"
+    exec_on_node ha3 "ha-cluster-join -y -c ${NETWORK}.101"
     crm_status
 }
 
@@ -102,7 +102,7 @@ list_ra_stonith() {
 
 # Test HAWK2
 # HAWK2 i sonly available on node HA1
-#firefox https://192.168.12.101:7630
+#firefox https://${NETWORK}.101:7630
 
 # CRMshell test (from any nodes)
 crm_status() {

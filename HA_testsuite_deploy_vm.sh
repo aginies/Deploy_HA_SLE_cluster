@@ -68,7 +68,7 @@ install_vm() {
 	   --vcpus ${VCPU} \
 	   --virt-type kvm \
 	   --graphics vnc,keymap=${KEYMAP} \
-	   --network network=${NETWORK},mac=${MAC} \
+	   --network network=${NETWORKNAME},mac=${MAC} \
 	   --disk path=${VMDISK},format=qcow2,bus=virtio,cache=none \
 	   --disk path=${SBDDISK},bus=virtio \
 	   --disk path=${DISKHAVM},bus=virtio \
@@ -153,7 +153,7 @@ install_vm
 virsh list --all
 
 # Get IP address
-virsh net-dhcp-leases ${NETWORK}
+virsh net-dhcp-leases ${NETWORKNAME}
 
 # List installation in progress
 screen -list
