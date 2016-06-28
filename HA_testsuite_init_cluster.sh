@@ -82,13 +82,16 @@ copy_ssh_key_on_nodes() {
 # ADD all other NODES (from HOST)
 add_remove_node_test() {
     echo "############ START other HA nodes join the cluster"
+    echo "- Add Node HA2 HA3 and HA4 to cluster"
     exec_on_node ha2 "ha-cluster-join -y -c ${NETWORK}.101"
     exec_on_node ha3 "ha-cluster-join -y -c ${NETWORK}.101"
     exec_on_node ha4 "ha-cluster-join -y -c ${NETWORK}.101"
     echo "############ START remove node HA3 from cluster"
+    echo "- Remove HA3 from cluster (from node HA1)"
     exec_on_node ha1 "ha-cluster-remove -c ${NETWORK}.103"
     crm_status
     echo "############ START re-add node HA3 to cluster"
+    echo "- Add HA3 back to cluster"
     exec_on_node ha3 "ha-cluster-join -y -c ${NETWORK}.101"
     crm_status
 }
@@ -96,7 +99,7 @@ add_remove_node_test() {
 # Test if SBD is usable (from an HA node)
 sbd_test() {
     echo "############ START test SBD on HA1 (from HA2), reset HA3"
-    echo "- Send a test messaage from HA2 to HA1"
+    echo "- Send a test message from HA2 to HA1"
     exec_on_node ha2 "sbd -d /dev/vdb message ha1 test"
     exec_on_node ha1 "journalctl -u sbd --lines 10"
     echo "- Reset node HA3 from node HA1"
@@ -136,8 +139,10 @@ ocf_check() {
 # Check maintenance mode works (from any node)
 maintenance_mode_check() {
     echo "############ START try Maintenance on node HA1"
+    echo "- Switch HA1 in maintenance mode"
     exec_on_node ha2 "crm node maintenance ha1"
     crm_status
+    echo "- Switch HA1 in ready mode"
     exec_on_node ha2 "crm node ready ha1"
     crm_status
 }

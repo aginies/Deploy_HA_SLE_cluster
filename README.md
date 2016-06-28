@@ -51,8 +51,8 @@ All variables for VM guest and Host. Most of them should not be changed.
 
 *NOTE*:
 You should adjust path to ISO for installation. Currently this is using local or NFS ISO via a pool.
-* HACDROM="/var/lib/libvirt/images/nasin/SLE-12-SP2-HA-DVD-x86_64-Buildxxxx-Media1.iso"
-* SLECDROM="/var/lib/libvirt/images/nasin/nasin/SLE-12-SP2-Server-DVD-x86_64-Buildxxxx-Media1.iso"
+* HACDROM="/var/lib/libvirt/images/SLE-12-SP2-HA-DVD-x86_64-Buildxxxx-Media1.iso"
+* SLECDROM="/var/lib/libvirt/images/SLE-12-SP2-Server-DVD-x86_64-Buildxxxx-Media1.iso"
 
 If you want to specify another way to ISO (like http etc...) you maybe need to adjust
 install_vm() function in HA_testsuite_deploy_vm.sh script.
