@@ -18,6 +18,7 @@ https://github.com/aginies/Deploy_HA_SLE_cluster.git
 * *NOTE* Host server should be a SLE or an openSUSE (will use zypper)
 * *NOTE* HA1 will be the node where ha-cluster-init will be launched
 * *WARNING* Running the script will erase all previous deployment configuration
+* *NOTE* Scripts are written in shell to simplify external contribution and modification, of course this choice lead to some technical limitation
 
 ## Install / HOWTO
 
