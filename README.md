@@ -1,4 +1,4 @@
-# HA QA semi auto test suite
+# Easily Deploy an HA cluster in Virtual Machines
 
 Goal: quickly deploy HA nodes (Virtual Machine) and run basic test.
 This will configure:
