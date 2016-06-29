@@ -23,41 +23,13 @@ https://github.com/aginies/Deploy_HA_SLE_cluster.git
 ## Install / HOWTO
 
 * Clone this repository
+* Adjust VARS in havm.conf file
 * Prepare the host: HA_testsuite_host_conf.sh
 * Deploy HA VM: HA_testsuite_deploy_vm.sh
 * Init the cluster: HA_testsuite_init_cluster.sh
 * Your HA cluster is now able to run some HA scenarios
 
-## HA_testsuite_host_conf.sh
-Configure the host:
-* install virtualization tools and restart libvirtd
-* generate an ssh root key, and prepare a config to connect to HA nodes
-* pre-configure pssh (generate an /etc/hanodes)
-* add HA nodes in /etc/hosts
-* create a Virtual Network: DHCP with host/mac/name/ip for HA nodes
-* create an SBD pool
-* prepapre an image (raw) which contains autoyast file
-
-## HA_testsuite_deploy_vm.sh
-This script will install all nodes with needed data
-* clean-up all previous data: VM definition, VM images
-* create an hapool to store VM images
-* install all HA VM (using screen)
-* display information how to copy host root key to HA nodes (VM)
-
-## HA_testsuite_init_cluster.sh
-Finish the nodes installation and run some tests.
-The ha-cluster-init script will be run on node HA1.
-
-*NOTE* Use the [force] option to bypass the HA cluster check.
-
-## havm.xml
-This file is the autoyast profile with Graphical interface installation.
-
-## havm_mini.xml
-This file is the autoyast profile (simple without GUI).
-
-## havm.conf
+## havm.conf configuration file
 All variables for VM guest and Host. Most of them should not be changed.
 
 *NOTE*:
@@ -67,6 +39,43 @@ You should adjust path to ISO for installation. Currently this is using local or
 
 If you want to specify another way to ISO (like http etc...) you maybe need to adjust
 install_vm() function in HA_testsuite_deploy_vm.sh script.
+
+## Scripts
+
+### HA_testsuite_host_conf.sh
+Configure the host:
+* install virtualization tools and restart libvirtd
+* generate an ssh root key, and prepare a config to connect to HA nodes
+* pre-configure pssh (generate an /etc/hanodes)
+* add HA nodes in /etc/hosts
+* create a Virtual Network: DHCP with host/mac/name/ip for HA nodes
+* create an SBD pool
+* prepapre an image (raw) which contains autoyast file
+
+### HA_testsuite_deploy_vm.sh
+This script will install all nodes with needed data
+* clean-up all previous data: VM definition, VM images
+* create an hapool to store VM images
+* install all HA VM (using screen)
+* display information how to copy host root key to HA nodes (VM)
+
+### HA_testsuite_init_cluster.sh
+Finish the nodes installation and run some tests.
+The ha-cluster-init script will be run on node HA1.
+
+*NOTE* Use the [force] option to bypass the HA cluster check.
+
+
+## AutoYast files
+
+Files used for auto-installation of HA nodes. Files are copied into
+a image file (havm_xml.raw) and used as a disk image under HA VM.
+
+### havm.xml
+This file is the autoyast profile with Graphical interface installation.
+
+### havm_mini.xml
+This file is the autoyast profile (simple without GUI).
 
 ## functions
 Contains needed functions for all scripts.
