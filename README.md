@@ -2,22 +2,30 @@
 
 Goal: quickly deploy HA nodes (Virtual Machine) and run basic test.
 This will configure:
-* a KVM host
+* an host (currently KVM)
 * 4 HA nodes
 
 All configurations files on the host are dedicated for this cluster, which means
 this should not interact or destroy any other configuration (pool, net, etc...)
 
-please report any bugs or improvment:
+Please report any bugs or improvment:
 https://github.com/aginies/Deploy_HA_SLE_cluster.git
 
 *NOTE*: default root password for Virtual Machine is: "a"
 
-* *WARNING* All guest installation will be done at the same time
-* *NOTE* you need an HA DVD rom and an SLE12SPX ISO DVD rom as source for Zypper (or a repo)
+* *WARNING* All guest installation will be done at the same time (4 nodes)
+* *NOTE* You need an HA DVD rom and an SLE12SPX ISO DVD as source for Zypper
 * *NOTE* Host server should be a SLE or an openSUSE (will use zypper)
 * *NOTE* HA1 will be the node where ha-cluster-init will be launched
-* *WARNING* running the script will erase all previous configuration
+* *WARNING* Running the script will erase all previous deployment configuration
+
+## Install / HOWTO
+
+* Clone this repository
+* Prepare the host: HA_testsuite_host_conf.sh
+* Deploy HA VM: HA_testsuite_deploy_vm.sh
+* Init the cluster: HA_testsuite_init_cluster.sh
+* Your HA cluster is now able to run some HA scenarios
 
 ## HA_testsuite_host_conf.sh
 Configure the host:
@@ -30,7 +38,7 @@ Configure the host:
 * prepapre an image (raw) which contains autoyast file
 
 ## HA_testsuite_deploy_vm.sh
-Install all nodes with needed data
+This script will install all nodes with needed data
 * clean-up all previous data: VM definition, VM images
 * create an hapool to store VM images
 * install all HA VM (using screen)
@@ -38,15 +46,17 @@ Install all nodes with needed data
 
 ## HA_testsuite_init_cluster.sh
 Finish the nodes installation and run some tests.
-Use the [force] option to bypass the HA cluster check.
+The ha-cluster-init script will be run on node HA1.
+
+*NOTE* Use the [force] option to bypass the HA cluster check.
 
 ## havm.xml
-autoyast profile with Graphical interface
+This file is the autoyast profile with Graphical interface installation.
 
 ## havm_mini.xml
-autoyast profile (simple without GUI)
+This file is the autoyast profile (simple without GUI).
 
-## haqasemi.conf
+## havm.conf
 All variables for VM guest and Host. Most of them should not be changed.
 
 *NOTE*:
@@ -58,4 +68,4 @@ If you want to specify another way to ISO (like http etc...) you maybe need to a
 install_vm() function in HA_testsuite_deploy_vm.sh script.
 
 ## functions
-contains needed functions for scripts
+Contains needed functions for all scripts.

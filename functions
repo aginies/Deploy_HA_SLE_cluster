@@ -1,10 +1,11 @@
 #!/bin/sh
+CONF="havm.conf"
 
 check_load_config_file() {
-if [ -f `pwd`/haqasemi.conf ]; then
-    source `pwd`/haqasemi.conf
+if [ -f `pwd`/${CONF} ]; then
+    source `pwd`/${CONF}
 else
-    echo "!! haqasemi.conf not found in current path !!"
+    echo "!! ${CONF} not found in current path !!"
     exit 1
 fi
 }
