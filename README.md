@@ -1,14 +1,21 @@
 # Easily Deploy an HA cluster in Virtual Machines
 
-Goal: quickly deploy HA nodes (Virtual Machine) and run basic test.
-This will configure:
+The goal was to easily and quickly deploy an HA cluster in Virtual
+Machine to be able to test latest release and test some scenarios.
+
+Videos: Presentation and a demo at Youtube:
+* https://www.youtube.com/watch?v=y0herkr6x-A
+* https://www.youtube.com/watch?v=vmUpaabYV-o
+* https://www.youtube.com/watch?v=k77sa9y6Lwk
+
+This scripts will configure:
 * an host (currently KVM)
-* 4 HA nodes
+* 4 HA nodes ready for HA scenario
 
 All configurations files on the host are dedicated for this cluster, which means
 this should not interact or destroy any other configuration (pool, net, etc...)
 
-Please report any bugs or improvment:
+Please report any bugs or improvments to:
 https://github.com/aginies/Deploy_HA_SLE_cluster.git
 
 *NOTE*: default root password for Virtual Machine is: "a"
