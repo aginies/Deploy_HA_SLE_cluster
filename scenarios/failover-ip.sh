@@ -17,12 +17,13 @@ check_load_config_file other
 # IP address of the vip
 IPEND="222"
 CIBNAME="failoverip-cib"
+RESOURCEID="failover-ip"
 
 failover_ip_cib() {
     echo "############ START failover_ip_cib"
     exec_on_node ha1 "crm<<EOF
 cib new ${CIBNAME}
-configure primitive failover-ip ocf:heartbeat:IPaddr2 params ip=${NETWORK}.${IPEND} cidr_netmask=32 op monitor interval=1s
+configure primitive ${RESOURCEID} ocf:heartbeat:IPaddr2 params ip=${NETWORK}.${IPEND} cidr_netmask=32 op monitor interval=1s
 verify
 end
 cib use live
@@ -33,23 +34,23 @@ EOF"
 
 test_failoverip() {
     echo "############ START test_failoverip"
-    exec_on_node ha1 "crm status"
+    exec_on_node ha1 "crm_resource -r ${RESOURCEID} -W"
 }
 
 delete_cib_resource() {
     echo "############ START delete_cib_resource"
     exec_on_node ha1 "crm cib list | grep ${CIBNAME}"
     if [ $? -eq 0 ]; then
-	echo "- Deleting cib and resource ${CIBNAME}"
+	echo "- Deleting cib and resource ${RESOURCEID}"
 	exec_on_node ha1 "crm<<EOF
-resource stop failover-ip
+resource stop ${RESOURCEID}
 EOF"
 echo "- Wait stop/clear/delete resource (10s)"
        sleep 10
        exec_on_node ha1 "crm<<EOF
-resource clear failover-ip
-configure delete failover-ip
-cib delete failoverip-cib
+resource clear ${RESOURCEID}
+configure delete ${RESOURCEID}
+cib delete ${CIBNAME}
 verify
 configure commit
 exit
