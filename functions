@@ -22,7 +22,7 @@ exec_on_node() {
     CMD="$2"
     # avoid: No pseudo-tty detected! Use -t option to ssh if calling remotely
     echo "${NODE}: ssh -t -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no ${NODE} ${CMD}"
-    ssh -t -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no ${NODE} ${CMD}
+    ssh -t -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no ${NODE} "${CMD}"
 }
 
 # scp a file to a NODE from host
