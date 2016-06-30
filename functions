@@ -2,10 +2,11 @@
 CONF="havm.conf"
 
 check_load_config_file() {
-if [ -f `pwd`/${CONF} ]; then
-    source `pwd`/${CONF}
+if [ "$1" == "other" ]; then CDIR=`dirname $PWD`; fi
+if [ -f $CDIR/${CONF} ]; then
+    source ${CDIR}/${CONF}
 else
-    echo "!! ${CONF} not found in current path !!"
+    echo "!! ${CONF} not found in ${CDIR} path !!"
     exit 1
 fi
 }
