@@ -35,6 +35,7 @@ EOF"
 check_failoverip_resource() {
     echo "############ START check_failoverip_resource"
     exec_on_node ha1 "crm_resource -r ${RESOURCEID} -W"
+    exec_on_node ha1 "crm status"
 }
 
 delete_cib_resource() {
