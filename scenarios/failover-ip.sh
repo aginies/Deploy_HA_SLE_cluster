@@ -3,13 +3,13 @@
 #
 #
 #########################################################
-## failover IP
+## Failover IP
 #########################################################
 
 if [ -f ../functions ] ; then
     . ../functions
 else
-    echo "! need functions in current path; Exiting"
+    echo "! need functions file ! ; Exiting"
     exit 1
 fi
 check_load_config_file other
@@ -32,8 +32,8 @@ exit
 EOF"
 }
 
-test_failoverip() {
-    echo "############ START test_failoverip"
+check_failoverip_resource() {
+    echo "############ START check_failoverip_resource"
     exec_on_node ha1 "crm_resource -r ${RESOURCEID} -W"
 }
 
@@ -81,5 +81,6 @@ ping_virtual_ip() {
 delete_cib_resource
 failover_ip_cib
 ping_virtual_ip
+check_failoverip_resource
 test_failoverip
 delete_cib_resource
