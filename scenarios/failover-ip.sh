@@ -9,7 +9,7 @@
 if [ -f ../functions ] ; then
     . ../functions
 else
-    echo "! need functions file ! ; Exiting"
+    echo "! functions file needed! ; Exiting"
     exit 1
 fi
 check_load_config_file other
