@@ -81,7 +81,6 @@ ping_virtual_ip() {
 
 delete_cib_resource
 failover_ip_cib
-ping_virtual_ip
 check_failoverip_resource
-test_failoverip
+ping_virtual_ip
 delete_cib_resource
