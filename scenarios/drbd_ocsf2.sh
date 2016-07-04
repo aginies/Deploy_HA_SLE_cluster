@@ -127,8 +127,12 @@ c/csync2/csync2.cfg"
 finalize_DRBD_setup() {
     echo "############ START finalize_DRBD_setup"
     echo "- Initializes the metadata storage"
-    exec_on_node ${NODEA} "drbdadm create-md drbd"
-    exec_on_node ${NODEB} "drbdadm create-md drbd"
+    exec_on_node ${NODEA} "cat >drbdadm create-md drbd<<EOF
+yes
+EOF"
+    exec_on_node ${NODEB} "cat >drbdadm create-md drbd<<EOF
+yes
+EOF"
     echo "- Create the /dev/drbd"
     exec_on_node ${NODEA} "drbdadm up drbd"
     exec_on_node ${NODEB} "drbdadm up drbd"
@@ -161,15 +165,18 @@ umount_mnttest() {
 
 check_primary_secondary() {
 	echo "############ START check_primary_secondary"
-	echo "-Create ${MNTTEST} directory"
+	echo "- Create ${MNTTEST} directory"
 	exec_on_node ${NODEA} "mkdir ${MNTTEST}"
 	exec_on_node ${NODEB} "mkdir ${MNTTEST}"
 	echo "- Mount /dev/drbd0"
 	exec_on_node ${NODEA} "mount /dev/drbd/by-disk/${TARGETVD} ${MNTTEST}"
 	echo "- Create a file in the FS"
-	exec_on_node ${NODEA} "mount dd if=/dev/zero of=${MNTTEST}/testing bs=1M count=24"
+	exec_on_node ${NODEA} "dd if=/dev/zero of=${MNTTEST}/testing bs=1M count=24"
 	exec_on_node ${NODEA} "drbdadm status"
-	exec_on_node ${NODEA} "drbdadm dstate"
+	exec_on_node ${NODEA} "drbdadm dstate drbd"
+    echo "- Sleep to get drbd sync (20s)"
+    sleep 20s
+	exec_on_node ${NODEA} "drbdadm status"
 	exec_on_node ${NODEA} "umount ${MNTTEST}"
 	echo "- Switch ${NODEA} to secondary"
 	exec_on_node ${NODEA} "drbdadm secondary drbd"
