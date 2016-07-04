@@ -22,6 +22,7 @@ POOLDRBD="DRBD"
 TARGETVD="vdd"
 NODEA="ha1"
 NODEB="ha2"
+MNTTEST="/mnt/test"
 IPA=`grep ${NODEA} /var/lib/libvirt/dnsmasq/${NETWORKNAME}.hostsfile | cut -d , -f 2`
 IPB=`grep ${NODEB} /var/lib/libvirt/dnsmasq/${NETWORKNAME}.hostsfile | cut -d , -f 2`
 
@@ -48,13 +49,20 @@ disable_drbd() {
     exec_on_node ${NODEB} "systemctl disable drbd"
 }
 
-
 enable_drbd() {
     echo "############ START enable_drbd"
     echo "- Enable drbd service on node"
     exec_on_node ${NODEA} "systemctl enable drbd"
     exec_on_node ${NODEB} "systemctl enable drbd"
 }
+
+stop_drbd() {
+    echo "############ START stop_drbd"
+    echo "- Stop drbd service on node"
+    exec_on_node ${NODEA} "systemctl stop drbd"
+    exec_on_node ${NODEB} "systemctl stop drbd"
+}
+
 
 create_vol_drbd() {
     echo "############ START create_vol_drbd"
@@ -140,27 +148,34 @@ format_ext3() {
 }
 
 format_ocfs2() {
+    # need DLM
 	echo "############ START format_ocfs2"
 	exec_on_node ${NODEA} "mkfs.ocfs2 /dev/drbd/by-disk/${TARGETVD}"
 }
 
+umount_mnttest() {
+    echo "############ START umount_mnttest"
+    exec_on_node ${NODEA} "umount ${MNTTEST}"
+    exec_on_node ${NODEB} "umount ${MNTTEST}"
+}
+
 check_primary_secondary() {
 	echo "############ START check_primary_secondary"
-	echo "-Create test directory"
-	exec_on_node ${NODEA} "mkdir /mnt/test"
-	exec_on_node ${NODEB} "mkdir /mnt/test"
+	echo "-Create ${MNTTEST} directory"
+	exec_on_node ${NODEA} "mkdir ${MNTTEST}"
+	exec_on_node ${NODEB} "mkdir ${MNTTEST}"
 	echo "- Mount /dev/drbd0"
-	exec_on_node ${NODEA} "mount /dev/drbd/by-disk/${TARGETVD} /mnt/test"
+	exec_on_node ${NODEA} "mount /dev/drbd/by-disk/${TARGETVD} ${MNTTEST}"
 	echo "- Create a file in the FS"
-	exec_on_node ${NODEA} "mount dd if=/dev/zero of=/mnt/test/testing bs=1M count=24"
+	exec_on_node ${NODEA} "mount dd if=/dev/zero of=${MNTTEST}/testing bs=1M count=24"
 	exec_on_node ${NODEA} "drbdadm status"
 	exec_on_node ${NODEA} "drbdadm dstate"
-	exec_on_node ${NODEA} "umount /mnt/test"
+	exec_on_node ${NODEA} "umount ${MNTTEST}"
 	echo "- Switch ${NODEA} to secondary"
 	exec_on_node ${NODEA} "drbdadm secondary drbd"
 	exec_on_node ${NODEB} "drbdadm primary drbd"
-	exec_on_node ${NODEB} "mount /dev/drbd/by-disk/${TARGETVD} /mnt/test"
-	exec_on_node ${NODEB} "ls -1 /mnt/test/testing"
+	exec_on_node ${NODEB} "mount /dev/drbd/by-disk/${TARGETVD} ${MNTTEST}"
+	exec_on_node ${NODEB} "ls -1 ${MNTTEST}/testing"
 	echo "- Test pause/resume sync "
 	exec_on_node ${NODEB} "drbdadm pause-sync drbd"
 	exec_on_node ${NODEB} "drbdadm status"
@@ -195,6 +210,9 @@ read
 
 install_packages
 #drbd_ocfs2_cib
+stop_drbd
+umount_mnttest
+
 enable_drbd
 create_pool DRBD
 create_vol_drbd
