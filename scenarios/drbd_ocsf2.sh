@@ -48,12 +48,20 @@ disable_drbd() {
     exec_on_node ${NODEB} "systemctl disable drbd"
 }
 
+
+enable_drbd() {
+    echo "############ START enable_drbd"
+    echo "- Enable drbd service on node"
+    exec_on_node ${NODEA} "systemctl enable drbd"
+    exec_on_node ${NODEB} "systemctl enable drbd"
+}
+
 create_vol_drbd() {
     echo "############ START create_vol_drbd"
     echo "- Create volume for DRBD device"
     virsh vol-create-as --pool ${POOLDRBD} --name ${POOLDRBD}A.qcow2 --format qcow2 --capacity 1G --allocation 1G --prealloc-metadata
     virsh vol-create-as --pool ${POOLDRBD} --name ${POOLDRBD}B.qcow2 --format qcow2 --capacity 1G --allocation 1G --prealloc-metadata
-    virsh vol-list ${POOLDRBD}
+    virsh vol-list ${POOLDRBD} --details
     virsh pool-refresh --pool ${POOLDRBD}
 }
 
@@ -126,6 +134,39 @@ finalize_DRBD_setup() {
     exec_on_node ${NODEA} "drbdadm -- --overwrite-data-of-peer primary drbd"
 }
 
+format_ext3() {
+	echo "############ START format_ext3"
+	exec_on_node ${NODEA} "mkfs.ext3 /dev/drbd/by-disk/${TARGETVD}"
+}
+
+format_ocfs2() {
+	echo "############ START format_ocfs2"
+	exec_on_node ${NODEA} "mkfs.ocfs2 /dev/drbd/by-disk/${TARGETVD}"
+}
+
+check_primary_secondary() {
+	echo "############ START check_primary_secondary"
+	echo "-Create test directory"
+	exec_on_node ${NODEA} "mkdir /mnt/test"
+	exec_on_node ${NODEB} "mkdir /mnt/test"
+	echo "- Mount /dev/drbd0"
+	exec_on_node ${NODEA} "mount /dev/drbd/by-disk/${TARGETVD} /mnt/test"
+	echo "- Create a file in the FS"
+	exec_on_node ${NODEA} "mount dd if=/dev/zero of=/mnt/test/testing bs=1M count=24"
+	exec_on_node ${NODEA} "drbdadm status"
+	exec_on_node ${NODEA} "drbdadm dstate"
+	exec_on_node ${NODEA} "umount /mnt/test"
+	echo "- Switch ${NODEA} to secondary"
+	exec_on_node ${NODEA} "drbdadm secondary drbd"
+	exec_on_node ${NODEB} "drbdadm primary drbd"
+	exec_on_node ${NODEB} "mount /dev/drbd/by-disk/${TARGETVD} /mnt/test"
+	exec_on_node ${NODEB} "ls -1 /mnt/test/testing"
+	echo "- Test pause/resume sync "
+	exec_on_node ${NODEB} "drbdadm pause-sync drbd"
+	exec_on_node ${NODEB} "drbdadm status"
+	exec_on_node ${NODEB} "drbdadm resume-sync drbd"
+	exec_on_node ${NODEB} "drbdadm status"
+}
 
 configure_resources() {
     echo "############ START configure_resources"
@@ -154,12 +195,16 @@ read
 
 install_packages
 #drbd_ocfs2_cib
-disable_drbd
+enable_drbd
 create_pool DRBD
 create_vol_drbd
 attach_disk_to_node
 drbdconf_csync2
 finalize_DRBD_setup
+format_ext3
+check_primary_secondary
+#format_ocfs2
+
 #configure_resources
 
 # restore initial conf
