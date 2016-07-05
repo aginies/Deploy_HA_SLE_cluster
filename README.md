@@ -9,7 +9,7 @@ Videos: Presentation and a demo at Youtube:
 * https://www.youtube.com/watch?v=k77sa9y6Lwk
 
 This scripts will configure:
-* an host (currently KVM)
+* an host (by default KVM)
 * 4 HA nodes ready for HA scenario
 
 All configurations files on the host are dedicated for this cluster, which means

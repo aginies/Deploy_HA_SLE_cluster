@@ -21,9 +21,9 @@ check_load_config_file
 # Install all needed Hypervisors tools
 install_virtualization_stack() {
     echo "############ START install_virtualization_stack #############"
-    echo "- patterns-sles-kvm_server patterns-sles-kvm_tools and restart libvirtd"
-    zypper in -y patterns-sles-kvm_server
-    zypper in -y patterns-sles-kvm_tools
+    echo "- patterns-sles-${HYPERVISOR}_server patterns-sles-${HYPERVISOR}_tools and restart libvirtd"
+    zypper in -y patterns-sles-${HYPERVISOR}_server
+    zypper in -y patterns-sles-${HYPERVISOR}_tools
     echo "- Restart libvirtd"
     systemctl restart libvirtd
 }
