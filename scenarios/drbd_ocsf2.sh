@@ -63,6 +63,13 @@ stop_drbd() {
     exec_on_node ${NODEB} "systemctl stop drbd"
 }
 
+start_drbd() {
+    echo "############ START start_drbd"
+    echo "- Start drbd service on node"
+    exec_on_node ${NODEA} "systemctl start drbd"
+    exec_on_node ${NODEB} "systemctl start drbd"
+}
+
 
 create_vol_drbd() {
     echo "############ START create_vol_drbd"
@@ -181,14 +188,22 @@ check_primary_secondary() {
     exec_on_node ${NODEA} "drbdadm secondary drbd"
     exec_on_node ${NODEB} "drbdadm primary drbd"
     exec_on_node ${NODEB} "mount /dev/drbd/by-disk/${TARGETVD} ${MNTTEST}"
-    exec_on_node ${NODEB} "cat ${MNTTEST}/sha1sum
-sha1sum  ${MNTTEST}/testing ${MNTTEST}/random"
+    exec_on_node ${NODEB} "cat ${MNTTEST}/sha1sum"
+    exec_on_node ${NODEB} "sha1sum ${MNTTEST}/testing ${MNTTEST}/random"
     echo "- Test pause/resume sync "
     exec_on_node ${NODEB} "drbdadm pause-sync drbd"
     exec_on_node ${NODEB} "dd if=/dev/zero of=${MNTTEST}/testing2 bs=1M count=24"
     exec_on_node ${NODEB} "drbdadm status"
     exec_on_node ${NODEB} "drbdadm resume-sync drbd"
     exec_on_node ${NODEB} "drbdadm status"
+}
+
+back_to_begining() {
+    echo "############ START back_to_begining"
+    umount_mnttest
+    exec_on_node ${NODEA} "rm -rf ${MNTTEST}"
+    exec_on_node ${NODEB} "rm -rf ${MNTTEST}"
+    exec_on_node ${NODEB} "drbdadm secondary drbd"
 }
 
 configure_resources() {
@@ -226,14 +241,20 @@ create_pool DRBD
 create_vol_drbd
 attach_disk_to_node
 drbdconf_csync2
+#start_drbd
 finalize_DRBD_setup
 format_ext3
 check_primary_secondary
+
+# restore before runnning the test
+back_to_begining
+stop_drbd
+
 #format_ocfs2
 
 #configure_resources
 
 # restore initial conf
-#detach_disk_from_node
-#delete_vol_drbd
+detach_disk_from_node
+delete_vol_drbd
 
