@@ -2,7 +2,7 @@
 CONF="havm.conf"
 
 check_load_config_file() {
-if [ "$1" == "other" ]; then CDIR=`dirname $PWD`; fi
+if [ "$1" == "other" ]; then CDIR=`dirname $PWD`; else CDIR=$PWD; fi
 if [ -f $CDIR/${CONF} ]; then
     source ${CDIR}/${CONF}
 else
