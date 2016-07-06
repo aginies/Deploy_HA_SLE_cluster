@@ -38,6 +38,21 @@ check_failoverip_resource() {
     exec_on_node ha1 "crm status"
 }
 
+standby_node_running_resource() {
+    echo "############ START standby_node_running_resource"
+    exec_on_node ha1 "crm_resource -r ${RESOURCEID} -W" > /tmp/result
+    # use one line, and remove \r
+    export RNODE=`cat /tmp/result | tail -1 | cut -d ':' -f 2 | sed -e "s/\r//"`
+    echo "- Standby ${RNODE} from node HA1"
+    exec_on_node ha1 "crm node standby ${RNODE}"
+}
+
+online_rnode() {
+    echo "############ START online_rnode"
+    echo "- Restore online ${RNODE}"
+    exec_on_node ha1 "crm node online ${RNODE}"
+}
+
 delete_cib_resource() {
     echo "############ START delete_cib_resource"
     exec_on_node ha1 "crm cib list | grep ${CIBNAME}"
@@ -65,6 +80,8 @@ EOF"
 
 ping_virtual_ip() {
     echo "############ START ping_virtual_ip"
+    echo "- Flush ARP table for ${NETWORK}.${IPEND}"
+    ip -s -s neigh flush ${NETWORK}.${IPEND}
     ping -c 2 ${NETWORK}.${IPEND}
     if [ $? -eq 0 ]; then
 	echo "- ping ${NETWORK}.${IPEND} OK"
@@ -83,4 +100,8 @@ delete_cib_resource
 failover_ip_cib
 check_failoverip_resource
 ping_virtual_ip
+standby_node_running_resource
+check_failoverip_resource
+ping_virtual_ip
+online_rnode
 delete_cib_resource
