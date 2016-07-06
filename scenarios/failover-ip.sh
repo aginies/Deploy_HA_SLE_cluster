@@ -42,13 +42,24 @@ standby_node_running_resource() {
     echo "############ START standby_node_running_resource"
     exec_on_node ha1 "crm_resource -r ${RESOURCEID} -W" > /tmp/result
     # use one line, and remove \r
-    export RNODE=`cat /tmp/result | tail -1 | cut -d ':' -f 2 | sed -e "s/\r//"`
+    RNODE=`cat /tmp/result | tail -1 | cut -d ':' -f 2 | sed -e "s/\r//"`
     echo "- Standby ${RNODE} from node HA1"
     exec_on_node ha1 "crm node standby ${RNODE}"
 }
 
+put_node_maintenance() {
+    echo "############ START put_node_maintenance"
+    exec_on_node ha1 "crm node maintenance ha2"
+}
+
+restore_node_in_maintenance() {
+    echo "############ START restore_node_in_maintenance"
+    exec_on_node ha1 "crm node ready ha2"
+}
+
 online_rnode() {
     echo "############ START online_rnode"
+    RNODE=`cat /tmp/result | tail -1 | cut -d ':' -f 2 | sed -e "s/\r//"`
     echo "- Restore online ${RNODE}"
     exec_on_node ha1 "crm node online ${RNODE}"
 }
@@ -96,12 +107,26 @@ ping_virtual_ip() {
 ##########################
 ##########################
 
+echo "############ FAILOVER IP SCENARIO #############"
+echo
+echo " One node will be in maintenance (ha2)"
+echo " The one running the resource will be put in standby mode"
+echo " The IP address must be reachable: ${NETWORK}.${IPEND}"
+echo " (if manual debug, please check arp table!)"
+echo
+echo " press [ENTER] twice OR Ctrl+C to abort"
+read
+read
+
+
 delete_cib_resource
 failover_ip_cib
 check_failoverip_resource
 ping_virtual_ip
 standby_node_running_resource
+put_node_maintenance
 check_failoverip_resource
 ping_virtual_ip
 online_rnode
+restore_node_in_maintenance
 delete_cib_resource
