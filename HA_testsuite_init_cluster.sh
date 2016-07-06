@@ -28,7 +28,7 @@ create_sbd_dev() {
 # Enable SBD on all HA nodes
 enable_sbd_all_nodes() {
     echo "############ START enable SBD on all HA nodes"
-    pssh -h /etc/hanodes "systemctl enable sbd"
+    exec_pssh "systemctl enable sbd"
 }
 
 # Check cluster Active

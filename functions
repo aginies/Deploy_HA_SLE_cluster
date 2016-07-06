@@ -22,8 +22,19 @@ exec_on_node() {
     NODE="$1"
     CMD="$2"
     # avoid: No pseudo-tty detected! Use -t option to ssh if calling remotely
-    echo "${NODE}: ssh -t -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no ${NODE} ${CMD}"
+    echo "${NODE}: ssh -t -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no ${NODE} \"${CMD}\""
     ssh -q -t -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no ${NODE} "${CMD}"
+}
+
+exec_pssh() {
+    if [ $# -lt 1 ]
+    then
+        echo "! 1 arg needed (CMD);Exiting"
+        exit 1
+    fi
+    CMD="$1"
+    echo "pssh -h /etc/hanodes -x \"-o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no\" \"$CMD\""
+    pssh -h /etc/hanodes -x "-o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no" "$CMD"
 }
 
 # scp a file to a NODE from host
