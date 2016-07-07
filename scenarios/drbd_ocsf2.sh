@@ -83,7 +83,17 @@ create_vol_drbd() {
 delete_vol_drbd() {
     echo "############ START delete_vol_drbd"
     virsh vol-delete --pool ${POOLDRBD} ${POOLDRBD}A.qcow2
-    virsh vol-delete --pool ${POOLDRBD} ${POOLDRBD}A.qcow2
+    virsh vol-delete --pool ${POOLDRBD} ${POOLDRBD}B.qcow2
+}
+
+delete_pool_drbd() {
+    if [ $# -ne 1 ]; then echo "- delete_pool_drbd need one arg: POOL_NAME" ; exit 1; fi
+    POOL="$1"
+    echo "############ START delete_pool_drbd"
+    virsh pool-destroy ${POOL}
+    virsh pool-undefine ${POOL}
+    echo "- Delete path to volume"
+    rm -rf ${STORAGEP}/DRBD
 }
 
 attach_disk_to_node() {
@@ -91,6 +101,29 @@ attach_disk_to_node() {
     echo "- Attach volume to node"
     virsh attach-disk ${DISTRO}HA1 --live --cache none --type disk ${STORAGEP}/${POOLDRBD}/${POOLDRBD}A.qcow2 --target ${TARGETVD}
     virsh attach-disk ${DISTRO}HA2 --live --cache none --type disk ${STORAGEP}/${POOLDRBD}/${POOLDRBD}B.qcow2 --target ${TARGETVD}
+}
+
+check_targetvd_on_node() {
+    # workaround as this is not possible to garantee target device on VM guest
+    if [ $# -ne 1 ]; then echo "- check_targetvd_on_node need one arg: NODE_NAME" ; exit 1; fi
+    NODE=$1
+    exec_on_node ${NODE} "ls -la /dev/${TARGETVD}"
+    if [ $? -eq 0 ]; then
+	return REALTARGETVD=${TARGETVD}
+    else
+	for LETTER in {e..z}; do
+	    #echo "- Testing /dev/vd${LETTER}"
+	    export REALTARGETVD="vd${LETTER}"
+	    exec_on_node ${NODE} "ls -la /dev/vd${LETTER}"
+	    if [ $? -eq 0 ]; then
+		#echo "- Switching target on HA node to vd${LETTER}"
+		return REALTARGETVD="vd${LETTER}"
+		break
+	    #else
+	    #echo "- Trying another letter..."
+	    fi
+	done
+    fi
 }
 
 detach_disk_from_node() {
@@ -103,32 +136,37 @@ detach_disk_from_node() {
 create_drbd_resource() {
     echo "############ START create_drbd_resource"
     echo "- Create /etc/drbd.d/drbd.res file"
+    check_targetvd_on_node ${NODEA} > /tmp/check_targetvd_on_node_${NODEA}
+    REALTARGETVDA=`cat /tmp/check_targetvd_on_node_${NODEA} | tail -1 | awk -F "/dev/" '{print $2}'`
+    check_targetvd_on_node ${NODEB} > /tmp/check_targetvd_on_node_${NODEB}
+    REALTARGETVDB=`cat /tmp/check_targetvd_on_node_${NODEB} | tail -1 | awk -F "/dev/" '{print $2}'`
     exec_on_node ${NODEA} "cat >/etc/drbd.d/drbd.res<<EOF
 resource drbd {
     device ${DRBDDEV};
-    disk /dev/${TARGETVD};
     meta-disk internal;
     on ${NODEA} {
       address ${IPA}:7790;
+      disk /dev/${REALTARGETVDA};
     }
     on ${NODEB} {
       address ${IPB}:7790;
+      disk /dev/${REALTARGETVDB};
     }
-
 EOF"
 }
 
 drbdconf_csync2() {
     echo "############ START drbdconf_csync2"
     echo "- Corosync2 drbd conf"
+    exec_on_node ${NODEA} "perl -pi -e 's|usage-count.*|usage-count no;|' /etc/drbd.d/global_common.conf"
     exec_on_node ${NODEA} "grep /etc/drbd.conf /etc/csync2/csync2.cfg"
     if [ $? -eq 1 ]; then
     	exec_on_node ${NODEA} "perl -pi -e 's|}|\tinclude /etc/drbd.conf;\n\tinclude /etc/drbd.d;\n}|' /et
 c/csync2/csync2.cfg"
-    	exec_on_node ${NODEA} "csync2 -xv"
     else
         echo "- /etc/csync2/csync2.cfg already contains drbd files to sync"
     fi
+    exec_on_node ${NODEA} "csync2 -xv"
 }
 
 finalize_DRBD_setup() {
@@ -150,14 +188,14 @@ finalize_DRBD_setup() {
 }
 
 format_ext3() {
-	echo "############ START format_ext3"
-	exec_on_node ${NODEA} "mkfs.ext3 -F ${DRBDDEV}"
+    echo "############ START format_ext3"
+    exec_on_node ${NODEA} "mkfs.ext3 -F ${DRBDDEV}"
 }
 
 format_ocfs2() {
     # need DLM
-	echo "############ START format_ocfs2"
-	exec_on_node ${NODEA} "mkfs.ocfs2 ${DRBDDEV}"
+    echo "############ START format_ocfs2"
+    exec_on_node ${NODEA} "mkfs.ocfs2 ${DRBDDEV}"
 }
 
 umount_mnttest() {
@@ -187,7 +225,7 @@ check_primary_secondary() {
     echo "- Switch ${NODEA} to secondary"
     exec_on_node ${NODEA} "drbdadm secondary drbd"
     exec_on_node ${NODEB} "drbdadm primary drbd"
-    exec_on_node ${NODEB} "mount /dev/drbd/by-disk/${TARGETVD} ${MNTTEST}"
+    exec_on_node ${NODEB} "mount /dev/drbd0 ${MNTTEST}"
     exec_on_node ${NODEB} "cat ${MNTTEST}/sha1sum"
     exec_on_node ${NODEB} "sha1sum ${MNTTEST}/testing ${MNTTEST}/random"
     echo "- Test pause/resume sync "
@@ -204,6 +242,8 @@ back_to_begining() {
     exec_on_node ${NODEA} "rm -rf ${MNTTEST}"
     exec_on_node ${NODEB} "rm -rf ${MNTTEST}"
     exec_on_node ${NODEB} "drbdadm secondary drbd"
+    exec_on_node ${NODEA} "rm -vf /etc/drbd.d/drbd.res"
+    exec_on_node ${NODEA} "csync2 -xv"
 }
 
 configure_resources() {
@@ -240,6 +280,7 @@ enable_drbd
 create_pool DRBD
 create_vol_drbd
 attach_disk_to_node
+create_drbd_resource
 drbdconf_csync2
 #start_drbd
 finalize_DRBD_setup
@@ -251,10 +292,9 @@ back_to_begining
 stop_drbd
 
 #format_ocfs2
-
 #configure_resources
 
 # restore initial conf
 detach_disk_from_node
 delete_vol_drbd
-
+delete_pool_drbd DRBD
