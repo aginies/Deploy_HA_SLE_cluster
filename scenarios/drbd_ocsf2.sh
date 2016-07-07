@@ -172,8 +172,8 @@ c/csync2/csync2.cfg"
 finalize_DRBD_setup() {
     echo "############ START finalize_DRBD_setup"
     echo "- Initializes the metadata storage"
-    exec_on_node ${NODEA} "drbdadm create-md drbd"
-    exec_on_node ${NODEB} "drbdadm create-md drbd"
+    exec_on_node ${NODEA} "yes yes | drbdadm create-md drbd"
+    exec_on_node ${NODEB} "yes yes | drbdadm create-md drbd"
     echo "- Create the /dev/drbd"
     exec_on_node ${NODEA} "drbdadm up drbd"
     exec_on_node ${NODEB} "drbdadm up drbd"
@@ -218,8 +218,8 @@ check_primary_secondary() {
     exec_on_node ${NODEA} "sha1sum  ${MNTTEST}/testing ${MNTTEST}/random > ${MNTTEST}/sha1sum"
     exec_on_node ${NODEA} "drbdadm status"
     exec_on_node ${NODEA} "drbdadm dstate drbd"
-    echo "- Sleep to get drbd sync (5s)"
-    sleep 5s
+    echo "- Wait to get drbd sync"
+    exec_on_node ${NODEA} "while (drbdadm status | grep Inconsistent); do sleep 5s; done"
     exec_on_node ${NODEA} "drbdadm status"
     exec_on_node ${NODEA} "umount ${MNTTEST}"
     echo "- Switch ${NODEA} to secondary"
@@ -227,7 +227,13 @@ check_primary_secondary() {
     exec_on_node ${NODEB} "drbdadm primary drbd"
     exec_on_node ${NODEB} "mount /dev/drbd0 ${MNTTEST}"
     exec_on_node ${NODEB} "cat ${MNTTEST}/sha1sum"
-    exec_on_node ${NODEB} "sha1sum ${MNTTEST}/testing ${MNTTEST}/random"
+    exec_on_node ${NODEB} "sha1sum ${MNTTEST}/testing ${MNTTEST}/random > /mnt/testing_from_${NODEB}"
+    exec_on_node ${NODEB} "diff -au ${MNTTEST}/sha1sum /mnt/testing_from_${NODEB}"
+    if [ $? -eq 1 ]; then 
+	echo "- ! Warning; Corruption in FILES detected: sha1 are different"
+    else
+	echo "- Same Sha1 from ${NODEA} and ${NODEB}: TEST OK"
+    fi
     echo "- Test pause/resume sync "
     exec_on_node ${NODEB} "drbdadm pause-sync drbd"
     exec_on_node ${NODEB} "dd if=/dev/zero of=${MNTTEST}/testing2 bs=1M count=24"
@@ -242,6 +248,9 @@ back_to_begining() {
     exec_on_node ${NODEA} "rm -rf ${MNTTEST}"
     exec_on_node ${NODEB} "rm -rf ${MNTTEST}"
     exec_on_node ${NODEB} "drbdadm secondary drbd"
+    exec_on_node ${NODEA} "drbdadm down drbd"
+    exec_on_node ${NODEB} "drbdadm down drbd"
+    exec_on_node ${NODEA} "drbdadm disconnect drbd"
     exec_on_node ${NODEA} "rm -vf /etc/drbd.d/drbd.res"
     exec_on_node ${NODEA} "csync2 -xv"
 }
@@ -287,12 +296,13 @@ finalize_DRBD_setup
 format_ext3
 check_primary_secondary
 
+#format_ocfs2
+#configure_resources
+
 # restore before runnning the test
 back_to_begining
 stop_drbd
-
-#format_ocfs2
-#configure_resources
+disable_drbd
 
 # restore initial conf
 detach_disk_from_node
