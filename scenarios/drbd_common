@@ -1,0 +1,120 @@
+#!/bin/sh
+#########################################################
+#
+#
+#########################################################
+## DRBD COMMON
+#########################################################
+
+if [ -f ../functions ] ; then
+    . ../functions
+else
+    echo "! functions file needed! ; Exiting"
+    exit 1
+fi
+check_load_config_file other
+
+# SOME VARS
+DRBDDEV="/dev/drbd0"
+POOLDRBD="DRBD"
+TARGETVD="vdd"
+NODEA="ha1"
+NODEB="ha2"
+MNTTEST="/mnt/test"
+IPA=`grep ${NODEA} /var/lib/libvirt/dnsmasq/${NETWORKNAME}.hostsfile | cut -d , -f 2`
+IPB=`grep ${NODEB} /var/lib/libvirt/dnsmasq/${NETWORKNAME}.hostsfile | cut -d , -f 2`
+
+install_packages() {
+    echo "############ START finstall_packages"
+    pssh -h /etc/hanodes "zypper in -y drbd-kmp-default drbd drbd-utils"
+}
+
+disable_drbd() {
+    echo "############ START disable_drbd"
+    echo "- Disable drbd service on node"
+    exec_on_node ${NODEA} "systemctl disable drbd"
+    exec_on_node ${NODEB} "systemctl disable drbd"
+}
+
+enable_drbd() {
+    echo "############ START enable_drbd"
+    echo "- Enable drbd service on node"
+    exec_on_node ${NODEA} "systemctl enable drbd"
+    exec_on_node ${NODEB} "systemctl enable drbd"
+}
+
+stop_drbd() {
+    echo "############ START stop_drbd"
+    echo "- Stop drbd service on node"
+    exec_on_node ${NODEA} "systemctl stop drbd"
+    exec_on_node ${NODEB} "systemctl stop drbd"
+}
+
+start_drbd() {
+    echo "############ START start_drbd"
+    echo "- Start drbd service on node"
+    exec_on_node ${NODEA} "systemctl start drbd"
+    exec_on_node ${NODEB} "systemctl start drbd"
+}
+
+create_vol_drbd() {
+    echo "############ START create_vol_drbd"
+    echo "- Create volume for DRBD device"
+    virsh vol-create-as --pool ${POOLDRBD} --name ${POOLDRBD}A.qcow2 --format qcow2 --capacity 1G --allocation 1G --prealloc-metadata
+    virsh vol-create-as --pool ${POOLDRBD} --name ${POOLDRBD}B.qcow2 --format qcow2 --capacity 1G --allocation 1G --prealloc-metadata
+    virsh vol-list ${POOLDRBD} --details
+    virsh pool-refresh --pool ${POOLDRBD}
+}
+
+delete_vol_drbd() {
+    echo "############ START delete_vol_drbd"
+    virsh vol-delete --pool ${POOLDRBD} ${POOLDRBD}A.qcow2
+    virsh vol-delete --pool ${POOLDRBD} ${POOLDRBD}B.qcow2
+}
+
+delete_pool_drbd() {
+    if [ $# -ne 1 ]; then echo "- delete_pool_drbd need one arg: POOL_NAME" ; exit 1; fi
+    POOL="$1"
+    echo "############ START delete_pool_drbd"
+    virsh pool-destroy ${POOL}
+    virsh pool-undefine ${POOL}
+    echo "- Delete path to volume"
+    rm -rf ${STORAGEP}/DRBD
+}
+
+attach_disk_to_node() {
+    echo "############ START attach_disk_to_node"
+    echo "- Attach volume to node"
+    virsh attach-disk ${DISTRO}HA1 --live --cache none --type disk ${STORAGEP}/${POOLDRBD}/${POOLDRBD}A.qcow2 --target ${TARGETVD}
+    virsh attach-disk ${DISTRO}HA2 --live --cache none --type disk ${STORAGEP}/${POOLDRBD}/${POOLDRBD}B.qcow2 --target ${TARGETVD}
+}
+
+check_targetvd_on_node() {
+    # workaround as this is not possible to garantee target device on VM guest
+    if [ $# -ne 1 ]; then echo "- check_targetvd_on_node need one arg: NODE_NAME" ; exit 1; fi
+    NODE=$1
+    exec_on_node ${NODE} "ls -la /dev/${TARGETVD}"
+    if [ $? -eq 0 ]; then
+	return REALTARGETVD=${TARGETVD}
+    else
+	for LETTER in {e..z}; do
+	    #echo "- Testing /dev/vd${LETTER}"
+	    export REALTARGETVD="vd${LETTER}"
+	    exec_on_node ${NODE} "ls -la /dev/vd${LETTER}"
+	    if [ $? -eq 0 ]; then
+		#echo "- Switching target on HA node to vd${LETTER}"
+		return REALTARGETVD="vd${LETTER}"
+		break
+	    #else
+	    #echo "- Trying another letter..."
+	    fi
+	done
+    fi
+}
+
+detach_disk_from_node() {
+    echo "############ START detach_disk_from_node"
+    echo "- Detach volume from node"
+    virsh detach-disk ${DISTRO}HA1 ${TARGETVD}
+    virsh detach-disk ${DISTRO}HA2 ${TARGETVD}
+}
