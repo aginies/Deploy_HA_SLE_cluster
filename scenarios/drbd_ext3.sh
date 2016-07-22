@@ -6,8 +6,8 @@
 ## DRBD EXT3
 #########################################################
 
-if [ -f drbd_common ] ; then
-    . drbd_common
+if [ -f "${PWD}/drbd_common" ] ; then
+    . ${PWD}/drbd_common
 else
     echo "! functions file drbd_common needed! ; Exiting"
     exit 1
