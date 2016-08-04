@@ -25,8 +25,8 @@ MNTTEST="/mnt/test"
 IPA=`grep ${NODEA} /var/lib/libvirt/dnsmasq/${NETWORKNAME}.hostsfile | cut -d , -f 2`
 IPB=`grep ${NODEB} /var/lib/libvirt/dnsmasq/${NETWORKNAME}.hostsfile | cut -d , -f 2`
 
-install_packages() {
-    echo "############ START finstall_packages"
+install_packages_drbd() {
+    echo "############ START install_packages_drbd"
     pssh -h /etc/hanodes "zypper in -y drbd-kmp-default drbd drbd-utils"
 }
 

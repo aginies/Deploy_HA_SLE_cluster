@@ -156,12 +156,32 @@ back_to_begining() {
     exec_on_node ${NODEA} "csync2 -xv"
 }
 
-configure_resources() {
-    echo "############ START configure_resources"
-    echo "- dual primary DRBD"
-    exec_on_node ${NODEA} "crm<<EOF
-configure primitive resDRBD ocf:linbit:drbd params drbd_resource=${DRBDRESOURCE} operations \$id='resDRBD-operations op monitor interval='20' role='Master' timeout='20' op monitor interval='30' role='Slave' timeout='20' 
-configure ms msDRBD resDRBD configure meta resource-stickines='100' notify='true' master-max='2' interleave='true'
+create_dlm_resource() {
+	echo "############ START create_dlm_resource"
+    exec_on_node ${NODEA} "crm configure<<EOF
+primitive dlm ocf:pacemaker:controld op monitor interval='60' timeout='60'
+group base-group dlm
+clone base-clone base-group meta interleave=true target-role=Started
+commit
+exit
+EOF"
+}
+
+delete_all_resources() {
+    echo "############ START delete_all_resources"
+    exec_on_node ${NODEA} "crm resource<<EOF
+stop base-clone
+stop base-group
+stop dlm
+status
+EOF"
+    sleep 5;
+    exec_on_node ${NODEA} "crm configure<<EOF
+delete base-clone
+delete base-group
+delete dlm
+commit
+exit
 EOF"
     exec_on_node ${NODEB} "crm status"
 }
@@ -182,7 +202,7 @@ echo " press [ENTER] twice OR Ctrl+C to abort"
 read
 read
 
-install_packages
+install_packages_drbd
 #drbd_ocfs2_cib
 stop_drbd
 umount_mnttest
@@ -192,13 +212,13 @@ create_pool DRBD
 create_vol_name
 attach_disk_to_node
 create_drbd_resource
+create_dlm_resource
 drbdconf_csync2
 #start_drbd
 finalize_DRBD_setup
 format_ocfs2
 
-#check_primary_secondary
-#configure_resources
+check_primary_secondary
 
 # restore before runnning the test
 back_to_begining
@@ -207,5 +227,6 @@ disable_drbd
 
 # restore initial conf
 detach_disk_from_node
+delete_all_resources
 delete_vol_name
 delete_pool_name DRBD

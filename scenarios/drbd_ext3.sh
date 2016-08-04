@@ -147,7 +147,7 @@ echo " press [ENTER] twice OR Ctrl+C to abort"
 read
 read
 
-install_packages
+install_packages_drbd
 stop_drbd
 umount_mnttest
 
