@@ -16,7 +16,8 @@ check_load_config_file other
 
 # SOME VARS
 DRBDDEV="/dev/drbd0"
-POOLDRBD="DRBD"
+# by default DRBD
+POOLNAME="DRBD"
 TARGETVD="vdd"
 NODEA="ha1"
 NODEB="ha2"
@@ -57,25 +58,25 @@ start_drbd() {
     exec_on_node ${NODEB} "systemctl start drbd"
 }
 
-create_vol_drbd() {
-    echo "############ START create_vol_drbd"
+create_vol_name() {
+    echo "############ START create_vol_name"
     echo "- Create volume for DRBD device"
-    virsh vol-create-as --pool ${POOLDRBD} --name ${POOLDRBD}A.qcow2 --format qcow2 --capacity 1G --allocation 1G --prealloc-metadata
-    virsh vol-create-as --pool ${POOLDRBD} --name ${POOLDRBD}B.qcow2 --format qcow2 --capacity 1G --allocation 1G --prealloc-metadata
-    virsh vol-list ${POOLDRBD} --details
-    virsh pool-refresh --pool ${POOLDRBD}
+    virsh vol-create-as --pool ${POOLNAME} --name ${POOLNAME}A.qcow2 --format qcow2 --capacity 1G --allocation 1G --prealloc-metadata
+    virsh vol-create-as --pool ${POOLNAME} --name ${POOLNAME}B.qcow2 --format qcow2 --capacity 1G --allocation 1G --prealloc-metadata
+    virsh vol-list ${POOLNAME} --details
+    virsh pool-refresh --pool ${POOLNAME}
 }
 
-delete_vol_drbd() {
-    echo "############ START delete_vol_drbd"
-    virsh vol-delete --pool ${POOLDRBD} ${POOLDRBD}A.qcow2
-    virsh vol-delete --pool ${POOLDRBD} ${POOLDRBD}B.qcow2
+delete_vol_name() {
+    echo "############ START delete_vol_name"
+    virsh vol-delete --pool ${POOLNAME} ${POOLNAME}A.qcow2
+    virsh vol-delete --pool ${POOLNAME} ${POOLNAME}B.qcow2
 }
 
-delete_pool_drbd() {
-    if [ $# -ne 1 ]; then echo "- delete_pool_drbd need one arg: POOL_NAME" ; exit 1; fi
+delete_pool_name() {
+    if [ $# -ne 1 ]; then echo "- delete_pool_name need one arg: POOL_NAME" ; exit 1; fi
     POOL="$1"
-    echo "############ START delete_pool_drbd"
+    echo "############ START delete_pool_name"
     virsh pool-destroy ${POOL}
     virsh pool-undefine ${POOL}
     echo "- Delete path to volume"
@@ -85,8 +86,8 @@ delete_pool_drbd() {
 attach_disk_to_node() {
     echo "############ START attach_disk_to_node"
     echo "- Attach volume to node"
-    virsh attach-disk ${DISTRO}HA1 --live --cache none --type disk ${STORAGEP}/${POOLDRBD}/${POOLDRBD}A.qcow2 --target ${TARGETVD}
-    virsh attach-disk ${DISTRO}HA2 --live --cache none --type disk ${STORAGEP}/${POOLDRBD}/${POOLDRBD}B.qcow2 --target ${TARGETVD}
+    virsh attach-disk ${DISTRO}HA1 --live --cache none --type disk ${STORAGEP}/${POOLNAME}/${POOLNAME}A.qcow2 --target ${TARGETVD}
+    virsh attach-disk ${DISTRO}HA2 --live --cache none --type disk ${STORAGEP}/${POOLNAME}/${POOLNAME}B.qcow2 --target ${TARGETVD}
 }
 
 check_targetvd_on_node() {
