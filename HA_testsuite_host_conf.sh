@@ -143,7 +143,7 @@ prepare_auto_deploy_image() {
     sleep 1
     perl -pi -e "s/NETWORK/${NETWORK}/g" ${WDIR2}/havm.xml
     perl -pi -e "s/NETWORK/${NETWORK}/g" ${WDIR2}/havm_mini.xml
-    qemu-img create havm_xml.raw -f raw 64K
+    qemu-img create havm_xml.raw -f raw 2M
     mkfs.ext3 havm_xml.raw
     mount havm_xml.raw ${WDIRMOUNT}
     cp -v ${WDIR2}/havm.xml ${WDIRMOUNT}
