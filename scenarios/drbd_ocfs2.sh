@@ -96,7 +96,7 @@ finalize_DRBD_setup() {
 format_ocfs2() {
     # need DLM
     echo "############ START format_ocfs2"
-    exec_on_node ${NODEA} "mkfs.ocfs2 --force --cluster-stack pcmk -L 'VMtesting' --cluster-name drbdo2 ${DRBDDEV}"
+    exec_on_node ${NODEA} "mkfs.ocfs2 --force --cluster-stack pcmk -L 'VMtesting' --cluster-name hacluster ${DRBDDEV}"
 }
 
 umount_mnttest() {
@@ -138,6 +138,10 @@ check_primary_secondary() {
     echo "- Test pause/resume sync "
     exec_on_node ${NODEB} "drbdadm pause-sync drbdo2"
     exec_on_node ${NODEB} "dd if=/dev/zero of=${MNTTEST}/testing2 bs=1M count=24"
+    exec_on_node ${NODEA} "touch ${MNTTEST}/bspl{0001..10001}.c"
+    exec_on_node ${NODEA} "ls ${MNTTEST}/*.c"
+    exec_on_node ${NODEB} "chmod -R 777 ${MNTTEST}/" 
+    exec_on_node ${NODEA} "chmod -R 775 ${MNTTEST}/" 
     exec_on_node ${NODEB} "drbdadm status"
     exec_on_node ${NODEB} "drbdadm resume-sync drbdo2"
     exec_on_node ${NODEB} "drbdadm status"
@@ -175,7 +179,7 @@ stop base-group
 stop dlm
 status
 EOF"
-    sleep 5;
+    sleep 25;
     exec_on_node ${NODEA} "crm configure<<EOF
 delete base-clone
 delete base-group
@@ -196,7 +200,7 @@ EOF"
 echo "############ DRBD / OSCFS2 SCENARIO #############"
 echo "  !! WARNING !! "
 echo "  !! WARNING !! "
-echo " NOT USABLE NOW .... please QUIT or debug :)"
+#echo " NOT USABLE NOW .... please QUIT or debug :)"
 echo
 echo " press [ENTER] twice OR Ctrl+C to abort"
 read
