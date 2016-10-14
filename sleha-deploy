@@ -319,11 +319,17 @@ def mkdirp(d, mode=0777):
     os.makedirs(d, mode=mode)
 
 
-config = Config(['sleha-deploy.ini', os.path.expanduser('~/.sleha-deploy.ini')])
-if config.iso.url.endswith('/'):
-    config.iso.url = config.iso.url[:-1]
-if not os.path.isdir(config.iso.dir):
-    mkdirp(config.iso.dir)
+def mkconfig():
+    config = Config(['sleha-deploy.ini', os.path.expanduser('~/.sleha-deploy.ini')])
+    if config.iso.url.endswith('/'):
+        config.iso.url = config.iso.url[:-1]
+    if not os.path.isdir(config.iso.dir):
+        mkdirp(config.iso.dir)
+    config.user.password = crypt_passwd(config.user.password)
+    return config
+
+
+config = mkconfig()
 
 
 downloads = []
@@ -379,6 +385,8 @@ def config_scenario(scenario):
     """
     Load and add scenario to configuration
     """
+    if scenario is None:
+        error("Scenario is required")
     if not os.path.isfile(scenario):
         scenariof = "scenarios/{}.ini".format(scenario)
         if os.path.isfile(scenariof):
@@ -445,6 +453,12 @@ def cmd_deploy(args):
     #copy_ssh_key()
 
 
+def cmd_config(args):
+    if args.scenario is not None:
+        config_scenario(args.scenario)
+    print config
+
+
 def main():
     global QUIET
     global DEBUG
@@ -468,6 +482,10 @@ def main():
         parser_deploy = subparsers.add_parser('deploy', help="Install all nodes with needed data")
         parser_deploy.add_argument('scenario', help="Scenario to set up")
         parser_deploy.set_defaults(func=cmd_deploy)
+
+        parser_deploy = subparsers.add_parser('config', help="Print config")
+        parser_deploy.add_argument('scenario', help="Scenario to load", nargs='?')
+        parser_deploy.set_defaults(func=cmd_config)
 
         args = parser.parse_args()
         DEBUG = args.debug
