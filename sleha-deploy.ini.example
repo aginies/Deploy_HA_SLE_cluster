@@ -1,5 +1,5 @@
 [iso]
-dir = /home/krig/iso
+dir = /mnt/ISO/SP2devel
 url = http://iso-repository.example.com/
 
 [vm]
@@ -12,7 +12,7 @@ keymap=english-us
 timezone=Europe/Stockholm
 
 [sbd]
-path=/home/krig/vms
+path=/var/lib/libvirt/images
 name=SBD
 disk={path}/{name}/{name}.img
 device=/dev/vdb
