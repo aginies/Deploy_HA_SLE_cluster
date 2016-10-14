@@ -5,6 +5,11 @@
     <add_on_products config:type="list">
       <listentry>
         <media_url><![CDATA[dvd:///?devices=/dev/sr0]]></media_url>
+        <product>sle-ha-geo</product>
+        <product_dir>/</product_dir>
+      </listentry>
+      <listentry>
+        <media_url><![CDATA[dvd:///?devices=/dev/sr1]]></media_url>
         <product>sle-ha</product>
         <product_dir>/</product_dir>
       </listentry>
@@ -59,7 +64,7 @@
     <image_installation config:type="boolean">false</image_installation>
   </deploy_image>
   <keyboard>
-    <keymap>french</keymap>
+    <keymap>english-us</keymap>
   </keyboard>
   <login_settings/>
   <networking>
@@ -147,7 +152,7 @@
   </services-manager>
   <timezone>
     <hwclock>UTC</hwclock>
-    <timezone>Europe/Paris</timezone>
+    <timezone>Europe/Stockholm</timezone>
   </timezone>
   <user_defaults>
     <expire/>
@@ -163,9 +168,9 @@
   <users config:type="list">
     <user>
       <encrypted config:type="boolean">true</encrypted>
-      <fullname>aginies</fullname>
+      <fullname>krig</fullname>
       <gid>100</gid>
-      <home>/home/aginies</home>
+      <home>/home/krig</home>
       <password_settings>
         <expire/>
         <flag/>
@@ -176,8 +181,8 @@
       </password_settings>
       <shell>/bin/bash</shell>
       <uid>1000</uid>
-      <user_password>$6$xY17NdMS0M9R$d3F8dm3B/.T4jhi3n/XWNhyRO9I6HthxdBBMxZ9LCIuKtI3wSVavBW64G86tOAAc0CklvsPViyT9lOuaHxc5L0</user_password>
-      <username>aginies</username>
+      <user_password>$6$dVLJkcT9$shUUC7XtvTtziZFK0hPGEWArVzVLUSq1dKE4ur6/DfEivgLQcT2RVbKBANpKdWEGUctS2JTCXHRfXdYf5z.7W/</user_password>
+      <username>krig</username>
     </user>
     <user>
       <encrypted config:type="boolean">true</encrypted>
@@ -194,7 +199,7 @@
       </password_settings>
       <shell>/bin/bash</shell>
       <uid>0</uid>
-      <user_password>$6$Wa9BNOQh5cjJ$0G99sgb1WtqYaCZulBBkPzHrmEj49zumisslpcitXmasNeFj63Yl97w.ODcxhNWix.XWYhbf9BLsnJjNZOdO8/</user_password>
+      <user_password>$6$dVLJkcT9$shUUC7XtvTtziZFK0hPGEWArVzVLUSq1dKE4ur6/DfEivgLQcT2RVbKBANpKdWEGUctS2JTCXHRfXdYf5z.7W/</user_password>
       <username>root</username>
     </user>
 </users>
@@ -211,6 +216,7 @@
       <package>autoyast2</package>
       <package>ntp</package>
       <package>patterns-ha-ha_sles</package>
+      <package>patterns-ha-ha_geo</package>
     </packages>
 </software>
  <host>
@@ -237,6 +243,12 @@
         <host_address>NETWORK.104</host_address>
         <names config:type="list">
           <name>ha4.testing.com ha4</name>
+        </names>
+      </hosts_entry>
+      <hosts_entry>
+        <host_address>NETWORK.105</host_address>
+        <names config:type="list">
+          <name>ha5.testing.com ha5</name>
         </names>
       </hosts_entry>
     </hosts>

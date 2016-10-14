@@ -36,7 +36,7 @@ ssh_root_key() {
     ssh-keygen -t rsa -f ~/.ssh/${IDRSAHA} -N ""
     echo "- Create /root/.ssh/config for HA nodes access"
     cat > /root/.ssh/config<<EOF
-host ha1 ha2 ha3 ha4
+host ha1 ha2 ha3 ha4 ha5
 IdentityFile /root/.ssh/${IDRSAHA}
 EOF
 }
@@ -53,6 +53,7 @@ ha1
 ha2
 ha3
 ha4
+ha5
 EOF
 }
 
@@ -67,6 +68,7 @@ ${NETWORK}.101  ha1.testing.com ha1
 ${NETWORK}.102  ha2.testing.com ha2
 ${NETWORK}.103  ha3.testing.com ha3
 ${NETWORK}.104  ha4.testing.com ha4
+${NETWORK}.105  ha5.testing.com ha5
 EOF
     else
         echo "- /etc/hosts already ok"
@@ -93,6 +95,7 @@ prepare_virtual_HAnetwork() {
       <host mac="52:54:00:c7:92:db" name="ha2.testing.com" ip="${NETWORK}.102" />
       <host mac="52:54:00:c7:92:dc" name="ha3.testing.com" ip="${NETWORK}.103" />
       <host mac="52:54:00:c7:92:dd" name="ha4.testing.com" ip="${NETWORK}.104" />
+      <host mac="52:54:00:c7:92:de" name="ha5.testing.com" ip="${NETWORK}.105" />
     </dhcp>
   </ip>
 </network>

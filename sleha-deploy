@@ -1,0 +1,146 @@
+#!/usr/bin/python
+import sys
+import os
+import time
+import argparse
+from ConfigParser import SafeConfigParser
+from StringIO import StringIO
+import subprocess
+import requests
+from lxml import etree
+
+
+def get_variants(baseurl):
+    r = requests.get(baseurl)
+    if r.status_code == 200:
+        parser = etree.HTMLParser()
+        tree = etree.parse(StringIO(r.text), parser)
+
+        def filter_path(p):
+            if not p.startswith('SLE-') and not p.startswith('openSUSE-'):
+                return False
+            if any(p.endswith('{}/'.format(x)) for x in ('BACKUP', 'Ports', 'UNTESTED', '.old')):
+                return False
+            if not p.endswith('/'):
+                return False
+            return True
+        return [p[:-1] for p in tree.xpath('//a/@href') if filter_path(p)]
+    raise ValueError("Failed to get {}: Status code {}".format(baseurl, r.status_code))
+
+
+def get_isos(baseurl, variant):
+    r = requests.get("{}/{}/".format(baseurl, variant))
+    if r.status_code == 200:
+        parser = etree.HTMLParser()
+        tree = etree.parse(StringIO(r.text), parser)
+
+        def filter_path(p):
+            return ".iso" in p
+        return [p for p in tree.xpath('//a/@href') if filter_path(p)]
+
+    raise ValueError("Failed to get {}/{}/: Status code {}".format(baseurl, variant, r.status_code))
+
+
+class Config(object):
+    def __init__(self):
+        cfg = SafeConfigParser()
+        cfg.read(['sleha-deploy.ini', os.path.expanduser('~/.sleha-deploy.ini')])
+
+        class Section(object):
+            def __init__(self, items):
+                self.__dict__.update(items)
+
+            def __repr__(self):
+                return str(self.__dict__)
+
+        for section in cfg.sections():
+            setattr(self, section, Section(cfg.items(section)))
+
+    def __repr__(self):
+        return str(self.__dict__)
+
+
+def mkdirp(d, mode=0777):
+    if os.path.isdir(d):
+        return True
+    os.makedirs(d, mode=mode)
+
+
+config = Config()
+if config.common.isourl.endswith('/'):
+    config.common.isourl = config.common.isourl[:-1]
+if not os.path.isdir(config.common.isodir):
+    mkdirp(config.common.isodir)
+
+
+downloads = []
+
+
+def start_download(url, outname):
+    proc = subprocess.Popen(["curl", "-s", "-S", "--fail", "-o", outname, url])
+    downloads.append(proc)
+
+
+def wait_for_downloads():
+    while True:
+        done = []
+        for dl in downloads:
+            if dl.poll() is not None:
+                done.append(dl)
+        for dl in done:
+            sys.stdout.write('\n')
+            print "Download complete: (rc = {})".format(dl.returncode)
+            downloads.remove(dl)
+        if len(downloads) == 0:
+            print "All downloads complete."
+            return
+        if len(done) != 0:
+            sys.stdout.write('\n')
+        time.sleep(2)
+        sys.stdout.write('.')
+        sys.stdout.flush()
+
+
+def cmd_iso(args):
+    if args.variant is None:
+        baseurl = config.common.isourl
+        variants = get_variants(baseurl)
+        print "\n".join(variants)
+        return
+
+    if args.iso is None:
+        baseurl = config.common.isourl
+        isos = get_isos(baseurl, args.variant)
+        print '\n'.join(isos)
+        return
+
+    baseurl = config.common.isourl
+    variant = args.variant
+    iso = args.iso
+
+    if os.path.isfile(os.path.join(config.common.isodir, iso)):
+        raise ValueError("{} already exists in {}".format(iso, config.common.isodir))
+
+    url = '{}/{}/{}'.format(baseurl, variant, iso)
+    start_download(url, os.path.join(config.common.isodir, iso))
+
+
+def main():
+    try:
+        parser = argparse.ArgumentParser(description='Tools for setting up a test cluster for SLE HA')
+        subparsers = parser.add_subparsers()
+        parser_iso = subparsers.add_parser('iso', help='List available variants and download ISO files for variants'.format(config.common.isourl))
+        parser_iso.add_argument('variant', help="Name of variant", nargs='?')
+        parser_iso.add_argument('iso', help="ISO file name", nargs='?')
+        parser_iso.set_defaults(func=cmd_iso)
+        args = parser.parse_args()
+        args.func(args)
+        wait_for_downloads()
+    except Exception as e:
+        sys.stderr.write("ERROR: ")
+        sys.stderr.write(str(e))
+        sys.stderr.write('\n')
+        sys.exit(1)
+
+if __name__ == "__main__":
+    main()

@@ -18,6 +18,7 @@ LIBVIRTPOOL="hapool"
 DISKHAVM="${STORAGEP}/havm_xml.raw"
 EXTRAARGS="autoyast=device://vdc/havm.xml"
 
+if [ ! -f ${GEOCDROM} ]; then echo "! ${GEOCDROM} can not be found, needed for installation! fix this in ${CONF}. Exiting!" ; exit 1; fi
 if [ ! -f ${HACDROM} ]; then echo "! ${HACDROM} can not be found, needed for installation! fix this in ${CONF}. Exiting!" ; exit 1; fi
 if [ ! -f ${SLECDROM} ]; then echo "! ${SLECDROM} can not be found, needed for installation! fix this in ${CONF}. Exiting!" ; exit 1; fi
 
@@ -72,6 +73,7 @@ install_vm() {
 	   --disk path=${VMDISK},format=qcow2,bus=virtio,cache=none \
 	   --disk path=${SBDDISK},bus=virtio \
 	   --disk path=${DISKHAVM},bus=virtio \
+	   --disk path=${GEOCDROM},device=cdrom \
 	   --disk path=${HACDROM},device=cdrom \
 	   --disk path=${SLECDROM},device=cdrom \
 	   --location ${SLECDROM} \
@@ -101,7 +103,8 @@ copy_ssh_key() {
 ssh-copy-id -f -i /root/.ssh/${IDRSAHA}.pub -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no ha1
 ssh-copy-id -f -i /root/.ssh/${IDRSAHA}.pub -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no ha2
 ssh-copy-id -f -i /root/.ssh/${IDRSAHA}.pub -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no ha3
-ssh-copy-id -f -i /root/.ssh/${IDRSAHA}.pub -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no ha4"
+ssh-copy-id -f -i /root/.ssh/${IDRSAHA}.pub -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no ha4
+ssh-copy-id -f -i /root/.ssh/${IDRSAHA}.pub -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no ha5"
 echo 
 echo "- Clean up your /root/.ssh/known_hosts from previous config (dirty way below)
 rm -vf /root/.ssh/known_hosts"
@@ -149,7 +152,13 @@ MAC="52:54:00:c7:92:dd"
 VMDISK="${STORAGEP}/${LIBVIRTPOOL}/${NAME}.qcow2"
 install_vm
 
-# Check VM HA1, HA2, HA3, HA4
+# Install HA5 VM
+NAME="${DISTRO}HA5"
+MAC="52:54:00:c7:92:de"
+VMDISK="${STORAGEP}/${LIBVIRTPOOL}/${NAME}.qcow2"
+install_vm
+
+# Check VM HA1, HA2, HA3, HA4, HA5
 virsh list --all
 
 # Get IP address

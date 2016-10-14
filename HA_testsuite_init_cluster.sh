@@ -73,6 +73,7 @@ copy_ssh_key_on_nodes() {
     scp_on_node "/tmp/id_rsa*" "ha2:/root/.ssh/"
     scp_on_node "/tmp/id_rsa*" "ha3:/root/.ssh/"
     scp_on_node "/tmp/id_rsa*" "ha4:/root/.ssh/"
+    scp_on_node "/tmp/id_rsa*" "ha5:/root/.ssh/"
     rm -vf /tmp/id_rsa*
     exec_on_node ha2 "grep 'Cluster Internal' /root/.ssh/authorized_keys || cat /tmp/id_rsa.pub >> /root/.ssh/authorized_keys"
     exec_on_node ha3 "grep 'Cluster Internal' /root/.ssh/authorized_keys || cat /tmp/id_rsa.pub >> /root/.ssh/authorized_keys"
@@ -82,10 +83,11 @@ copy_ssh_key_on_nodes() {
 # ADD all other NODES (from HOST)
 add_remove_node_test() {
     echo "############ START other HA nodes join the cluster"
-    echo "- Add Node HA2 HA3 and HA4 to cluster"
+    echo "- Add Node HA2 HA3, HA4, HA5 to cluster"
     exec_on_node ha2 "ha-cluster-join -y -c ${NETWORK}.101"
     exec_on_node ha3 "ha-cluster-join -y -c ${NETWORK}.101"
     exec_on_node ha4 "ha-cluster-join -y -c ${NETWORK}.101"
+    exec_on_node ha5 "ha-cluster-join -y -c ${NETWORK}.101"
     echo "############ START remove node HA3 from cluster"
     echo "- Remove HA3 from cluster (from node HA1)"
     exec_on_node ha1 "ha-cluster-remove -c ${NETWORK}.103"
