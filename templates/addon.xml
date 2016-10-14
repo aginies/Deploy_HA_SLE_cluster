@@ -1,0 +1,5 @@
+<listentry>
+  <media_url><![CDATA[dvd:///?devices=$device]]></media_url>
+  <product>$name</product>
+  <product_dir>/</product_dir>
+</listentry>

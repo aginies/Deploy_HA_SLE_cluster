@@ -1,0 +1,7 @@
+<hosts_entry>
+  <host_address>$address</host_address>
+  <names config:type="list">
+    <name>$fqdn $name</name>
+  </names>
+</hosts_entry>
+

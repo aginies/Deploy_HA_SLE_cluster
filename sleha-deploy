@@ -10,6 +10,17 @@ import requests
 from lxml import etree
 
 
+def mksalt():
+    import string
+    from random import choice
+    _saltchars = string.ascii_letters + string.digits + './'
+    return '$6$' + ''.join(choice(_saltchars) for _ in range(16))
+
+
+def crypt_passwd(passwd):
+    import crypt
+    return crypt.crypt(passwd, mksalt())
+
 def get_variants(baseurl):
     r = requests.get(baseurl)
     if r.status_code == 200:
@@ -67,10 +78,10 @@ def mkdirp(d, mode=0777):
 
 
 config = Config()
-if config.common.isourl.endswith('/'):
-    config.common.isourl = config.common.isourl[:-1]
-if not os.path.isdir(config.common.isodir):
-    mkdirp(config.common.isodir)
+if config.iso.url.endswith('/'):
+    config.iso.url = config.iso.url[:-1]
+if not os.path.isdir(config.iso.dir):
+    mkdirp(config.iso.dir)
 
 
 downloads = []
@@ -103,36 +114,72 @@ def wait_for_downloads():
 
 def cmd_iso(args):
     if args.variant is None:
-        baseurl = config.common.isourl
+        baseurl = config.iso.url
         variants = get_variants(baseurl)
         print "\n".join(variants)
         return
 
     if args.iso is None:
-        baseurl = config.common.isourl
+        baseurl = config.iso.url
         isos = get_isos(baseurl, args.variant)
         print '\n'.join(isos)
         return
 
-    baseurl = config.common.isourl
+    baseurl = config.iso.url
     variant = args.variant
     iso = args.iso
 
-    if os.path.isfile(os.path.join(config.common.isodir, iso)):
-        raise ValueError("{} already exists in {}".format(iso, config.common.isodir))
+    if os.path.isfile(os.path.join(config.iso.dir, iso)):
+        raise ValueError("{} already exists in {}".format(iso, config.iso.dir))
 
     url = '{}/{}/{}'.format(baseurl, variant, iso)
-    start_download(url, os.path.join(config.common.isodir, iso))
+    start_download(url, os.path.join(config.iso.dir, iso))
 
+
+def cmd_hostcfg(args):
+    """
+    Configure the host:
+    * Install virtualization tools and restart libvirtd
+    * Generate a SSH root key, and prepare a config to connect to HA nodes
+    * Pre-configure pssh (generate /etc/hanodes)
+    * Add HA nodes in /etc/hosts
+    * Create a virtual network: DHCP with host/mac/name/ip for HA nodes
+    * Create an SBD pool
+    * Prepare an image (raw) containing autoyast file
+    """
+
+def cmd_deploy(args):
+    """
+    Install all nodes with needed data
+    * Clean up all previous data: VM definition, VM images
+    * Create a hapool to store VM images
+    * Install all VMs using screen
+    * Display information on how to copy host root key to HA nodes (VM)
+    """
+    def ssh_root_key():
+        status("Generate ~/.ssh/{} without password".format(config.user.sshkey))
+        invoke(['ssh-keygen', '-t', 'rsa', '-f', '~/.ssh/' + config.user.sshkey, '-N', ''])
+        status("Create /root/.ssh/config for HA nodes access")
+        str2file("""Host ha1 ha2 ha3 ha4 ha5
+IdentityFile /root/.ssh/{}
+""".format(config.user.sshkey), "/root/.ssh/config")
 
 def main():
     try:
         parser = argparse.ArgumentParser(description='Tools for setting up a test cluster for SLE HA')
         subparsers = parser.add_subparsers()
-        parser_iso = subparsers.add_parser('iso', help='List available variants and download ISO files for variants'.format(config.common.isourl))
+
+        parser_iso = subparsers.add_parser('iso', help='List available variants and download ISO files for variants'.format(config.iso.url))
         parser_iso.add_argument('variant', help="Name of variant", nargs='?')
         parser_iso.add_argument('iso', help="ISO file name", nargs='?')
         parser_iso.set_defaults(func=cmd_iso)
+
+        parser_hostcfg = subparsers.add_parser('hostcfg', help="Configure the host")
+        parser_hostcfg.set_defaults(func=cmd_hostcfg)
+
+        parser_deploy = subparsers.add_parser('deploy', help="Install all nodes with needed data")
+        parser_deploy.set_defaults(func=cmd_deploy)
+
         args = parser.parse_args()
         args.func(args)
         wait_for_downloads()
@@ -144,3 +191,16 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
+# templates/vm.xml
+# $addons - for each addon
+# $hosts - for each vm in scenario, apply hosts_entry.xml template
+# $packages - for each package in scenario:common:packages, apply package.xml template
+# ${keymap}
+# ${networkname}
+# ${timezone}
+# ${username}
+# ${userpass} - mkpasswd encrypted
+# to generate: crypt_passwd
+
