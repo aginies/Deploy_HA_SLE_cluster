@@ -3,11 +3,201 @@ import sys
 import os
 import time
 import argparse
+from contextlib import contextmanager
 from ConfigParser import SafeConfigParser
 from StringIO import StringIO
 import subprocess
 import requests
 from lxml import etree
+
+LOG_FILE = "sleha-deploy.log"
+DEBUG = False
+QUIET = False
+
+
+def die(*args):
+    """
+    Broken out as special case for log() failure.  Ordinarily you
+    should just use error() to terminate.
+    """
+    if DEBUG:
+        import pdb
+        pdb.set_trace()
+    raise ValueError(" ".join([str(arg) for arg in args]))
+
+
+def error(*args):
+    log("ERROR: {}".format(" ".join([str(arg) for arg in args])))
+    die(*args)
+
+
+def warn(*args):
+    log("WARNING: {}".format(" ".join([str(arg) for arg in args])))
+    print " ".join([str(arg) for arg in args])
+
+
+def log(*args):
+    try:
+        with open(LOG_FILE, "a") as logfile:
+            logfile.write(" ".join([str(arg) for arg in args]) + "\n")
+    except IOError:
+        die("Can't append to {} - aborting".format(LOG_FILE))
+
+
+def getuser():
+    "Returns the name of the current user"
+    import getpass
+    return getpass.getuser()
+
+
+def gethostname():
+    return os.uname()[1]
+
+
+def get_stdout(cmd, input_s=None, stderr_on=True, shell=True):
+    '''
+    Run a cmd, return stdout output.
+    Optional input string "input_s".
+    stderr_on controls whether to show output which comes on stderr.
+    '''
+    if stderr_on:
+        stderr = None
+    else:
+        stderr = subprocess.PIPE
+    proc = subprocess.Popen(cmd,
+                            shell=shell,
+                            stdin=subprocess.PIPE,
+                            stdout=subprocess.PIPE,
+                            stderr=stderr)
+    stdout_data, stderr_data = proc.communicate(input_s)
+    return proc.returncode, stdout_data.strip()
+
+
+def get_stdout_stderr(cmd, input_s=None, shell=True):
+    '''
+    Run a cmd, return (rc, stdout, stderr)
+    '''
+    proc = subprocess.Popen(cmd,
+                            shell=shell,
+                            stdin=input_s and subprocess.PIPE or None,
+                            stdout=subprocess.PIPE,
+                            stderr=subprocess.PIPE)
+    stdout_data, stderr_data = proc.communicate(input_s)
+    return proc.returncode, stdout_data.strip(), stderr_data.strip()
+
+
+def invoke(*args):
+    """
+    Log command execution to log file.
+    Log output from command to log file.
+    Return returncode == 0
+    """
+    log("+ " + " ".join(args))
+    rc, stdout, stderr = get_stdout_stderr(" ".join(args))
+    if stdout:
+        log(stdout)
+    if stderr:
+        log(stderr)
+    return rc == 0
+
+
+def status(msg):
+    log("# " + msg)
+    if not QUIET:
+        print "  {}".format(msg)
+
+
+def status_long(msg):
+    log("# {}...".format(msg))
+    if not QUIET:
+        sys.stdout.write("  {}...".format(msg))
+        sys.stdout.flush()
+
+
+def status_progress():
+    if not QUIET:
+        sys.stdout.write(".")
+        sys.stdout.flush()
+
+
+def status_done():
+    log("# done")
+    if not QUIET:
+        print "done"
+
+
+@contextmanager
+def create_tempfile(suffix='', dir=None):
+    """ Context for temporary file.
+
+    Will find a free temporary filename upon entering
+    and will try to delete the file on leaving, even in case of an exception.
+
+    Parameters
+    ----------
+    suffix : string
+        optional file suffix
+    dir : string
+        optional directory to save temporary file in
+
+    (from http://stackoverflow.com/a/29491523)
+    """
+    import tempfile
+    tf = tempfile.NamedTemporaryFile(delete=False, suffix=suffix, dir=dir)
+    tf.file.close()
+    try:
+        yield tf.name
+    finally:
+        try:
+            os.remove(tf.name)
+        except OSError as e:
+            if e.errno == 2:
+                pass
+            else:
+                raise
+
+
+@contextmanager
+def open_atomic(filepath, mode="r", buffering=-1, fsync=False):
+    """ Open temporary file object that atomically moves to destination upon
+    exiting.
+
+    Allows reading and writing to and from the same filename.
+
+    The file will not be moved to destination in case of an exception.
+
+    Parameters
+    ----------
+    filepath : string
+        the file path to be opened
+    fsync : bool
+        whether to force write the file to disk
+
+    (from http://stackoverflow.com/a/29491523)
+    """
+
+    with create_tempfile(dir=os.path.dirname(os.path.abspath(filepath))) as tmppath:
+        with open(tmppath, mode, buffering) as file:
+            try:
+                yield file
+            finally:
+                if fsync:
+                    file.flush()
+                    os.fsync(file.fileno())
+        os.rename(tmppath, filepath)
+
+
+def str2file(s, fname):
+    '''
+    Write a string to a file.
+    '''
+    try:
+        with open_atomic(fname, 'w') as dst:
+            dst.write(s)
+    except IOError, msg:
+        common_err(msg)
+        return False
+    return True
 
 
 def mksalt():
@@ -20,6 +210,7 @@ def mksalt():
 def crypt_passwd(passwd):
     import crypt
     return crypt.crypt(passwd, mksalt())
+
 
 def get_variants(baseurl):
     r = requests.get(baseurl)
@@ -52,23 +243,74 @@ def get_isos(baseurl, variant):
     raise ValueError("Failed to get {}/{}/: Status code {}".format(baseurl, variant, r.status_code))
 
 
-class Config(object):
-    def __init__(self):
-        cfg = SafeConfigParser()
-        cfg.read(['sleha-deploy.ini', os.path.expanduser('~/.sleha-deploy.ini')])
-
-        class Section(object):
-            def __init__(self, items):
-                self.__dict__.update(items)
-
-            def __repr__(self):
-                return str(self.__dict__)
-
-        for section in cfg.sections():
-            setattr(self, section, Section(cfg.items(section)))
+class Section(object):
+    def __init__(self, items, name=None):
+        if name is not None:
+            self.__dict__["name"] = name
+        self.__dict__.update(items)
 
     def __repr__(self):
         return str(self.__dict__)
+
+
+class Config(object):
+    def __init__(self, fns, root=None):
+        cfg = SafeConfigParser()
+        cfg.read(fns)
+        if root is None:
+            self.__dict__["scenario"] = None
+
+        for section in cfg.sections():
+            if ':' in section:
+                lst, name = section.split(':', 1)
+                if not hasattr(self, lst):
+                    setattr(self, lst, [])
+                getattr(self, lst).append(Section(cfg.items(section), name=name))
+            else:
+                setattr(self, section, Section(cfg.items(section)))
+
+        def resolve_section(s, env):
+            for k, v in s.__dict__.iteritems():
+                s.__dict__[k] = v.format(**env)
+
+        def mkenv(s, is_common=False):
+            env = {}
+            if root:
+                env["config"] = root
+            if "common" in cfg.sections():
+                for k, v in self.common.__dict__.iteritems():
+                    env[k] = v
+            if not is_common:
+                for k, v in s.__dict__.iteritems():
+                    env[k] = v
+            return env
+
+        if "common" in cfg.sections():
+            resolve_section(self.common, mkenv(self.common, is_common=True))
+
+        lists = []
+        for section in cfg.sections():
+            if ':' in section:
+                lst, name = section.split(':', 1)
+                if getattr(self, lst) not in lists:
+                    lists.append(getattr(self, lst))
+            else:
+                s = getattr(self, section)
+                resolve_section(s, mkenv(s))
+        for l in lists:
+            for s in l:
+                resolve_section(s, mkenv(s))
+
+    def __repr__(self):
+        return str(self.__dict__)
+
+    def __str__(self):
+        import json
+
+        class MyEncoder(json.JSONEncoder):
+            def default(self, o):
+                return o.__dict__
+        return json.dumps(config, sort_keys=True, indent=2, cls=MyEncoder)
 
 
 def mkdirp(d, mode=0777):
@@ -77,7 +319,7 @@ def mkdirp(d, mode=0777):
     os.makedirs(d, mode=mode)
 
 
-config = Config()
+config = Config(['sleha-deploy.ini', os.path.expanduser('~/.sleha-deploy.ini')])
 if config.iso.url.endswith('/'):
     config.iso.url = config.iso.url[:-1]
 if not os.path.isdir(config.iso.dir):
@@ -88,6 +330,7 @@ downloads = []
 
 
 def start_download(url, outname):
+    status_long("{} -> {}".format(url, outname))
     proc = subprocess.Popen(["curl", "-s", "-S", "--fail", "-o", outname, url])
     downloads.append(proc)
 
@@ -99,17 +342,13 @@ def wait_for_downloads():
             if dl.poll() is not None:
                 done.append(dl)
         for dl in done:
-            sys.stdout.write('\n')
-            print "Download complete: (rc = {})".format(dl.returncode)
+            status_done()
+            status("Download complete: (rc = {})".format(dl.returncode))
             downloads.remove(dl)
         if len(downloads) == 0:
-            print "All downloads complete."
             return
-        if len(done) != 0:
-            sys.stdout.write('\n')
         time.sleep(2)
-        sys.stdout.write('.')
-        sys.stdout.flush()
+        status_progress()
 
 
 def cmd_iso(args):
@@ -130,11 +369,24 @@ def cmd_iso(args):
     iso = args.iso
 
     if os.path.isfile(os.path.join(config.iso.dir, iso)):
-        raise ValueError("{} already exists in {}".format(iso, config.iso.dir))
+        error("{} already exists in {}".format(iso, config.iso.dir))
 
     url = '{}/{}/{}'.format(baseurl, variant, iso)
     start_download(url, os.path.join(config.iso.dir, iso))
 
+
+def config_scenario(scenario):
+    """
+    Load and add scenario to configuration
+    """
+    if not os.path.isfile(scenario):
+        scenariof = "scenarios/{}.ini".format(scenario)
+        if os.path.isfile(scenariof):
+            scenario = scenariof
+        else:
+            error("Unknown scenario: {} ({})".format(scenario, scenariof))
+
+    config.scenario = Config([scenario], root=config)
 
 def cmd_hostcfg(args):
     """
@@ -147,6 +399,25 @@ def cmd_hostcfg(args):
     * Create an SBD pool
     * Prepare an image (raw) containing autoyast file
     """
+    def ssh_root_key():
+        status("Generate ~/.ssh/{} without password".format(config.user.sshkey))
+        invoke(['ssh-keygen', '-t', 'rsa', '-f', '~/.ssh/' + config.user.sshkey, '-N', ''])
+        status("Create /root/.ssh/config for HA nodes access")
+        str2file("""Host ha1 ha2 ha3 ha4 ha5
+IdentityFile /root/.ssh/{}
+""".format(config.user.sshkey), "/root/.ssh/config")
+
+    config_scenario(args.scenario)
+    #print config
+    #ssh_root_key()
+    #install_virtualization_stack()
+    #prepare_remote_pssh()
+    #prepare_etc_hosts()
+    #prepare_virtual_HAnetwork()
+    #prepare_SBD_pool()
+    #prepare_auto_deploy_image()
+    #check_host_config()
+
 
 def cmd_deploy(args):
     """
@@ -156,17 +427,33 @@ def cmd_deploy(args):
     * Install all VMs using screen
     * Display information on how to copy host root key to HA nodes (VM)
     """
-    def ssh_root_key():
-        status("Generate ~/.ssh/{} without password".format(config.user.sshkey))
-        invoke(['ssh-keygen', '-t', 'rsa', '-f', '~/.ssh/' + config.user.sshkey, '-N', ''])
-        status("Create /root/.ssh/config for HA nodes access")
-        str2file("""Host ha1 ha2 ha3 ha4 ha5
-IdentityFile /root/.ssh/{}
-""".format(config.user.sshkey), "/root/.ssh/config")
+    config_scenario(args.scenario)
+    #cleanup_vm()
+    #create_pool()
+    #check_before_install()
+    #install_vms()
+    # check vms
+    _, outp = get_stdout("virsh list --all")
+    print outp
+    # get IP addresses
+    _, outp = get_stdout("virsh net-dhcp-leases {}".format(config.scenario.common.networkname))
+    print outp
+    # list installations in progress
+    _, outp = get_stdout("screen -list")
+    print outp
+
+    #copy_ssh_key()
+
 
 def main():
+    global QUIET
+    global DEBUG
     try:
         parser = argparse.ArgumentParser(description='Tools for setting up a test cluster for SLE HA')
+
+        parser.add_argument('-q', '--quiet', help="Minimal output", action="store_true")
+        parser.add_argument('-d', '--debug', help="Halt in debugger on error", action="store_true")
+
         subparsers = parser.add_subparsers()
 
         parser_iso = subparsers.add_parser('iso', help='List available variants and download ISO files for variants'.format(config.iso.url))
@@ -175,15 +462,22 @@ def main():
         parser_iso.set_defaults(func=cmd_iso)
 
         parser_hostcfg = subparsers.add_parser('hostcfg', help="Configure the host")
+        parser_hostcfg.add_argument('scenario', help="Scenario to set up")
         parser_hostcfg.set_defaults(func=cmd_hostcfg)
 
         parser_deploy = subparsers.add_parser('deploy', help="Install all nodes with needed data")
+        parser_deploy.add_argument('scenario', help="Scenario to set up")
         parser_deploy.set_defaults(func=cmd_deploy)
 
         args = parser.parse_args()
+        DEBUG = args.debug
+        QUIET = args.quiet
         args.func(args)
         wait_for_downloads()
     except Exception as e:
+        if DEBUG:
+            import pdb
+            pdb.set_trace()
         sys.stderr.write("ERROR: ")
         sys.stderr.write(str(e))
         sys.stderr.write('\n')
@@ -203,4 +497,3 @@ if __name__ == "__main__":
 # ${username}
 # ${userpass} - mkpasswd encrypted
 # to generate: crypt_passwd
-
