@@ -530,7 +530,7 @@ def generate_vm_template(outputdir):
     t_package = open("templates/package.xml").read()
     t_hosts_entry = open("templates/hosts_entry.xml").read()
 
-    addons = "".join(t_addon.format(**a.__dict__) for a in config.scenario.addon)
+    addons = "".join(t_addon.format(**a.__dict__) for a in config.scenario.addon if getattr(a, "base", "no") != "yes")
     packages = "".join(t_package.format(name=pkg) for pkg in config.scenario.common.packages.split())
     hosts = "".join(t_hosts_entry.format(**vm.__dict__) for vm in config.scenario.vm)
     txt = t_vm.format(
@@ -756,7 +756,10 @@ def main():
     global DEBUG
     global DOWNLOAD
     try:
-        parser = argparse.ArgumentParser(description='''Tools for setting up a test cluster for SLE HA. Configure your scenarios using the sleha-deploy.ini and scenario files, run configure-host to prepare SSH keys, libvirt and the hypervisor, and then run deploy to create the virtual machines.''')
+        parser = argparse.ArgumentParser(description='''Tools for setting up a test cluster for SLE HA.
+        Configure your scenarios using the sleha-deploy.ini and scenario files,
+        run configure-host to prepare SSH keys, libvirt and the hypervisor,
+        and then run deploy to create the virtual machines.''')
 
         parser.add_argument('-q', '--quiet', help="Minimal output", action="store_true")
         parser.add_argument('-x', '--debug', help="Halt in debugger on error", action="store_true")
