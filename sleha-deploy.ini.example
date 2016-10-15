@@ -1,6 +1,6 @@
 [iso]
-dir = /mnt/ISO/SP2devel
-url = http://iso-repository.example.com/
+path=/mnt/ISO/SP2devel
+url=http://download.opensuse.org/distribution/leap/42.2/iso/
 
 [vm]
 hypervisor=kvm
@@ -10,15 +10,18 @@ ram=2048
 imagesize=8G
 keymap=english-us
 timezone=Europe/Stockholm
+libvirtpool=hapool
+autoyastfile=havm.xml
+extraargs=autoyast=device://vdc/{autoyastfile}
 
-[sbd]
+[storage]
 path=/var/lib/libvirt/images
-name=SBD
-disk={path}/{name}/{name}.img
-device=/dev/vdb
+sbdname=SBD
+sbddevice=/dev/vdb
+havmdisk=havm_xml.raw
 
 [user]
 keymap=en
 sshkey=id_rsa_ha
 name=krig
-pass=linux
+password=linux
