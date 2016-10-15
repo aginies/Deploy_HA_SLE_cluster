@@ -13,6 +13,20 @@ from lxml import etree
 LOG_FILE = "sleha-deploy.log"
 DEBUG = False
 QUIET = False
+DOWNLOAD = False  # Download isos if they aren't available locally
+
+
+def memoize(function):
+    "Decorator to invoke a function once only for any argument"
+    memoized = {}
+
+    def inner(*args):
+        if args in memoized:
+            return memoized[args]
+        r = function(*args)
+        memoized[args] = r
+        return r
+    return inner
 
 
 def die(*args):
@@ -86,18 +100,23 @@ def get_stdout_stderr(cmd, input_s=None, shell=True):
     return proc.returncode, stdout_data.strip(), stderr_data.strip()
 
 
-def invoke(*args):
+def invoke(*args, **kwargs):
     """
     Log command execution to log file.
     Log output from command to log file.
     Return returncode == 0
+    Optional argument: echo_stdout, echo_stderr (default False)
     """
     log("+ " + " ".join(args))
     rc, stdout, stderr = get_stdout_stderr(" ".join(args))
     if stdout:
         log(stdout)
+        if kwargs.get("echo_stdout"):
+            print stdout
     if stderr:
         log(stderr)
+        if kwargs.get("echo_stderr"):
+            print >>sys.stderr, stderr
     return rc == 0
 
 
@@ -212,6 +231,7 @@ def crypt_passwd(passwd):
     return crypt.crypt(passwd, mksalt())
 
 
+@memoize
 def get_variants(baseurl):
     r = requests.get(baseurl)
     if r.status_code == 200:
@@ -230,6 +250,7 @@ def get_variants(baseurl):
     raise ValueError("Failed to get {}: Status code {}".format(baseurl, r.status_code))
 
 
+@memoize
 def get_isos(baseurl, variant):
     r = requests.get("{}/{}/".format(baseurl, variant))
     if r.status_code == 200:
@@ -313,6 +334,13 @@ class Config(object):
         return json.dumps(config, sort_keys=True, indent=2, cls=MyEncoder)
 
 
+def mkconfigenv(cfg):
+    env = {}
+    for k, v in cfg.__dict__.iteritems():
+        env[k] = v
+    return env
+
+
 def mkdirp(d, mode=0777):
     if os.path.isdir(d):
         return True
@@ -323,8 +351,8 @@ def mkconfig():
     config = Config(['sleha-deploy.ini', os.path.expanduser('~/.sleha-deploy.ini')])
     if config.iso.url.endswith('/'):
         config.iso.url = config.iso.url[:-1]
-    if not os.path.isdir(config.iso.dir):
-        mkdirp(config.iso.dir)
+    if not os.path.isdir(config.iso.path):
+        mkdirp(config.iso.path)
     config.user.password = crypt_passwd(config.user.password)
     return config
 
@@ -374,11 +402,11 @@ def cmd_iso(args):
     variant = args.variant
     iso = args.iso
 
-    if os.path.isfile(os.path.join(config.iso.dir, iso)):
-        error("{} already exists in {}".format(iso, config.iso.dir))
+    if os.path.isfile(os.path.join(config.iso.path, iso)):
+        error("{} already exists in {}".format(iso, config.iso.path))
 
     url = '{}/{}/{}'.format(baseurl, variant, iso)
-    start_download(url, os.path.join(config.iso.dir, iso))
+    start_download(url, os.path.join(config.iso.path, iso))
 
 
 def config_scenario(scenario):
@@ -396,35 +424,300 @@ def config_scenario(scenario):
 
     config.scenario = Config([scenario], root=config)
 
+
+def install_virtualization_stack():
+    status("Install virtualization stack")
+    if not invoke("zypper -q -n install -y patterns-sles-{0}_server patterns-sles-{0}_tools".format(config.vm.hypervisor)):
+        error("Failed to install hypervisor")
+    if not invoke("systemctl restart libvirtd"):
+        error("Failed to restart libvirtd")
+
+
+def prepare_etc_hosts():
+    """
+    Ensure /etc/hosts points to the right nodes
+    """
+    status("Prepare /etc/hosts")
+    hosts = [line for line in open("/etc/hosts").readlines()]
+    with open_atomic("/etc/hosts", "w") as f:
+        for line in hosts:
+            sp = line.split()
+            if len(sp) == 0 or sp[0].startswith('#'):
+                f.write(line)
+                continue
+            for vm in config.scenario.vm:
+                if vm.name in sp:
+                    f.write('#')
+                    f.write(line)
+                    break
+        for vm in config.scenario.vm:
+            f.write("{}  {} {}\n".format(vm.address, vm.fqdn, vm.name))
+
+
+def prepare_virtual_network():
+    """
+    Define HAnet private HA network (NAT)
+    NETWORK will be ${NETWORK}.0/24 gw/dns ${NETWORK}.1
+    TODO: fix hardcoded UUID / MAC / virbr1...
+    """
+    path = "/etc/libvirt/qemu/networks/{}.xml".format(config.scenario.common.networkname)
+    hosts = ""
+    for vm in config.scenario.vm:
+        hosts += '        <host mac="{mac}" name="{fqdn}" ip="{address}" />\n'.format(vm.__dict__)
+    status("Prepare virtual network ({})".format(path))
+    str2file("""<network>
+  <name>{networkname}</name>
+  <uuid>{networkuuid}</uuid>
+  <forward mode='nat'/>
+  <bridge name='{networkif} stp='on' delay='0'/>
+  <mac address='{networkmac}'/>
+  <domain name='{networkname}'/>
+  <ip address='{network}.1' netmask='255.255.255.0'>
+    <dhcp>
+      <range start='{network}.128' end='{network}.254'/>
+{hosts}
+    </dhcp>
+  </ip>
+</network>
+""".format(hosts=hosts, **mkconfigenv(config.scenario.common)), path)
+
+
+def create_tempdir():
+    from tempfile import mkdtemp
+    return mkdtemp(dir="/tmp", prefix="sleha-deploy-")
+
+
+def ssh_root_key():
+    status("Generate ~/.ssh/{} without password".format(config.user.sshkey))
+    invoke(['ssh-keygen', '-t', 'rsa', '-f', '~/.ssh/' + config.user.sshkey, '-N', ''])
+    status("Create /root/.ssh/config for HA nodes access")
+    str2file("Host ha1 ha2 ha3 ha4 ha5\nIdentityFile /root/.ssh/{}\n".format(config.user.sshkey), "/root/.ssh/config")
+
+
+def prepare_SBD_pool():
+    """
+    Create an SBD pool on the host
+    """
+    status("Prepare SBD pool")
+    _, outp = get_stdout("virsh pool-list --all")
+    sbdname = config.storage.sbdname
+    sbddisk = os.path.join(config.storage.path, config.storage.sbdname, config.storage.sbdname + ".img")
+    if sbdname in outp:
+        status("Destroy current pool {}".format(sbdname))
+        invoke("virsh", "pool-destroy", sbdname)
+        status("Undefine current pool {}".format(sbdname))
+        invoke("virsh", "pool-undefine", sbdname)
+        if os.path.isfile(sbddisk):
+            os.remove(sbddisk)
+    status("Define pool {}".format(sbdname))
+    mkdirp(os.path.join(config.storage.path, sbdname))
+    invoke("virsh", "pool-define-as", "--name", sbdname, "--type", "dir", "--target", os.path.join(config.storage.path, sbdname))
+    status("Start and Autostart the pool")
+    invoke("virsh", "pool-start", sbdname)
+    invoke("virsh", "pool-autostart", sbdname)
+    status("Create the SBD volume")
+    invoke("virsh", "vol-create-as",
+           "--pool", sbdname,
+           "--name", "{}.img".format(sbdname),
+           "--format", "raw",
+           "--allocation", "10M",
+           "--capacity", "10M")
+
+
+def generate_vm_template(outputdir):
+    t_vm = open("templates/vm.xml").read()
+    t_addon = open("templates/addon.xml").read()
+    t_package = open("templates/package.xml").read()
+    t_hosts_entry = open("templates/hosts_entry.xml").read()
+
+    addons = "".join(t_addon.format(**a.__dict__) for a in config.scenario.addon)
+    packages = "".join(t_package.format(name=pkg) for pkg in config.scenario.common.packages.split())
+    hosts = "".join(t_hosts_entry.format(**vm.__dict__) for vm in config.scenario.vm)
+    txt = t_vm.format(
+        addons=addons,
+        packages=packages,
+        hosts=hosts,
+        keymap=config.vm.keymap,
+        networkname=config.scenario.common.networkname,
+        timezone=config.vm.timezone,
+        username=config.user.name,
+        userpass=config.user.password
+    )
+    str2file(txt, os.path.join(outputdir, config.vm.autoyastfile))
+
+
+def prepare_auto_deploy_image():
+    """
+    Create a RAW file which contains auto install file for deployment
+    """
+    status("Prepare the Autoyast image for VM guest installation")
+    tmpmount = create_tempdir()
+    wdir = create_tempdir()
+    cwd = os.getcwd()
+    os.chdir(wdir)
+    try:
+        generate_vm_template(wdir)
+        invoke("qemu-img create {} -f raw 2M".format(config.storage.havmdisk))
+        invoke("mkfs.ext3 {}".format(config.storage.havmdisk))
+        invoke("mount {} {}".format(config.storage.havmdisk, tmpmount))
+        invoke("cp -v {}/{} {}".format(wdir, config.vm.autoyastfile, tmpmount))
+        invoke("umount {}".format(tmpmount))
+    finally:
+        invoke("rm -rf {} {}".format(tmpmount, wdir))
+        os.chdir(cwd)
+
+
+def check_host_config():
+    """
+    Prints host info
+    """
+    invoke("virsh net-list", echo_stdout=True)
+    invoke("virsh pool-list", echo_stdout=True)
+    invoke("virsh vol-list {}".format(config.storage.sbdname), echo_stdout=True)
+
+
 def cmd_hostcfg(args):
     """
     Configure the host:
     * Install virtualization tools and restart libvirtd
     * Generate a SSH root key, and prepare a config to connect to HA nodes
-    * Pre-configure pssh (generate /etc/hanodes)
+    # no need for this, we can handle this part
     * Add HA nodes in /etc/hosts
     * Create a virtual network: DHCP with host/mac/name/ip for HA nodes
     * Create an SBD pool
     * Prepare an image (raw) containing autoyast file
     """
-    def ssh_root_key():
-        status("Generate ~/.ssh/{} without password".format(config.user.sshkey))
-        invoke(['ssh-keygen', '-t', 'rsa', '-f', '~/.ssh/' + config.user.sshkey, '-N', ''])
-        status("Create /root/.ssh/config for HA nodes access")
-        str2file("""Host ha1 ha2 ha3 ha4 ha5
-IdentityFile /root/.ssh/{}
-""".format(config.user.sshkey), "/root/.ssh/config")
-
     config_scenario(args.scenario)
-    #print config
-    #ssh_root_key()
-    #install_virtualization_stack()
-    #prepare_remote_pssh()
-    #prepare_etc_hosts()
-    #prepare_virtual_HAnetwork()
-    #prepare_SBD_pool()
-    #prepare_auto_deploy_image()
-    #check_host_config()
+    ssh_root_key()
+    install_virtualization_stack()
+    prepare_etc_hosts()
+    prepare_virtual_network()
+    prepare_SBD_pool()
+    prepare_auto_deploy_image()
+    check_host_config()
+
+
+def resolve_iso_file(addon):
+    import fnmatch
+    varianturl, isofile = addon.iso.rsplit('/', 1)
+    baseurl, variant = varianturl.rsplit('/', 1)
+    isos = get_isos(baseurl, variant)
+    for iso in isos:
+        if fnmatch.fnmatch(iso, isofile):
+            return iso
+    error("Found no ISO matching {} at {}".format(isofile, varianturl))
+
+
+def check_isos():
+    for addon in config.scenario.addon:
+        isofile = resolve_iso_file(addon)
+        if not os.path.isfile(os.path.join(config.iso.path, isofile)):
+            isourl = addon.iso.rsplit('/', 0) + '/' + isofile
+            if not DOWNLOAD:
+                error("Missing ISO: {}".format(isourl))
+            status("Downloading missing ISO: {}".format(isourl))
+            start_download(isourl, os.path.join(config.iso.path, isofile))
+
+
+def cleanup_vm():
+    status("Cleanup VM")
+    pooldir = os.path.join(config.storage.path, config.vm.libvirtpool)
+    if os.path.isdir(pooldir):
+        status("WARNING!")
+        status("This will remove previous HA VM guest images in {}!".format(pooldir))
+        status("Images: {}".format(" ".join(f for f in os.listdir(pooldir) if f.endswith(".qcow2"))))
+    _, vmlist = get_stdout("virsh -q list --all")
+
+    for vm in config.scenario.vm:
+        name = "{}{}".format(config.vm.distro, vm.name)
+        if name in vmlist.split():
+            status("Destroy current VM: {}".format(name))
+            invoke("virsh destroy {}".format(name))
+            status("Undefine current VM: {}".format(name))
+            invoke("virsh undefine {}".format(name))
+        status("Remove previous image file for VM {0} ({0}.qcow2)".format(name))
+        invoke("rm -rvf {}.qcow2".format(os.path.join(config.storage.path, config.vm.libvirtpool, name)))
+
+
+def check_before_install():
+    status("Check disks before install")
+    havmdiskpath = os.path.join(config.storage.path, config.storage.havmdisk)
+    sbddiskpath = os.path.join(config.storage.path, config.storage.sbdname, "{}.img".format(config.storage.sbdname))
+    if not os.path.isfile(havmdiskpath):
+        error("{} not found, needed for autoinstallation".format(havmdiskpath))
+    if not os.path.isfile(sbddiskpath):
+        error("{} not found, needed for autoinstallation".format(sbddiskpath))
+
+
+def create_pool(poolname):
+    "Create a pool (on host)"
+    status("Create pool {}".format(poolname))
+    path = os.path.join(config.storage.path, poolname)
+    _, outp = get_stdout("virsh -q pool-list --all")
+    if poolname in [l.split()[0] for l in outp.split('\n') if l.strip()]:
+        status("{} already present, deleting it".format(poolname))
+        invoke("virsh pool-destroy {}".format(poolname))
+        invoke("virsh pool-undefine {}".format(poolname))
+        invoke("rm -rvf {}".format(path))
+    mkdirp(path)
+    invoke("virsh pool-define-as --name {} --type dir --target {}".format(poolname, path))
+    invoke("virsh pool-start {}".format(poolname))
+    invoke("virsh pool-autostart {}".format(poolname))
+
+
+def install_vms():
+    pool = config.vm.libvirtpool
+    for vm in config.scenario.vm:
+        vmname = "{}{}".format(config.vm.distro, vm.name)
+        status("Install VM {}".format(vm.name))
+        invoke("virsh pool-refresh {}".format(pool))
+        invoke("virsh vol-create-as --pool {pool} --name {vmname}.qcow2 --capacity {size} --allocation {size} --format qcow2".format(
+            pool=pool, vmname=vmname, size=config.vm.imagesize))
+        invoke("virsh pool-refresh {}".format(pool))
+
+        vmdisk = "{}/{}/{}.qcow2".format(config.storage.path, config.vm.libvirtpool, vmname)
+        havmdiskpath = os.path.join(config.storage.path, config.storage.havmdisk)
+        sbddiskpath = os.path.join(config.storage.path, config.storage.sbdname, "{}.img".format(config.storage.sbdname))
+
+        if not os.path.isfile(vmdisk):
+            error("{} not present".format(vmdisk))
+
+        cmd = ['screen -d -m -S "install_HA_VM_guest_', vmname, '" ',
+               'virt-install --name ', vmname,
+               ' --ram ', config.vm.ram,
+               ' --vcpus ', config.vm.vcpu,
+               ' --virt-type ', config.vm.hypervisor,
+               ' --graphics ', 'vnc,keymap=', config.vm.keymap,
+               ' --network network=', config.scenario.common.networkname, ',mac=', vm.mac,
+               ' --disk path=', vmdisk, ',format=qcow2,bus=virtio,cache=none',
+               ' --disk path=', sbddiskpath, ',bus=virtio',
+               ' --disk path=', havmdiskpath, ',bus=virtio']
+
+        baseloc = None
+        for addon in config.scenario.addon:
+            isofile = addon.iso.rsplit('/', 1)[-1]
+            diskpath = os.path.join(config.iso.path, isofile)
+            cmd.append(' --disk path={},device=cdrom'.format(diskpath))
+            if hasattr(addon, "base") and addon.base == "yes":
+                baseloc = diskpath
+
+        cmd.extend([' --location ', baseloc,
+                    ' --boot cdrom',
+                    ' --extra-args ', config.vm.extraargs,
+                    ' --watchdog i6300esb,action=poweroff'
+                    ' --console pty,target_type=virtio',
+                    ' --check all=off'])
+        invoke("".join(cmd))
+
+
+def copy_ssh_key():
+    print "- Don't forget to copy the root host SSH key to VM guest"
+    for vm in config.scenario.vm:
+        print "ssh-copy-id -f -i /root/.ssh/${IDRSAHA}.pub -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no {}".format(config.user.sshkey, name)
+
+    print ""
+    print "- Clean up your /root/.ssh/known_hosts from previous config (dirty way below)"
+    print "rm -vf /root/.ssh/known_hosts"
 
 
 def cmd_deploy(args):
@@ -436,21 +729,20 @@ def cmd_deploy(args):
     * Display information on how to copy host root key to HA nodes (VM)
     """
     config_scenario(args.scenario)
-    #cleanup_vm()
-    #create_pool()
-    #check_before_install()
-    #install_vms()
+    check_isos()
+    cleanup_vm()
+    create_pool(config.vm.libvirtpool)
+    wait_for_downloads()
+    check_before_install()
+    install_vms()
     # check vms
-    _, outp = get_stdout("virsh list --all")
-    print outp
+    invoke("virsh list --all", echo_stdout=True)
     # get IP addresses
-    _, outp = get_stdout("virsh net-dhcp-leases {}".format(config.scenario.common.networkname))
-    print outp
+    invoke("virsh net-dhcp-leases {}".format(config.scenario.common.networkname), echo_stdout=True)
     # list installations in progress
-    _, outp = get_stdout("screen -list")
-    print outp
+    invoke("screen -list", echo_stdout=True)
 
-    #copy_ssh_key()
+    copy_ssh_key()
 
 
 def cmd_config(args):
@@ -462,20 +754,22 @@ def cmd_config(args):
 def main():
     global QUIET
     global DEBUG
+    global DOWNLOAD
     try:
-        parser = argparse.ArgumentParser(description='Tools for setting up a test cluster for SLE HA')
+        parser = argparse.ArgumentParser(description='''Tools for setting up a test cluster for SLE HA. Configure your scenarios using the sleha-deploy.ini and scenario files, run configure-host to prepare SSH keys, libvirt and the hypervisor, and then run deploy to create the virtual machines.''')
 
         parser.add_argument('-q', '--quiet', help="Minimal output", action="store_true")
-        parser.add_argument('-d', '--debug', help="Halt in debugger on error", action="store_true")
+        parser.add_argument('-x', '--debug', help="Halt in debugger on error", action="store_true")
+        parser.add_argument('-d', '--download', help="Download missing ISO files automatically", action="store_true")
 
         subparsers = parser.add_subparsers()
 
-        parser_iso = subparsers.add_parser('iso', help='List available variants and download ISO files for variants'.format(config.iso.url))
+        parser_iso = subparsers.add_parser('download', help='List available variants and download ISO files for variants'.format(config.iso.url))
         parser_iso.add_argument('variant', help="Name of variant", nargs='?')
         parser_iso.add_argument('iso', help="ISO file name", nargs='?')
         parser_iso.set_defaults(func=cmd_iso)
 
-        parser_hostcfg = subparsers.add_parser('hostcfg', help="Configure the host")
+        parser_hostcfg = subparsers.add_parser('configure-host', help="Configure the host")
         parser_hostcfg.add_argument('scenario', help="Scenario to set up")
         parser_hostcfg.set_defaults(func=cmd_hostcfg)
 
@@ -483,13 +777,14 @@ def main():
         parser_deploy.add_argument('scenario', help="Scenario to set up")
         parser_deploy.set_defaults(func=cmd_deploy)
 
-        parser_deploy = subparsers.add_parser('config', help="Print config")
+        parser_deploy = subparsers.add_parser('print-configuration', help="Display resolved configuration values")
         parser_deploy.add_argument('scenario', help="Scenario to load", nargs='?')
         parser_deploy.set_defaults(func=cmd_config)
 
         args = parser.parse_args()
         DEBUG = args.debug
         QUIET = args.quiet
+        DOWNLOAD = args.download
         args.func(args)
         wait_for_downloads()
     except Exception as e:
@@ -503,15 +798,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-
-# templates/vm.xml
-# $addons - for each addon
-# $hosts - for each vm in scenario, apply hosts_entry.xml template
-# $packages - for each package in scenario:common:packages, apply package.xml template
-# ${keymap}
-# ${networkname}
-# ${timezone}
-# ${username}
-# ${userpass} - mkpasswd encrypted
-# to generate: crypt_passwd

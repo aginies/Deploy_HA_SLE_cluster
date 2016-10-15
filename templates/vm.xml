@@ -3,7 +3,7 @@
 <profile xmlns="http://www.suse.com/1.0/yast2ns" xmlns:config="http://www.suse.com/1.0/configns">
   <add-on>
     <add_on_products config:type="list">
-      ${addons}
+      {addons}
     </add_on_products>
   </add-on>
   <bootloader>
@@ -35,7 +35,7 @@
     <image_installation config:type="boolean">false</image_installation>
   </deploy_image>
   <keyboard>
-    <keymap>${keymap}</keymap>
+    <keymap>{keymap}</keymap>
   </keyboard>
   <login_settings/>
   <networking>
@@ -45,7 +45,7 @@
     </dhcp_options>
     <dns>
       <dhcp_hostname config:type="boolean">true</dhcp_hostname>
-      <domain>${networkname}</domain>
+      <domain>{networkname}</domain>
       <resolv_conf_policy>auto</resolv_conf_policy>
       <write_hostname config:type="boolean">false</write_hostname>
     </dns>
@@ -123,7 +123,7 @@
   </services-manager>
   <timezone>
     <hwclock>UTC</hwclock>
-    <timezone>${timezone}</timezone>
+    <timezone>{timezone}</timezone>
   </timezone>
   <user_defaults>
     <expire/>
@@ -139,9 +139,9 @@
   <users config:type="list">
     <user>
       <encrypted config:type="boolean">true</encrypted>
-      <fullname>${username}</fullname>
+      <fullname>{username}</fullname>
       <gid>100</gid>
-      <home>/home/${username}</home>
+      <home>/home/{username}</home>
       <password_settings>
         <expire/>
         <flag/>
@@ -152,8 +152,8 @@
       </password_settings>
       <shell>/bin/bash</shell>
       <uid>1000</uid>
-      <user_password>${userpass}</user_password>
-      <username>${username}</username>
+      <user_password>{userpass}</user_password>
+      <username>{username}</username>
     </user>
     <user>
       <encrypted config:type="boolean">true</encrypted>
@@ -170,7 +170,7 @@
       </password_settings>
       <shell>/bin/bash</shell>
       <uid>0</uid>
-      <user_password>${userpass}</user_password>
+      <user_password>{userpass}</user_password>
       <username>root</username>
     </user>
 </users>
@@ -182,12 +182,26 @@
       <pattern>Minimal</pattern>
     </patterns>
     <packages config:type="list">
-      $packages
+{packages}
     </packages>
 </software>
  <host>
    <hosts config:type="list">
-     $hosts
+{hosts}
     </hosts>
   </host>
+  <scripts>
+    <init-scripts config:type="list">
+      <script>
+        <debug config:type="boolean">true</debug>
+        <filename>prepare.sh</filename>
+        <interpreter>shell</interpreter>
+        <source><![CDATA[#!/bin/sh
+echo "UseDNS no" >> /etc/ssh/sshd_config
+echo "GSSAPIAuthentication no" >> /etc/ssh/sshd_config
+systemctl restart sshd
+]]></source>
+      </script>
+    </init-scripts>
+  </scripts>
 </profile>
