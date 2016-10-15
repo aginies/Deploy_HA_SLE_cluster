@@ -200,6 +200,9 @@
 echo "UseDNS no" >> /etc/ssh/sshd_config
 echo "GSSAPIAuthentication no" >> /etc/ssh/sshd_config
 systemctl restart sshd
+mkdir /mnt/autoyastdisk
+mount /dev/vdc /mnt/autoyastdisk
+cp /mnt/autoyastdisk/*.pub /root/.ssh/authorized_keys
 ]]></source>
       </script>
     </init-scripts>

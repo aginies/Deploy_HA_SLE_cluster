@@ -488,10 +488,19 @@ def create_tempdir():
 
 
 def ssh_root_key():
-    status("Generate ~/.ssh/{} without password".format(config.user.sshkey))
-    invoke(['ssh-keygen', '-t', 'rsa', '-f', '~/.ssh/' + config.user.sshkey, '-N', ''])
-    status("Create /root/.ssh/config for HA nodes access")
-    str2file("Host ha1 ha2 ha3 ha4 ha5\nIdentityFile /root/.ssh/{}\n".format(config.user.sshkey), "/root/.ssh/config")
+    keypath = "/root/.ssh/{}".format(config.user.sshkey)
+    if not os.path.exists(keypath):
+        status("Generate ~/.ssh/{} without password".format(config.user.sshkey))
+        invoke('ssh-keygen', '-t', 'rsa', '-f', '~/.ssh/{}'.format(config.user.sshkey), '-N', '')
+
+    configpath = "/root/.ssh/config"
+    if os.path.exists(configpath):
+        configpath = "/root/.ssh/config.ha".format(i)
+    status("Create {} for HA nodes access".format(configpath))
+    vms = " ".join(vm.name for vm in config.scenario.vm)
+    str2file("Host {}\nIdentityFile /root/.ssh/{}\n".format(vms, config.user.sshkey), configpath)
+    if configpath.endswith('.ha'):
+        status("NOTE: Manually copy contents of {} into /root/.ssh/config".format(configpath))
 
 
 def prepare_SBD_pool():
@@ -560,7 +569,7 @@ def prepare_auto_deploy_image():
         invoke("qemu-img create {} -f raw 2M".format(config.storage.havmdisk))
         invoke("mkfs.ext3 {}".format(config.storage.havmdisk))
         invoke("mount {} {}".format(config.storage.havmdisk, tmpmount))
-        invoke("cp -v {}/{} {}".format(wdir, config.vm.autoyastfile, tmpmount))
+        invoke("cp -v {}/{} /root/.ssh/{}.pub {}".format(wdir, config.vm.autoyastfile, config.user.sshkey, tmpmount))
         invoke("umount {}".format(tmpmount))
     finally:
         invoke("rm -rf {} {}".format(tmpmount, wdir))
@@ -713,7 +722,7 @@ def install_vms():
 def copy_ssh_key():
     print "- Don't forget to copy the root host SSH key to VM guest"
     for vm in config.scenario.vm:
-        print "ssh-copy-id -f -i /root/.ssh/${IDRSAHA}.pub -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no {}".format(config.user.sshkey, name)
+        print "ssh-copy-id -f -i /root/.ssh/{}.pub -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no {}".format(config.user.sshkey, name)
 
     print ""
     print "- Clean up your /root/.ssh/known_hosts from previous config (dirty way below)"
