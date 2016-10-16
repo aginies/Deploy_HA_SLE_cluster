@@ -833,6 +833,7 @@ def cmd_up(args):
     """
     cmd_hostcfg(args)
     cmd_deploy(args)
+    cmd_status(args)
 
 
 def cmd_status(args):
