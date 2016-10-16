@@ -372,25 +372,30 @@ log_start()
 config = mkconfig()
 
 
-downloads = []
+downloads = {}
 
 
 def start_download(url, outname):
-    status_long("{} -> {}".format(url, outname))
-    proc = subprocess.Popen(["curl", "-s", "-S", "--fail", "-o", outname, url])
-    downloads.append(proc)
+    if outname in downloads:
+        status("Already downloading {}".format(outname))
+        return
+    status_long("Download: {}".format(url))
+    cmd = ["curl", "-s", "-S", "--fail", "-o", outname, url]
+    log("+ {}".format(" ".join(cmd)))
+    proc = subprocess.Popen(cmd)
+    downloads[outname] = proc
 
 
 def wait_for_downloads():
     while True:
-        done = []
-        for dl in downloads:
+        done = {}
+        for _, outname, dl in downloads:
             if dl.poll() is not None:
-                done.append(dl)
-        for dl in done:
+                done[outname] = dl
+        for outname, dl in done.iteritems():
             status_done()
-            status("Download complete: (rc = {})".format(dl.returncode))
-            downloads.remove(dl)
+            status("Done: {} (rc = {})".format(outname, dl.returncode))
+            del downloads[outname]
         if len(downloads) == 0:
             return
         time.sleep(2)
