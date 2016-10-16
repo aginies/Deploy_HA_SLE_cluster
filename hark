@@ -837,16 +837,52 @@ def cmd_deploy(args):
     wait_for_downloads()
     check_before_install()
     install_vms()
-    if not QUIET:
-        # check vms
-        invoke("virsh list --all", echo_stdout=True)
-        # get IP addresses
-        invoke("virsh net-dhcp-leases {}".format(config.scenario.common.networkname), echo_stdout=True)
-        # list installations in progress
-        invoke("screen -list", echo_stdout=True)
 
 
-def cmd_cleanup(args):
+def cmd_up(args):
+    """
+    Configures the host (if necessary) and deploys the VMs
+    (again, if necessary)
+    """
+    cmd_hostcfg(args)
+    cmd_deploy(args)
+
+
+def cmd_status(args):
+    """
+    Displays status of configuration (is host configured?
+    Are VMs created? Are VMs running?
+    Is there a cluster running on the VMs?)
+    """
+    # check vms
+    print("# Virtual machines:")
+    rc, outp = get_stdout("virsh -q list --all")
+    if rc != 0:
+        error("Failed to list virtual machines")
+    for line in outp.decode('utf-8').splitlines():
+        if config.vm.distro in line:
+            print(line)
+
+    # get IP addresses
+    print("# IP Addresses:")
+    rc, outp = get_stdout("virsh -q net-dhcp-leases {}".format(config.scenario.common.networkname))
+    if rc != 0:
+        error("Failed to list IP addresses for {}".format(config.scenario.common.networkname))
+    for line in outp.decode('utf-8').splitlines():
+        if line.strip():
+            print(line)
+
+    # list installations in progress
+    print("# Installations in progress:")
+    rc, outp = get_stdout("screen -list")
+    # Ignore rc == 1 since it just means there are no screens to list
+    if rc == 0:
+        for line in outp.decode('utf-8').splitlines():
+            if 'install_HA_VM_guest_' in line:
+                print(line)
+
+
+def cmd_destroy(args):
     """
     Stop and remove VMs
     """
@@ -917,17 +953,17 @@ def main():
         subparser.add_argument('iso', help="ISO file name", nargs='?')
         subparser.set_defaults(func=cmd_iso)
 
-        subparser = subparsers.add_parser('configure-host', help="Configure the host")
-        subparser.set_defaults(func=cmd_hostcfg)
-
-        subparser = subparsers.add_parser('deploy', help="Install all nodes with needed data")
-        subparser.set_defaults(func=cmd_deploy)
-
-        subparser = subparsers.add_parser('print-configuration', help="Display resolved configuration values")
+        subparser = subparsers.add_parser('config', help="Display resolved configuration values")
         subparser.set_defaults(func=cmd_config)
 
-        subparser = subparsers.add_parser('clean', help="Halt and destroy any created VMs")
-        subparser.set_defaults(func=cmd_cleanup)
+        subparser = subparsers.add_parser('status', help="Display status of configuration")
+        subparser.set_defaults(func=cmd_status)
+
+        subparser = subparsers.add_parser('up', help="Configure the host and bring virtual machines up")
+        subparser.set_defaults(func=cmd_up)
+
+        subparser = subparsers.add_parser('destroy', help="Halt and destroy any created VMs")
+        subparser.set_defaults(func=cmd_destroy)
 
         subparser = subparsers.add_parser('bootstrap', help="Bootstrap initial cluster")
         subparser.set_defaults(func=cmd_bootstrap)
