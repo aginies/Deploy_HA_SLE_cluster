@@ -630,7 +630,7 @@ def generate_vm_template(exedir, outputdir):
     t_package = open("{}/package.xml".format(t_path)).read()
     t_hosts_entry = open("{}/hosts_entry.xml".format(t_path)).read()
 
-    addons = "".join(t_addon.format(dev="/dev/sr{}".format(i)) for i, _ in enumerate(a for a in config.scenario.addon if getattr(a, "base", "no") != "yes"))
+    addons = "".join(t_addon.format(dev="/dev/sr{}".format(i)) for i, _ in enumerate(a for a in config.scenario.addon if a.name != "base"))
     packages = "".join(t_package.format(name=pkg) for pkg in config.scenario.common.packages.split())
     hosts = "".join(t_hosts_entry.format(**vm.__dict__) for vm in config.scenario.vm)
     txt = t_vm.format(
@@ -800,7 +800,7 @@ def install_vms():
         for addon in config.scenario.addon:
             diskpath = os.path.join(config.iso.path, resolve_iso_file(addon))
             cmd.append(' --disk path={},device=cdrom'.format(diskpath))
-            if hasattr(addon, "base") and addon.base == "yes":
+            if addon.name == "base":
                 baseloc = diskpath
 
         cmd.extend([' --location ', baseloc,
