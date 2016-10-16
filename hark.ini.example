@@ -13,6 +13,14 @@ timezone=Europe/Stockholm
 autoyastfile=havm.xml
 extraargs=autoyast=device://vdc/{autoyastfile}
 
+[network]
+name=HAnet
+range=192.168.12
+uuid=851e50f1-db72-475a-895f-28304baf8e8c
+hostmac=52:54:00:89:a0:b9
+interface=virbr1
+mac=52:54:00:c7:92:
+
 [storage]
 path=/var/lib/libvirt/images
 libvirtpool=hapool

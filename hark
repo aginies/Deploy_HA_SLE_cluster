@@ -534,35 +534,34 @@ def prepare_virtual_network():
     """
     Define HAnet private HA network (NAT)
     NETWORK will be ${NETWORK}.0/24 gw/dns ${NETWORK}.1
-    TODO: fix hardcoded UUID / MAC / virbr1...
     """
-    path = "/etc/libvirt/qemu/networks/{}.xml".format(config.scenario.common.networkname)
+    path = "/etc/libvirt/qemu/networks/{}.xml".format(config.network.name)
     hosts = ""
     for vm in config.scenario.vm:
         hosts += '        <host mac="{mac}" name="{fqdn}" ip="{address}" />\n'.format(**vm.__dict__)
     status_long("Prepare virtual network ({})".format(path))
     str2file("""<network>
-  <name>{networkname}</name>
-  <uuid>{networkuuid}</uuid>
+  <name>{name}</name>
+  <uuid>{uuid}</uuid>
   <forward mode='nat'/>
-  <bridge name='{networkif}' stp='on' delay='0'/>
-  <mac address='{networkmac}'/>
-  <domain name='{networkname}'/>
-  <ip address='{network}.1' netmask='255.255.255.0'>
+  <bridge name='{interface}' stp='on' delay='0'/>
+  <mac address='{hostmac}'/>
+  <domain name='{name}'/>
+  <ip address='{range}.1' netmask='255.255.255.0'>
     <dhcp>
-      <range start='{network}.128' end='{network}.254'/>
+      <range start='{range}.128' end='{range}.254'/>
 {hosts}
     </dhcp>
   </ip>
 </network>
-""".format(hosts=hosts, **mkconfigenv(config.scenario.common)), path)
+""".format(hosts=hosts, **mkconfigenv(config.network)), path)
     os.chmod(path, 0o644)
     status_progress()
     invoke("systemctl restart libvirtd")
     status_progress()
-    invoke("virsh net-autostart {}".format(config.scenario.common.networkname))
+    invoke("virsh net-autostart {}".format(config.network.name))
     status_progress()
-    invoke("virsh net-start {}".format(config.scenario.common.networkname))
+    invoke("virsh net-start {}".format(config.network.name))
     status_done()
 
 
@@ -639,7 +638,7 @@ def generate_vm_template(exedir, outputdir):
         packages=packages,
         hosts=hosts,
         keymap=config.vm.keymap,
-        networkname=config.scenario.common.networkname,
+        networkname=config.network.name,
         timezone=config.vm.timezone,
         username=config.user.name,
         userpass=config.user.password
@@ -792,7 +791,7 @@ def install_vms():
                ' --vcpus ', config.vm.vcpu,
                ' --virt-type ', config.vm.hypervisor,
                ' --graphics ', 'vnc,keymap=', config.user.keymap,
-               ' --network network=', config.scenario.common.networkname, ',mac=', vm.mac,
+               ' --network network=', config.network.name, ',mac=', vm.mac,
                ' --disk path=', vmdisk, ',format=qcow2,bus=virtio,cache=none',
                ' --disk path=', shareddisk, ',bus=virtio',
                ' --disk path=', havmdisk, ',bus=virtio']
@@ -903,7 +902,7 @@ def cmd_status(args):
     if rc != 0:
         error("Failed to list networks")
     for line in outp.decode('utf-8').splitlines():
-        if config.scenario.common.networkname in line:
+        if config.network.name in line:
             print("  ", line.strip())
     print("\n# Pools:")
     rc, outp = get_stdout("virsh -q pool-list")
@@ -931,9 +930,9 @@ def cmd_status(args):
 
     # get IP addresses
     print("\n# IP Addresses:")
-    rc, outp = get_stdout("virsh -q net-dhcp-leases {}".format(config.scenario.common.networkname))
+    rc, outp = get_stdout("virsh -q net-dhcp-leases {}".format(config.network.name))
     if rc != 0:
-        error("Failed to list IP addresses for {}".format(config.scenario.common.networkname))
+        error("Failed to list IP addresses for {}".format(config.network.name))
     for line in outp.decode('utf-8').splitlines():
         if line.strip():
             print("  ", line.strip())
