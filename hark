@@ -13,6 +13,7 @@ from lxml import etree
 LOG_FILE = "hark.log"
 DEBUG = False
 QUIET = False
+NONINTERACTIVE = False
 DOWNLOAD = False  # Download isos if they aren't available locally
 
 
@@ -56,6 +57,28 @@ def log(*args):
             logfile.write(" ".join([str(arg) for arg in args]) + "\n")
     except IOError:
         die("Can't append to {} - aborting".format(LOG_FILE))
+
+
+def ask(msg):
+    "Ask for user confirmation"
+    msg += ' '
+    if msg.endswith('? '):
+        msg = msg[:-2] + ' (y/n)? '
+
+    if NONINTERACTIVE:
+        log("? {} [Y]".format(msg))
+        return True
+
+    while True:
+        try:
+            ans = input(msg)
+        except EOFError:
+            ans = 'n'
+        if ans:
+            ans = ans[0].lower()
+            if ans in 'yn':
+                log('? {} [{}]'.format(msg, ans.upper()))
+                return ans == 'y'
 
 
 def log_start():
@@ -654,12 +677,13 @@ def check_host_config():
     """
     Prints host info
     """
-    print("\nNetworks:")
-    invoke("virsh net-list", echo_stdout=True)
-    print("\nPools:")
-    invoke("virsh pool-list", echo_stdout=True)
-    print("\nVolumes:")
-    invoke("virsh vol-list {}".format(config.storage.sbdname), echo_stdout=True)
+    if not QUIET:
+        print("\nNetworks:")
+        invoke("virsh net-list", echo_stdout=True)
+        print("\nPools:")
+        invoke("virsh pool-list", echo_stdout=True)
+        print("\nVolumes:")
+        invoke("virsh vol-list {}".format(config.storage.sbdname), echo_stdout=True)
 
 
 def cmd_hostcfg(args):
@@ -715,18 +739,22 @@ def cleanup_vm():
         if len(images) > 0:
             status("WARNING! This will remove previous HA VM guest images in {}!".format(pooldir))
             status("Images: {}".format(" ".join(images)))
+            if not ask("Remove images"):
+                return
     _, vmlist = get_stdout("virsh -q list --all")
     vmlist = vmlist.decode('utf-8')
 
     for vm in config.scenario.vm:
         name = "{}{}".format(config.vm.distro, vm.name)
         if name in vmlist.split():
-            status("Destroy current VM: {}".format(name))
+            status("Destroy VM: {}".format(name))
             invoke("virsh destroy {}".format(name))
-            status("Undefine current VM: {}".format(name))
+            status("Undefine VM: {}".format(name))
             invoke("virsh undefine {}".format(name))
-        status("Remove previous image file for VM {0} ({0}.qcow2)".format(name))
-        invoke("rm -rvf {}.qcow2".format(os.path.join(config.storage.path, config.vm.libvirtpool, name)))
+        fname = os.path.join(config.storage.path, config.vm.libvirtpool, name)
+        if os.path.isfile(fname):
+            status("Remove VM image {0}".format(name))
+            invoke("rm -vf {}.qcow2".format(fname))
 
 
 def check_before_install():
@@ -801,16 +829,6 @@ def install_vms():
         invoke("".join(cmd))
 
 
-def copy_ssh_key():
-    print("- Don't forget to copy the root host SSH key to VM guest")
-    for vm in config.scenario.vm:
-        print("ssh-copy-id -f -i /root/.ssh/{}.pub -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no {}".format(config.user.sshkey, vm.name))
-
-    print("")
-    print("- Clean up your /root/.ssh/known_hosts from previous config (dirty way below)")
-    print("rm -vf /root/.ssh/known_hosts")
-
-
 def cmd_deploy(args):
     """
     Install all nodes with needed data
@@ -828,15 +846,13 @@ def cmd_deploy(args):
     wait_for_downloads()
     check_before_install()
     install_vms()
-    # check vms
-    invoke("virsh list --all", echo_stdout=True)
-    # get IP addresses
-    invoke("virsh net-dhcp-leases {}".format(config.scenario.common.networkname), echo_stdout=True)
-    # list installations in progress
-    invoke("screen -list", echo_stdout=True)
-
-    copy_ssh_key()
-
+    if not QUIET:
+        # check vms
+        invoke("virsh list --all", echo_stdout=True)
+        # get IP addresses
+        invoke("virsh net-dhcp-leases {}".format(config.scenario.common.networkname), echo_stdout=True)
+        # list installations in progress
+        invoke("screen -list", echo_stdout=True)
 
 def cmd_cleanup(args):
     """
@@ -863,6 +879,7 @@ def getuser():
 def main():
     global QUIET
     global DEBUG
+    global NONINTERACTIVE
     global DOWNLOAD
     try:
         parser = argparse.ArgumentParser(description='''Hark! A tool for setting up a test cluster for SLE HA.
@@ -871,6 +888,7 @@ def main():
         and then run deploy to create the virtual machines.''')
 
         parser.add_argument('-q', '--quiet', help="Minimal output", action="store_true")
+        parser.add_argument('-n', '--non-interactive', dest="noninteractive", help="Assume yes to all prompts", action="store_true")
         parser.add_argument('-x', '--debug', help="Halt in debugger on error", action="store_true")
         parser.add_argument('-d', '--download', help="Download missing ISO files automatically", action="store_true")
 
@@ -899,6 +917,7 @@ def main():
 
         args = parser.parse_args()
         DEBUG = args.debug
+        NONINTERACTIVE = args.noninteractive
         QUIET = args.quiet
         DOWNLOAD = args.download
         if hasattr(args, "func"):
