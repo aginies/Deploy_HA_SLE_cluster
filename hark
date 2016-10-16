@@ -670,19 +670,6 @@ def prepare_auto_deploy_image():
         os.chdir(cwd)
 
 
-def check_host_config():
-    """
-    Prints host info
-    """
-    if not QUIET:
-        print("\nNetworks:")
-        invoke("virsh net-list", echo_stdout=True)
-        print("\nPools:")
-        invoke("virsh pool-list", echo_stdout=True)
-        print("\nVolumes:")
-        invoke("virsh vol-list {}".format(config.storage.sharedname), echo_stdout=True)
-
-
 def cmd_hostcfg(args):
     """
     Configure the host:
@@ -702,7 +689,6 @@ def cmd_hostcfg(args):
     prepare_virtual_network()
     prepare_shared_pool()
     prepare_auto_deploy_image()
-    check_host_config()
 
 
 def resolve_iso_file(addon):
@@ -735,7 +721,7 @@ def cleanup_vm():
         if len(images) > 0:
             status("WARNING! This will remove previous HA VM guest images in {}!".format(pooldir))
             status("Images: {}".format(" ".join(images)))
-            if not ask("Remove images"):
+            if not ask("Remove images?"):
                 return
     _, vmlist = get_stdout("virsh -q list --all")
     vmlist = vmlist.decode('utf-8')
@@ -855,32 +841,55 @@ def cmd_status(args):
     Are VMs created? Are VMs running?
     Is there a cluster running on the VMs?)
     """
+
+    print("# Networks:")
+    rc, outp = get_stdout("virsh -q net-list")
+    if rc != 0:
+        error("Failed to list networks")
+    for line in outp.decode('utf-8').splitlines():
+        if config.scenario.common.networkname in line:
+            print("  ", line.strip())
+    print("\n# Pools:")
+    rc, outp = get_stdout("virsh -q pool-list")
+    if rc != 0:
+        error("Failed to list pools")
+    for line in outp.decode('utf-8').splitlines():
+        if config.storage.libvirtpool in line or config.storage.sharedname in line:
+            print("  ", line.strip())
+    print("\n# Volumes:")
+    rc, outp = get_stdout("virsh -q vol-list {}".format(config.storage.sharedname))
+    if rc != 0:
+        error("Failed to list volumes")
+    for line in outp.decode('utf-8').splitlines():
+        if config.storage.path in line:
+            print("  ", line.strip())
+
     # check vms
-    print("# Virtual machines:")
+    print("\n# Virtual machines:")
     rc, outp = get_stdout("virsh -q list --all")
     if rc != 0:
         error("Failed to list virtual machines")
     for line in outp.decode('utf-8').splitlines():
         if config.vm.distro in line:
-            print(line)
+            print("  ", line.strip())
 
     # get IP addresses
-    print("# IP Addresses:")
+    print("\n# IP Addresses:")
     rc, outp = get_stdout("virsh -q net-dhcp-leases {}".format(config.scenario.common.networkname))
     if rc != 0:
         error("Failed to list IP addresses for {}".format(config.scenario.common.networkname))
     for line in outp.decode('utf-8').splitlines():
         if line.strip():
-            print(line)
+            print("  ", line.strip())
 
     # list installations in progress
-    print("# Installations in progress:")
+    print("\n# Installations in progress:")
     rc, outp = get_stdout("screen -list")
     # Ignore rc == 1 since it just means there are no screens to list
     if rc == 0:
         for line in outp.decode('utf-8').splitlines():
             if 'install_HA_VM_guest_' in line:
-                print(line)
+                print("  ", line.strip())
 
 
 def cmd_destroy(args):
