@@ -921,11 +921,14 @@ def cmd_status(args):
 
     # check vms
     print("\n# Virtual machines:")
+    running = False
     rc, outp = get_stdout("virsh -q list --all")
     if rc != 0:
         error("Failed to list virtual machines")
     for line in outp.decode('utf-8').splitlines():
         if config.vm.distro in line:
+            if "running" in line:
+                running = True
             print("  ", line.strip())
 
     # get IP addresses
@@ -941,10 +944,18 @@ def cmd_status(args):
     print("\n# Installations in progress:")
     rc, outp = get_stdout("screen -list")
     # Ignore rc == 1 since it just means there are no screens to list
+    no_installations = True
     if rc == 0:
         for line in outp.decode('utf-8').splitlines():
             if 'install_HA_VM_guest_' in line:
+                no_installations = False
                 print("  ", line.strip())
+
+    if running and no_installations:
+        rc, outp = get_stdout(" ssh -q -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no root@{} crm_mon -1".format(config.scenario.vm[0].name))
+        if rc == 0:
+            print("# Cluster status:")
+            print(outp.decode('utf-8'))
 
 
 def cmd_destroy(args):
@@ -994,6 +1005,14 @@ def cmd_bootstrap(args):
     status_done()
 
 
+def cmd_test(args):
+    """
+    TODO: point to test script from scenario file
+    pass identity details and node list to test script?
+    """
+    pass
+
+
 def main():
     global QUIET
     global DEBUG
@@ -1035,6 +1054,10 @@ def main():
 
         subparser = subparsers.add_parser('bootstrap', help="Bootstrap initial cluster")
         subparser.set_defaults(func=cmd_bootstrap)
+
+        subparser = subparsers.add_parser('test', help="Run cluster test")
+        subparser.add_argument('test', help="Test case to run", nargs='?')
+        subparser.set_defaults(func=cmd_test)
 
         args = parser.parse_args()
         DEBUG = args.debug
