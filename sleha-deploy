@@ -763,12 +763,12 @@ def install_vms():
         if not os.path.isfile(vmdisk):
             error("{} not present".format(vmdisk))
 
-        cmd = ['screen -d -m -S "install_HA_VM_guest_', vmname, '" ',
+        cmd = ['screen -d -m -L -S "install_HA_VM_guest_', vmname, '" ',
                'virt-install --name ', vmname,
                ' --ram ', config.vm.ram,
                ' --vcpus ', config.vm.vcpu,
                ' --virt-type ', config.vm.hypervisor,
-               ' --graphics ', 'vnc,keymap=', config.vm.keymap,
+               ' --graphics ', 'vnc,keymap=', config.user.keymap,
                ' --network network=', config.scenario.common.networkname, ',mac=', vm.mac,
                ' --disk path=', vmdisk, ',format=qcow2,bus=virtio,cache=none',
                ' --disk path=', sbddiskpath, ',bus=virtio',
@@ -776,7 +776,7 @@ def install_vms():
 
         baseloc = None
         for addon in config.scenario.addon:
-            isofile = addon.iso.rsplit('/', 1)[-1]
+            isofile = resolve_iso_file(addon)
             diskpath = os.path.join(config.iso.path, isofile)
             cmd.append(' --disk path={},device=cdrom'.format(diskpath))
             if hasattr(addon, "base") and addon.base == "yes":
