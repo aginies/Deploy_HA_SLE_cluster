@@ -21,7 +21,7 @@ sbddevice=/dev/vdb
 havmdisk=havm_xml.raw
 
 [user]
-keymap=en
+keymap=us
 sshkey=id_rsa_ha
 name=krig
 password=linux
