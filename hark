@@ -808,7 +808,8 @@ def install_vms():
 
         baseloc = None
         for addon in config.scenario.addon:
-            cmd.append(' --disk path={},device=cdrom'.format(os.path.join(config.iso.path, resolve_iso_file(addon))))
+            diskpath = os.path.join(config.iso.path, resolve_iso_file(addon))
+            cmd.append(' --disk path={},device=cdrom'.format(diskpath))
             if hasattr(addon, "base") and addon.base == "yes":
                 baseloc = diskpath
 
