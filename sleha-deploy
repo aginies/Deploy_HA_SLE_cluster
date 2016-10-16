@@ -1,11 +1,11 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 import sys
 import os
 import time
 import argparse
 from contextlib import contextmanager
-from ConfigParser import SafeConfigParser
-from StringIO import StringIO
+from configparser import SafeConfigParser
+from io import StringIO
 import subprocess
 import requests
 from lxml import etree
@@ -47,7 +47,7 @@ def error(*args):
 
 def warn(*args):
     log("WARNING: {}".format(" ".join([str(arg) for arg in args])))
-    print " ".join([str(arg) for arg in args])
+    print(" ".join([str(arg) for arg in args]))
 
 
 def log(*args):
@@ -123,18 +123,18 @@ def invoke(*args, **kwargs):
     if stdout:
         log(stdout)
         if kwargs.get("echo_stdout"):
-            print stdout
+            print(stdout)
     if stderr:
         log(stderr)
         if kwargs.get("echo_stderr"):
-            print >>sys.stderr, stderr
+            print(stderr, file=sys.stderr)
     return rc == 0
 
 
 def status(msg):
     log("# " + msg)
     if not QUIET:
-        print "  {}".format(msg)
+        print("  {}".format(msg))
 
 
 def status_long(msg):
@@ -153,7 +153,7 @@ def status_progress():
 def status_done():
     log("# done")
     if not QUIET:
-        print "done"
+        print("done")
 
 
 @contextmanager
@@ -224,8 +224,8 @@ def str2file(s, fname):
     try:
         with open_atomic(fname, 'w') as dst:
             dst.write(s)
-    except IOError, msg:
-        common_err(msg)
+    except IOError as msg:
+        error(msg)
         return False
     return True
 
@@ -302,7 +302,7 @@ class Config(object):
                 setattr(self, section, Section(cfg.items(section)))
 
         def resolve_section(s, env):
-            for k, v in s.__dict__.iteritems():
+            for k, v in s.__dict__.items():
                 s.__dict__[k] = v.format(**env)
 
         def mkenv(s, is_common=False):
@@ -310,10 +310,10 @@ class Config(object):
             if root:
                 env["config"] = root
             if "common" in cfg.sections():
-                for k, v in self.common.__dict__.iteritems():
+                for k, v in self.common.__dict__.items():
                     env[k] = v
             if not is_common:
-                for k, v in s.__dict__.iteritems():
+                for k, v in s.__dict__.items():
                     env[k] = v
             return env
 
@@ -347,12 +347,12 @@ class Config(object):
 
 def mkconfigenv(cfg):
     env = {}
-    for k, v in cfg.__dict__.iteritems():
+    for k, v in cfg.__dict__.items():
         env[k] = v
     return env
 
 
-def mkdirp(d, mode=0777):
+def mkdirp(d, mode=0o777):
     if os.path.isdir(d):
         return True
     os.makedirs(d, mode=mode)
@@ -392,7 +392,7 @@ def wait_for_downloads():
         for _, outname, dl in downloads:
             if dl.poll() is not None:
                 done[outname] = dl
-        for outname, dl in done.iteritems():
+        for outname, dl in done.items():
             status_done()
             status("Done: {} (rc = {})".format(outname, dl.returncode))
             del downloads[outname]
@@ -406,13 +406,13 @@ def cmd_iso(args):
     if args.variant is None:
         baseurl = config.iso.url
         variants = get_variants(baseurl)
-        print "\n".join(variants)
+        print("\n".join(variants))
         return
 
     if args.iso is None:
         baseurl = config.iso.url
         isos = get_isos(baseurl, args.variant)
-        print '\n'.join(isos)
+        print('\n'.join(isos))
         return
 
     baseurl = config.iso.url
@@ -768,13 +768,13 @@ def install_vms():
 
 
 def copy_ssh_key():
-    print "- Don't forget to copy the root host SSH key to VM guest"
+    print("- Don't forget to copy the root host SSH key to VM guest")
     for vm in config.scenario.vm:
-        print "ssh-copy-id -f -i /root/.ssh/{}.pub -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no {}".format(config.user.sshkey, name)
+        print("ssh-copy-id -f -i /root/.ssh/{}.pub -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no {}".format(config.user.sshkey, vm.name))
 
-    print ""
-    print "- Clean up your /root/.ssh/known_hosts from previous config (dirty way below)"
-    print "rm -vf /root/.ssh/known_hosts"
+    print("")
+    print("- Clean up your /root/.ssh/known_hosts from previous config (dirty way below)")
+    print("rm -vf /root/.ssh/known_hosts")
 
 
 def cmd_deploy(args):
@@ -805,7 +805,7 @@ def cmd_deploy(args):
 def cmd_config(args):
     if args.scenario is not None:
         config_scenario(args.scenario)
-    print config
+    print(config)
 
 
 def main():
