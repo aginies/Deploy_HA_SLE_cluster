@@ -94,7 +94,6 @@
       <disable config:type="list"/>
       <enable config:type="list">
         <service>btrfsmaintenance-refresh</service>
-        <service>corosync</service>
         <service>cron</service>
         <service>display-manager</service>
         <service>getty@tty1</service>
