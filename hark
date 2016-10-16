@@ -631,7 +631,7 @@ def generate_vm_template(exedir, outputdir):
     t_package = open("{}/package.xml".format(t_path)).read()
     t_hosts_entry = open("{}/hosts_entry.xml".format(t_path)).read()
 
-    addons = "".join(t_addon.format(**a.__dict__) for a in config.scenario.addon if getattr(a, "base", "no") != "yes")
+    addons = "".join(t_addon.format(dev="/dev/sr{}".format(i)) for i, _ in enumerate(a for a in config.scenario.addon if getattr(a, "base", "no") != "yes"))
     packages = "".join(t_package.format(name=pkg) for pkg in config.scenario.common.packages.split())
     hosts = "".join(t_hosts_entry.format(**vm.__dict__) for vm in config.scenario.vm)
     txt = t_vm.format(
