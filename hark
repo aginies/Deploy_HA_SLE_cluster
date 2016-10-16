@@ -86,7 +86,7 @@ def log_start():
     Convenient side-effect: this will die immediately if the log file
     is not writable (e.g. if not running as root)
     """
-    datestr = get_stdout("date --rfc-3339=seconds")[1]
+    datestr = get_stdout("date --rfc-3339=seconds")[1].decode('utf-8')
     log('================================================================')
     log("{} {}".format(datestr, " ".join(sys.argv)))
     log('----------------------------------------------------------------')
@@ -663,7 +663,12 @@ def prepare_auto_deploy_image():
         invoke("qemu-img create {} -f raw 2M".format(config.storage.havmdisk))
         invoke("mkfs.ext3 {}".format(config.storage.havmdisk))
         invoke("mount {} {}".format(config.storage.havmdisk, tmpmount))
-        invoke("cp -v {}/{} /root/.ssh/{}.pub {}".format(wdir, config.vm.autoyastfile, config.user.sshkey, tmpmount))
+        invoke("mkdir {}/ssh".format(tmpmount))
+        invoke("cp -v {0}/{1} {2}".format(wdir, config.vm.autoyastfile, tmpmount))
+        invoke("cp -v /root/.ssh/{0} {1}/ssh/id_rsa".format(config.user.sshkey, tmpmount))
+        invoke("cp -v /root/.ssh/{0}.pub {1}/ssh/id_rsa.pub".format(config.user.sshkey, tmpmount))
+        invoke("cp -v /root/.ssh/{0}.pub {1}/ssh/authorized_keys".format(config.user.sshkey, tmpmount))
+        invoke("cp -v /root/.ssh/{0}.pub {1}/ssh/known_keys".format(config.user.sshkey, tmpmount))
         invoke("umount {}".format(tmpmount))
     finally:
         invoke("rm -rf {} {}".format(tmpmount, wdir))
@@ -831,9 +836,59 @@ def cmd_up(args):
     Configures the host (if necessary) and deploys the VMs
     (again, if necessary)
     """
-    cmd_hostcfg(args)
-    cmd_deploy(args)
-    cmd_status(args)
+    _, outp = get_stdout("screen -list")
+    if 'install_HA_VM_guest_' in outp.decode('utf-8'):
+        error("Installations in progress!")
+
+    def determine_status():
+        if not os.path.exists("/usr/bin/virsh"):
+            return 'unknown'
+        rc, outp = get_stdout("virsh -q list --all")
+        if rc != 0:
+            warn("Failed to list virtual machines")
+            return 'unknown'
+        for line in outp.decode('utf-8').splitlines():
+            if config.vm.distro in line:
+                if 'running' in line:
+                    return 'running'
+                if 'shut off' in line:
+                    return 'created'
+        return 'unknown'
+
+    state = determine_status()
+    if state == 'created':
+        for vm in config.scenario.vm:
+            vmname = "{}{}".format(config.vm.distro, vm.name)
+            invoke("virsh start {}".format(vmname))
+    elif state == 'running':
+        status("Already running")
+    else:
+        cmd_hostcfg(args)
+        cmd_deploy(args)
+        cmd_status(args)
+
+
+def cmd_halt(args):
+    """
+    Tell running vms to halt
+    """
+    _, outp = get_stdout("screen -list")
+    if 'install_HA_VM_guest_' in outp.decode('utf-8'):
+        if not ask("Installations in progress! Do you really want to tell VMs to halt?"):
+            return
+
+    rc, outp = get_stdout("virsh -q list --all")
+    if rc != 0:
+        error("Failed to list virtual machines")
+
+    for line in outp.decode('utf-8').splitlines():
+        if config.vm.distro in line:
+            vmname = line.split()[1]
+            if "running" not in line:
+                status("{} not running".format(vmname))
+                continue
+            if not invoke("virsh -q destroy {} --graceful".format(vmname)):
+                warn("Failed to halt {}".format(vmname))
 
 
 def cmd_status(args):
@@ -972,6 +1027,9 @@ def main():
 
         subparser = subparsers.add_parser('up', help="Configure the host and bring virtual machines up")
         subparser.set_defaults(func=cmd_up)
+
+        subparser = subparsers.add_parser('halt', help="Tell running VMs to halt")
+        subparser.set_defaults(func=cmd_halt)
 
         subparser = subparsers.add_parser('destroy', help="Halt and destroy any created VMs")
         subparser.set_defaults(func=cmd_destroy)

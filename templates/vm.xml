@@ -203,7 +203,7 @@ mkdir /mnt/autoyastdisk
 mount /dev/vdc /mnt/autoyastdisk
 mkdir -p /root/.ssh
 chmod 700 /root/.ssh
-cp /mnt/autoyastdisk/*.pub /root/.ssh/authorized_keys
+cp -r /mnt/autoyastdisk/ssh/* /root/.ssh/
 umount /mnt/autoyastdisk
 rmdir /mnt/autoyastdisk
 ]]></source>
