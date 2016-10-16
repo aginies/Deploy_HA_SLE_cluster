@@ -10,14 +10,15 @@ ram=2048
 imagesize=8G
 keymap=english-us
 timezone=Europe/Stockholm
-libvirtpool=hapool
 autoyastfile=havm.xml
 extraargs=autoyast=device://vdc/{autoyastfile}
 
 [storage]
 path=/var/lib/libvirt/images
-sbdname=SBD
-sbddevice=/dev/vdb
+libvirtpool=hapool
+sharedname=hashared
+shareddevice=/dev/vdb
+sharedsize=1G
 havmdisk=havm_xml.raw
 
 [user]
@@ -25,3 +26,6 @@ keymap=us
 sshkey=id_rsa_ha
 name=krig
 password=linux
+
+[scenario]
+default=2node
