@@ -92,9 +92,15 @@ will need to be modified.
 * Clone this repository
 * Copy `hark.ini.example` to `hark.ini`
 * Adjust settings to your liking
-* Configure the host and create VMs: `sudo ./hark up`
-* Bootstrap the cluster (optional): `sudo ./hark bootstrap`
+* Verify the configuration using `./hark config`
+* Configure the host and create VMs: `./hark up`
+* Bootstrap the cluster (optional): `./hark bootstrap`
+* See status using `./hark status`
 * Your HA cluster is now able to run some HA tests
+
+*Note*: Executed actions and commands are logged to `./hark.log`.
+
+*Note*: Background installation processes log to `./screenlog.0`.
 
 ## Scenario configuration files
 
@@ -114,7 +120,7 @@ The ha-cluster-init script will be run on node HA1.
 *NOTE* This script still needs some work to handle the various
  scenarios configurable by `hark`.
 
-*NOTE* Use the [force] option to bypass the HA cluster check.
+*NOTE* Use the `[force]` option to bypass the HA cluster check.
 
 ## AutoYast templates
 
@@ -191,4 +197,84 @@ mac={config.network.mac}db
 address={config.network.range}.133
 fqdn={name}.testing.com
 mac={config.network.mac}db
+```
+
+# Example installation run
+
+```
+host$ ./hark --scenario geo up
+  Install virtualization stack for openSUSE...done
+  Prepare /etc/hosts
+  Prepare virtual network (/etc/libvirt/qemu/networks/HAnet.xml)......done
+  Prepare and create shard pool and volume.......done
+  Prepare the Autoyast image for VM guest installation
+  Cleanup VM
+  Create pool hatwonode
+  Check disks before install
+  Install VM hageo11
+  Install VM hageo12
+  Install VM hageo21
+  Install VM hageo22
+  Install VM haarbitrator
+# Networks:
+   HAnet                active     yes           yes
+
+# Pools:
+   hashared             active     yes
+   hatwonode            active     yes
+
+# Volumes:
+   SLE12SP2haarbitrator.qcow2 /home/krig/vms/hatwonode/SLE12SP2haarbitrator.qcow2
+   SLE12SP2hageo11.qcow2 /home/krig/vms/hatwonode/SLE12SP2hageo11.qcow2
+   SLE12SP2hageo12.qcow2 /home/krig/vms/hatwonode/SLE12SP2hageo12.qcow2
+   SLE12SP2hageo21.qcow2 /home/krig/vms/hatwonode/SLE12SP2hageo21.qcow2
+   SLE12SP2hageo22.qcow2 /home/krig/vms/hatwonode/SLE12SP2hageo22.qcow2
+   hashared.img         /home/krig/vms/hashared/hashared.img
+
+# Virtual machines:
+
+# IP Addresses:
+
+# Installations in progress:
+   22739.install_HA_VM_guest_SLE12SP2haarbitrator	(Detached)
+   22723.install_HA_VM_guest_SLE12SP2hageo22	(Detached)
+   22706.install_HA_VM_guest_SLE12SP2hageo21	(Detached)
+   22687.install_HA_VM_guest_SLE12SP2hageo12	(Detached)
+   22673.install_HA_VM_guest_SLE12SP2hageo11	(Detached)
+```
+
+# Example post-installation status
+
+```
+host$ ./hark --scenario geo status
+# Networks:
+   HAnet                active     yes           yes
+
+# Pools:
+   hashared             active     yes
+   hatwonode            active     yes
+
+# Volumes:
+   SLE12SP2haarbitrator.qcow2 /home/krig/vms/hatwonode/SLE12SP2haarbitrator.qcow2
+   SLE12SP2hageo11.qcow2 /home/krig/vms/hatwonode/SLE12SP2hageo11.qcow2
+   SLE12SP2hageo12.qcow2 /home/krig/vms/hatwonode/SLE12SP2hageo12.qcow2
+   SLE12SP2hageo21.qcow2 /home/krig/vms/hatwonode/SLE12SP2hageo21.qcow2
+   SLE12SP2hageo22.qcow2 /home/krig/vms/hatwonode/SLE12SP2hageo22.qcow2
+   hashared.img         /home/krig/vms/hashared/hashared.img
+
+# Virtual machines:
+   6     SLE12SP2haarbitrator           running
+   7     SLE12SP2hageo12                running
+   8     SLE12SP2hageo11                running
+   10    SLE12SP2hageo22                running
+   11    SLE12SP2hageo21                running
+
+# IP Addresses:
+   2016-10-17 11:37:11  52:54:00:c7:92:ea  ipv4      192.168.12.111/24         hageo11         01:52:54:00:c7:92:ea
+   2016-10-17 11:37:06  52:54:00:c7:92:eb  ipv4      192.168.12.112/24         hageo12         01:52:54:00:c7:92:eb
+   2016-10-17 11:41:19  52:54:00:c7:92:ec  ipv4      192.168.12.113/24         hageo21         01:52:54:00:c7:92:ec
+   2016-10-17 11:37:14  52:54:00:c7:92:ed  ipv4      192.168.12.114/24         hageo22         01:52:54:00:c7:92:ed
+   2016-10-17 11:36:56  52:54:00:c7:92:ee  ipv4      192.168.12.115/24         haarbitrator    01:52:54:00:c7:92:ee
+
+# Installations in progress:
 ```
