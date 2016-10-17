@@ -11,6 +11,7 @@ import requests
 from lxml import etree
 
 LOG_FILE = "hark.log"
+LOG_ENABLED = True
 DEBUG = False
 QUIET = False
 NONINTERACTIVE = False
@@ -52,6 +53,8 @@ def warn(*args):
 
 
 def log(*args):
+    if not LOG_ENABLED:
+        return
     try:
         with open(LOG_FILE, "a") as logfile:
             logfile.write(" ".join([str(arg) for arg in args]) + "\n")
@@ -891,7 +894,6 @@ def cmd_up(args):
     else:
         cmd_hostcfg(args)
         cmd_deploy(args)
-        cmd_status(args)
 
     if args.bootstrap:
         wait_to_bootstrap()
@@ -916,18 +918,19 @@ def wait_to_bootstrap():
         status_progress()
     status_done()
     status_long("Wait for nodes to appear on network")
-    nwaits = 0
     while True:
         rc, outp = get_stdout("virsh -q net-dhcp-leases {}".format(config.network.name))
         outp = outp.decode('utf-8')
         if rc == 0:
             if all(node in outp for node in nodes):
                 break
-        nwaits += 1
         time.sleep(5)
         status_progress()
-    # wait some more before bootstrapping
-    if nwaits > 0:
+    status_done()
+    status_long("Try to connect")
+    while True:
+        if all(do_remote(n, "true", stderr_on=False) for n in nodes):
+            break
         time.sleep(5)
         status_progress()
     status_done()
@@ -1142,6 +1145,7 @@ def cmd_test(args):
 
 def main():
     global QUIET
+    global LOG_ENABLED
     global DEBUG
     global NONINTERACTIVE
     global DOWNLOAD
@@ -1154,6 +1158,7 @@ def main():
         cluster.''')
 
         parser.add_argument('-q', '--quiet', help="Minimal output", action="store_true")
+        parser.add_argument('-Q', '--no-log', dest="nolog", help="Disable log", action="store_true")
         parser.add_argument('-n', '--non-interactive', dest="noninteractive", help="Assume yes to all prompts", action="store_true")
         parser.add_argument('-x', '--debug', help="Halt in debugger on error", action="store_true")
         parser.add_argument('-d', '--download', help="Download missing ISO files automatically", action="store_true")
@@ -1194,6 +1199,7 @@ def main():
         subparser.set_defaults(func=cmd_test)
 
         args = parser.parse_args()
+        LOG_ENABLED = not args.nolog
         DEBUG = args.debug
         NONINTERACTIVE = args.noninteractive
         QUIET = args.quiet
