@@ -390,10 +390,6 @@ def mkconfig():
     return config
 
 
-log_start()
-config = mkconfig()
-
-
 downloads = {}
 
 
@@ -1142,8 +1138,11 @@ def cmd_test(args):
     """
     pass
 
+config = None
+
 
 def main():
+    global config
     global QUIET
     global LOG_ENABLED
     global DEBUG
@@ -1166,7 +1165,7 @@ def main():
 
         subparsers = parser.add_subparsers()
 
-        subparser = subparsers.add_parser('download', help='List available variants and download ISO files for variants'.format(config.iso.url))
+        subparser = subparsers.add_parser('download', help='List available variants and download ISO files for variants')
         subparser.add_argument('variant', help="Name of variant", nargs='?')
         subparser.add_argument('iso', help="ISO file name", nargs='?')
         subparser.set_defaults(func=cmd_iso)
@@ -1204,6 +1203,9 @@ def main():
         NONINTERACTIVE = args.noninteractive
         QUIET = args.quiet
         DOWNLOAD = args.download
+
+        log_start()
+        config = mkconfig()
 
         if args.scenario is None:
             config_scenario(config.scenario.default)
