@@ -121,3 +121,74 @@ The ha-cluster-init script will be run on node HA1.
 The AutoYast files used for auto-installation are based on the
 templates found in `templates/`. These may need to be modified for
 different versions of SLE or openSUSE.
+
+## Example configuration (hark.ini)
+
+```
+[iso]
+path=/mnt/ISO/SP2devel
+url=http://download.opensuse.org/distribution/leap/42.2/iso/
+
+[host]
+hypervisor=kvm
+
+[network]
+name=HAnet
+range=192.168.12
+uuid=851e50f1-db72-475a-895f-28304baf8e8c
+hostmac=52:54:00:89:a0:b9
+interface=virbr1
+mac=52:54:00:c7:92:
+
+[storage]
+path=/var/lib/libvirt/images
+vmpool=hapool
+sharedpool=hashared
+shareddisk={path}/{sharedpool}/{sharedpool}.img
+shareddevice=/dev/vdb
+sharedsize=1G
+
+[user]
+keymap=us
+sshkey=id_rsa_ha
+name=krig
+password=linux
+
+[scenario]
+default=2node
+```
+
+## Example scenario (scenarios/3node.ini)
+
+```
+[common]
+distro=SLE12SP2
+vcpu=2
+ram=2048
+imagesize=8G
+keymap=english-us
+timezone=Europe/Stockholm
+packages=openssh vim autoyast2 ntp patterns-ha-ha_sles haproxy apache2 mariadb mariadb-tools bridge-utils git-core perl-Error
+autoyastdisk={config.storage.path}/threenode.raw
+
+[addon:sle_ha]
+iso={config.iso.url}/SLE-12-SP2-HA-GMC/SLE-12-SP2-HA-DVD-x86_64-*-Media1.iso
+
+[addon:base]
+iso={config.iso.url}/SLE-12-SP2-Server-GMC/SLE-12-SP2-Server-DVD-x86_64-*-Media1.iso
+
+[vm:ha31]
+address={config.network.range}.131
+fqdn={name}.testing.com
+mac={config.network.mac}da
+
+[vm:ha32]
+address={config.network.range}.132
+fqdn={name}.testing.com
+mac={config.network.mac}db
+
+[vm:ha33]
+address={config.network.range}.133
+fqdn={name}.testing.com
+mac={config.network.mac}db
+```
