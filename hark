@@ -659,7 +659,7 @@ def prepare_auto_deploy_image():
     os.chdir(config.storage.path)
     try:
         generate_vm_template(cwd, wdir)
-        diskname = os.path.basename(config.storage.scenariodisk)
+        diskname = os.path.basename(config.scenario.common.autoyastdisk)
         invoke("qemu-img create {} -f raw 2M".format(diskname))
         invoke("mkfs.ext3 {}".format(diskname))
         invoke("mount {} {}".format(diskname, tmpmount))
@@ -746,7 +746,7 @@ def cleanup_vm():
 
 def check_before_install():
     status("Check disks before install")
-    for disk in (os.path.join(config.storage.path, config.storage.scenariodisk),
+    for disk in (config.scenario.common.autoyastdisk,
                  os.path.join(config.storage.path, config.storage.sharedpool, "{}.img".format(config.storage.sharedpool))):
         if not os.path.isfile(disk):
             error("{} not found, needed for autoinstallation".format(disk))
@@ -785,7 +785,7 @@ def install_vms():
         invoke("virsh pool-refresh {}".format(pool))
 
         vmdisk = "{}/{}/{}.qcow2".format(config.storage.path, config.storage.vmpool, vmname)
-        scenariodisk = os.path.join(config.storage.path, config.scenariodisk)
+        autoyastdisk = config.scenario.common.autoyastdisk
         shareddisk = config.storage.shareddisk
 
         if not os.path.isfile(vmdisk):
@@ -800,7 +800,7 @@ def install_vms():
                ' --network network=', config.network.name, ',mac=', vm.mac,
                ' --disk path=', vmdisk, ',format=qcow2,bus=virtio,cache=none',
                ' --disk path=', shareddisk, ',bus=virtio',
-               ' --disk path=', scenariodisk, ',bus=virtio']
+               ' --disk path=', autoyastdisk, ',bus=virtio']
 
         baseloc = None
         for addon in config.scenario.addon:

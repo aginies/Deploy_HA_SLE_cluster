@@ -2,16 +2,8 @@
 path=/mnt/ISO/SP2devel
 url=http://download.opensuse.org/distribution/leap/42.2/iso/
 
-[vm]
+[host]
 hypervisor=kvm
-distro=SLE12SP2
-vcpu=2
-ram=2048
-imagesize=8G
-keymap=english-us
-timezone=Europe/Stockholm
-autoyastfile=havm.xml
-extraargs=autoyast=device://vdc/{autoyastfile}
 
 [network]
 name=HAnet
@@ -23,11 +15,11 @@ mac=52:54:00:c7:92:
 
 [storage]
 path=/var/lib/libvirt/images
-libvirtpool=hapool
-sharedname=hashared
+vmpool=hapool
+sharedpool=hashared
+shareddisk={path}/{sharedpool}/{sharedpool}.img
 shareddevice=/dev/vdb
 sharedsize=1G
-havmdisk=havm_xml.raw
 
 [user]
 keymap=us
