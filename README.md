@@ -162,7 +162,7 @@ default=2node
 
 ```
 [common]
-distro=SLE12SP2
+distro=SLE12SP1
 vcpu=2
 ram=2048
 imagesize=8G
