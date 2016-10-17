@@ -919,6 +919,7 @@ def wait_to_bootstrap():
                 waitstate = 1
         if waitstate == 1:
             rc, outp = get_stdout("virsh -q net-dhcp-leases {}".format(config.network.name))
+            outp = outp.decode('utf-8')
             if rc == 0:
                 if all(node in outp for node in nodes):
                     waitstate = 2
