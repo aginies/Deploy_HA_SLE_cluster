@@ -17,7 +17,7 @@ mac=52:54:00:c7:92:
 path=/var/lib/libvirt/images
 vmpool=hapool
 sharedpool=hashared
-shareddisk={path}/{sharedpool}/{sharedpool}.img
+shareddisk={path}/{sharedpool}/{sharedpool}.raw
 shareddevice=/dev/vdb
 sharedsize=1G
 

@@ -583,7 +583,7 @@ def ssh_root_key():
 
 def destroy_shared_pool():
     sharedpool = config.storage.sharedpool
-    shareddisk = os.path.join(config.storage.path, config.storage.sharedpool, config.storage.sharedpool + ".img")
+    shareddisk = config.storage.shareddisk
     log("Destroy current pool {}".format(sharedpool))
     invoke("virsh", "pool-destroy", sharedpool)
     log("Undefine current pool {}".format(sharedpool))
@@ -612,12 +612,34 @@ def prepare_shared_pool():
     invoke("virsh", "pool-autostart", sharedpool)
     status_progress()
     log("Create the shared volume")
-    invoke("virsh", "vol-create-as",
-           "--pool", sharedpool,
-           "--name", "{}.img".format(sharedpool),
-           "--format", "raw",
-           "--allocation", config.storage.sharedsize,
-           "--capacity", config.storage.sharedsize)
+
+    def sized(s):
+        s = s.lower()
+        if s.endswith('g'):
+            return int(s[:-1]) * 1024 * 1024 * 1024
+        if s.endswith('m'):
+            return int(s[:-1]) * 1024 * 1024
+        if s.endswith('k'):
+            return int(s[:-1]) * 1024
+        return int(s)
+
+    diskname = os.path.basename(config.storage.shareddisk)
+
+    doc = """<volume>
+  <name>{name}</name>
+  <capacity>{capacity}</capacity>
+  <allocation>{capacity}</allocation>
+  <shareable/>
+  <target>
+    <format type='raw'/>
+  </target>
+</volume>
+""".format(name=diskname, capacity=sized(config.storage.sharedsize))
+
+    with create_tempfile() as tmppath:
+        with open(tmppath, "w") as f:
+            f.write(doc)
+        invoke("virsh", "vol-create", "--pool", sharedpool, "--file", tmppath)
     status_done()
 
 
@@ -722,7 +744,6 @@ def check_isos():
 
 
 def cleanup_vm():
-    status("Cleanup VM")
     pooldir = os.path.join(config.storage.path, config.storage.vmpool)
     if os.path.isdir(pooldir):
         images = [f for f in os.listdir(pooldir) if f.endswith(".qcow2")]
@@ -737,20 +758,16 @@ def cleanup_vm():
     for vm in config.scenario.vm:
         name = "{}{}".format(vm.distro, vm.name)
         if name in vmlist.split():
-            status("Destroy VM: {}".format(name))
+            status("Delete VM {}".format(name))
             invoke("virsh destroy {}".format(name))
-            status("Undefine VM: {}".format(name))
             invoke("virsh undefine {}".format(name))
-        fname = os.path.join(config.storage.path, config.storage.vmpool, name)
-        if os.path.isfile(fname):
-            status("Remove VM image {0}".format(name))
-            invoke("rm -vf {}.qcow2".format(fname))
+            invoke("virsh vol-delete --pool {} {}.qcow2".format(config.storage.vmpool, name))
 
 
 def check_before_install():
     status("Check disks before install")
     for disk in (config.scenario.common.autoyastdisk,
-                 os.path.join(config.storage.path, config.storage.sharedpool, "{}.img".format(config.storage.sharedpool))):
+                 config.storage.shareddisk):
         if not os.path.isfile(disk):
             error("{} not found, needed for autoinstallation".format(disk))
 
@@ -802,8 +819,8 @@ def install_vms():
                ' --graphics ', 'vnc,keymap=', config.user.keymap,
                ' --network network=', config.network.name, ',mac=', vm.mac,
                ' --disk path=', vmdisk, ',format=qcow2,bus=virtio,cache=none',
-               ' --disk path=', shareddisk, ',bus=virtio',
-               ' --disk path=', autoyastdisk, ',bus=virtio']
+               ' --disk path=', shareddisk, ',format=raw,bus=virtio,cache=none',
+               ' --disk path=', autoyastdisk, ',format=raw,bus=virtio']
 
         baseloc = None
         for addon in config.scenario.addon:
@@ -917,17 +934,21 @@ def cmd_status(args):
     rc, outp = get_stdout("virsh -q pool-list")
     if rc != 0:
         error("Failed to list pools")
+    pools = []
     for line in outp.decode('utf-8').splitlines():
-        if config.storage.vmpool in line or config.storage.sharedpool in line:
+        if config.storage.vmpool in line:
+            pools.append(config.storage.vmpool)
+            print("  ", line.strip())
+        elif config.storage.sharedpool in line:
+            pools.append(config.storage.sharedpool)
             print("  ", line.strip())
     print("\n# Volumes:")
-    for pool in (config.storage.vmpool, config.storage.sharedpool):
+    for pool in pools:
         rc, outp = get_stdout("virsh -q vol-list {}".format(pool))
-        if rc != 0:
-            error("Failed to list volumes")
-        for line in outp.decode('utf-8').splitlines():
-            if config.storage.path in line:
-                print("  ", line.strip())
+        if rc == 0:
+            for line in outp.decode('utf-8').splitlines():
+                if config.storage.path in line:
+                    print("  ", line.strip())
 
     # check vms
     print("\n# Virtual machines:")
@@ -992,6 +1013,24 @@ def cmd_destroy(args):
         error("Command has to run as root.")
     cleanup_vm()
 
+    if args.all:
+
+        def virsh(cmds, tgt):
+            for cmd in cmds.split():
+                invoke("virsh -q {} {}".format(cmd, tgt))
+
+        if invoke("virsh -q pool-info {}".format(config.storage.vmpool)):
+            status("Delete pool {}".format(config.storage.vmpool))
+            virsh('pool-destroy pool-delete pool-undefine', config.storage.vmpool)
+
+        if invoke("virsh -q pool-info {}".format(config.storage.sharedpool)):
+            status("Delete pool {}".format(config.storage.sharedpool))
+            virsh('pool-destroy pool-delete pool-undefine', config.storage.sharedpool)
+
+        if invoke("virsh -q net-uuid {}".format(config.network.name)):
+            status("Delete network {}".format(config.network.name))
+            virsh('net-destroy net-undefine', config.network.name)
+
 
 def cmd_config(args):
     print(config)
@@ -1019,14 +1058,14 @@ def cmd_bootstrap(args):
     if getuser() != "root":
         error("Command has to run as root.")
 
+    nodelist = [vm.name for vm in config.scenario.vm]
+
     status_long("Initialize cluster")
-    if not pssh("ha-cluster-init -y -t ocfs2 -p /dev/vdb",
-                nodes=config.scenario.vm[0].name):
+    if not pssh("ha-cluster-init -y -t ocfs2 -p /dev/vdb", nodes=nodelist[0]):
         error("Failed to initialize cluster")
     status_done()
     status_long("Join cluster from remaining nodes")
-    if not pssh("ha-cluster-join -y -c {}".format(config.scenario.vm[0].name),
-                nodes=" ".join(vm.name for vm in config.scenario.vm[1:])):
+    if not pssh("ha-cluster-join -y -c {}".format(nodelist[0]), nodes=" ".join(nodelist)):
         error("Failed to join cluster")
     status_done()
 
@@ -1078,6 +1117,7 @@ def main():
         subparser.set_defaults(func=cmd_halt)
 
         subparser = subparsers.add_parser('destroy', help="Halt and destroy any created VMs")
+        subparser.add_argument('-a', '--all', dest="all", action="store_true", help="Also destroy pools and network")
         subparser.set_defaults(func=cmd_destroy)
 
         subparser = subparsers.add_parser('bootstrap', help="Bootstrap initial cluster")
