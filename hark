@@ -906,31 +906,24 @@ def cmd_up(args):
 
 
 def wait_to_bootstrap():
-    import random
     status_long("Wait for installation to complete")
     nodes = [vm.name for vm in config.scenario.vm]
-    waitstate = 0
     while True:
+        state = determine_status()
+        if state == 'running':
+            break
         time.sleep(5)
         status_progress()
-        if waitstate == 0:
-            state = determine_status()
-            if state == 'running':
-                waitstate = 1
-        if waitstate == 1:
-            rc, outp = get_stdout("virsh -q net-dhcp-leases {}".format(config.network.name))
-            outp = outp.decode('utf-8')
-            if rc == 0:
-                if all(node in outp for node in nodes):
-                    waitstate = 2
-        if waitstate == 2:
-            n = random.choice(nodes)
-            rc, _ = get_stdout("ssh -q -o ConnectTimeout=5 -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no root@{} crm_mon -D1jr".format(n),
-                               stderr_on=False)
-            if rc == 0:
-                nodes.remove(n)
-                if len(nodes) == 0:
-                    break
+    status_done()
+    status_long("Wait for nodes to appear on network")
+    while True:
+        rc, outp = get_stdout("virsh -q net-dhcp-leases {}".format(config.network.name))
+        outp = outp.decode('utf-8')
+        if rc == 0:
+            if all(node in outp for node in nodes):
+                break
+        time.sleep(5)
+        status_progress()
     status_done()
 
 
