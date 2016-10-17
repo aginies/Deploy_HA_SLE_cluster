@@ -126,8 +126,8 @@ different versions of SLE or openSUSE.
 
 ```
 [iso]
-path=/mnt/ISO/SP2devel
-url=http://download.opensuse.org/distribution/leap/42.2/iso/
+path=/mnt/ISO/
+url=http://repo.example.com/iso/
 
 [host]
 hypervisor=kvm
@@ -172,10 +172,10 @@ packages=openssh vim autoyast2 ntp patterns-ha-ha_sles haproxy apache2 mariadb m
 autoyastdisk={config.storage.path}/threenode.raw
 
 [addon:sle_ha]
-iso={config.iso.url}/SLE-12-SP2-HA-GMC/SLE-12-SP2-HA-DVD-x86_64-*-Media1.iso
+iso={config.iso.url}/SLE-12-SP1-HA-DVD-x86_64-*-Media1.iso
 
 [addon:base]
-iso={config.iso.url}/SLE-12-SP2-Server-GMC/SLE-12-SP2-Server-DVD-x86_64-*-Media1.iso
+iso={config.iso.url}/SLE-12-SP1-Server-DVD-x86_64-*-Media1.iso
 
 [vm:ha31]
 address={config.network.range}.131
