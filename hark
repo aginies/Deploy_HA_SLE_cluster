@@ -632,7 +632,7 @@ def generate_vm_template(exedir, outputdir):
     t_hosts_entry = open("{}/hosts_entry.xml".format(t_path)).read()
 
     for vm in config.scenario.vm:
-        addons = "".join(t_addon.format(dev="/dev/sr{}".format(i)) for i, _ in enumerate(a for a in config.scenario.addon if a.name != "base"))
+        addons = "".join(t_addon.format(name=a.name, dev="/dev/sr{}".format(i)) for i, a in enumerate(a for a in config.scenario.addon if a.name != "base"))
         packages = "".join(t_package.format(name=pkg) for pkg in vm.packages.split())
         hosts = "".join(t_hosts_entry.format(**vm.__dict__) for vm in config.scenario.vm)
         txt = t_vm.format(
