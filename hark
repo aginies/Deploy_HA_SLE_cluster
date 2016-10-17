@@ -856,6 +856,22 @@ def cmd_deploy(args):
     install_vms()
 
 
+def determine_status():
+    if not os.path.exists("/usr/bin/virsh"):
+        return 'unknown'
+    rc, outp = get_stdout("virsh -q list --all")
+    if rc != 0:
+        warn("Failed to list virtual machines")
+        return 'unknown'
+    for line in outp.decode('utf-8').splitlines():
+        if config.scenario.common.distro in line:
+            if 'running' in line:
+                return 'running'
+            if 'shut off' in line:
+                return 'created'
+    return 'unknown'
+
+
 def cmd_up(args):
     """
     Configures the host (if necessary) and deploys the VMs
@@ -864,21 +880,6 @@ def cmd_up(args):
     _, outp = get_stdout("screen -list")
     if 'install_HA_VM_guest_' in outp.decode('utf-8'):
         error("Installations in progress!")
-
-    def determine_status():
-        if not os.path.exists("/usr/bin/virsh"):
-            return 'unknown'
-        rc, outp = get_stdout("virsh -q list --all")
-        if rc != 0:
-            warn("Failed to list virtual machines")
-            return 'unknown'
-        for line in outp.decode('utf-8').splitlines():
-            if config.scenario.common.distro in line:
-                if 'running' in line:
-                    return 'running'
-                if 'shut off' in line:
-                    return 'created'
-        return 'unknown'
 
     state = determine_status()
     if state == 'created':
@@ -891,6 +892,45 @@ def cmd_up(args):
         cmd_hostcfg(args)
         cmd_deploy(args)
         cmd_status(args)
+
+    if args.bootstrap:
+        wait_to_bootstrap()
+
+        class Bootstrapargs():
+            pass
+        bargs = Bootstrapargs()
+        bargs.nodes = None
+        cmd_bootstrap(bargs)
+    elif args.wait:
+        wait_to_bootstrap()
+
+
+def wait_to_bootstrap():
+    import random
+    status_long("Wait for installation to complete")
+    nodes = [vm.name for vm in config.scenario.vm]
+    waitstate = 0
+    while True:
+        time.sleep(5)
+        status_progress()
+        if waitstate == 0:
+            state = determine_status()
+            if state == 'running':
+                waitstate = 1
+        if waitstate == 1:
+            rc, outp = get_stdout("virsh -q net-dhcp-leases {}".format(config.network.name))
+            if rc == 0:
+                if all(node in outp for node in nodes):
+                    waitstate = 2
+        if waitstate == 2:
+            n = random.choice(nodes)
+            rc, _ = get_stdout("ssh -q -o ConnectTimeout=5 -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no root@{} crm_mon -D1jr".format(n),
+                               stderr_on=False)
+            if rc == 0:
+                nodes.remove(n)
+                if len(nodes) == 0:
+                    break
+    status_done()
 
 
 def cmd_halt(args):
@@ -986,7 +1026,8 @@ def cmd_status(args):
                 no_installations = False
                 print("  ", line.strip())
 
-    if args.crmmon and running and no_installations:
+    has_crmmon = hasattr(args, "crmmon") and args.crmmon
+    if has_crmmon and running and no_installations:
         rc, outp = get_stdout("ssh -q -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no root@{} crm_mon -D1jr".format(args.crmmon))
         if rc == 0:
             print("\n# Cluster status:")
@@ -1046,6 +1087,7 @@ def pssh(*args, nodes=None):
     return invoke(
         'pssh -H "{nodes}" -l root -p 30 -t 0 -x "-o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no" "{cmd}"'.format(
             nodes=nodes, cmd=" ".join(args)))
+
 
 def pscp(src, dst, nodes=None):
     if nodes is None:
@@ -1120,6 +1162,8 @@ def main():
         subparser.set_defaults(func=cmd_status)
 
         subparser = subparsers.add_parser('up', help="Configure the host and bring virtual machines up")
+        subparser.add_argument('--wait', dest="wait", action="store_true", help="Wait until VMs are ready")
+        subparser.add_argument('--bootstrap', dest="bootstrap", action="store_true", help="Bootstrap HA cluster (unless already bootstrapped)")
         subparser.set_defaults(func=cmd_up)
 
         subparser = subparsers.add_parser('halt', help="Tell running VMs to halt")
