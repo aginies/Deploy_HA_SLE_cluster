@@ -28,4 +28,4 @@ name=krig
 password=linux
 
 [scenario]
-default=2node
+default=3node
