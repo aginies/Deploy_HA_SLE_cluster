@@ -924,12 +924,25 @@ def cmd_status(args):
     """
 
     print("# Networks:")
+    nnetworks = 0
     rc, outp = get_stdout("virsh -q net-list")
     if rc != 0:
         error("Failed to list networks")
     for line in outp.decode('utf-8').splitlines():
         if config.network.name in line:
+            nnetworks += 1
             print("  ", line.strip())
+
+    # get IP addresses
+    if nnetworks > 0:
+        print("")
+        rc, outp = get_stdout("virsh -q net-dhcp-leases {}".format(config.network.name))
+        if rc != 0:
+            error("Failed to list IP addresses for {}".format(config.network.name))
+        for line in outp.decode('utf-8').splitlines():
+            if line.strip():
+                print("  ", line.strip())
+
     print("\n# Pools:")
     rc, outp = get_stdout("virsh -q pool-list")
     if rc != 0:
@@ -962,15 +975,6 @@ def cmd_status(args):
                 running = True
             print("  ", line.strip())
 
-    # get IP addresses
-    print("\n# IP Addresses:")
-    rc, outp = get_stdout("virsh -q net-dhcp-leases {}".format(config.network.name))
-    if rc != 0:
-        error("Failed to list IP addresses for {}".format(config.network.name))
-    for line in outp.decode('utf-8').splitlines():
-        if line.strip():
-            print("  ", line.strip())
-
     # list installations in progress
     print("\n# Installations in progress:")
     rc, outp = get_stdout("screen -list")
@@ -983,9 +987,9 @@ def cmd_status(args):
                 print("  ", line.strip())
 
     if running and no_installations:
-        rc, outp = get_stdout(" ssh -q -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no root@{} crm_mon -1".format(config.scenario.vm[0].name))
+        rc, outp = get_stdout("ssh -q -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no root@{} crm_mon -D1jr".format(config.scenario.vm[0].name))
         if rc == 0:
-            print("# Cluster status:")
+            print("\n# Cluster status:")
             print(outp.decode('utf-8'))
 
 
@@ -1058,16 +1062,20 @@ def cmd_bootstrap(args):
     if getuser() != "root":
         error("Command has to run as root.")
 
-    nodelist = [vm.name for vm in config.scenario.vm]
+    if args.nodes is None:
+        nodelist = [vm.name for vm in config.scenario.vm]
+    else:
+        nodelist = args.nodes.split()
 
     status_long("Initialize cluster")
     if not pssh("ha-cluster-init -y -t ocfs2 -p /dev/vdb", nodes=nodelist[0]):
         error("Failed to initialize cluster")
     status_done()
-    status_long("Join cluster from remaining nodes")
-    if not pssh("ha-cluster-join -y -c {}".format(nodelist[0]), nodes=" ".join(nodelist)):
-        error("Failed to join cluster")
-    status_done()
+    if len(nodelist) > 1:
+        status_long("Join cluster from remaining nodes")
+        if not pssh("ha-cluster-join -y -c {}".format(nodelist[0]), nodes=" ".join(nodelist[1:])):
+            error("Failed to join cluster")
+        status_done()
 
 
 def cmd_test(args):
@@ -1121,6 +1129,7 @@ def main():
         subparser.set_defaults(func=cmd_destroy)
 
         subparser = subparsers.add_parser('bootstrap', help="Bootstrap initial cluster")
+        subparser.add_argument('-n', '--nodes', dest="nodes", help="List of nodes to bootstrap cluster on")
         subparser.set_defaults(func=cmd_bootstrap)
 
         subparser = subparsers.add_parser('test', help="Run cluster test")
