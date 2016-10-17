@@ -1097,6 +1097,11 @@ def pscp(src, dst, nodes=None):
             nodes=nodes, src=src, dst=dst))
 
 
+def do_remote(node, cmd, stderr_on=True):
+    return invoke("ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no root@{} {}".format(node, cmd),
+                  stderr_on=stderr_on)
+
+
 def cmd_bootstrap(args):
     """
     Bootstrap cluster on configured nodes
@@ -1111,18 +1116,19 @@ def cmd_bootstrap(args):
 
     status("Check status of cluster nodes")
     for n in nodelist:
-        if invoke("ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no root@{} systemctl -q is-active corosync.service".format(n),
-                  stderr_on=False):
+        if do_remote(n, "systemctl -q is-active corosync.service", stderr_on=False):
             error("Cluster already active on {}".format(n))
 
     status_long("Initialize cluster")
-    if not pssh("ha-cluster-init -y -t ocfs2 -p /dev/vdb", nodes=nodelist[0]):
+    if not do_remote(nodelist[0], "ha-cluster-init -y -t ocfs2 -p /dev/vdb"):
         error("Failed to initialize cluster")
     status_done()
     if len(nodelist) > 1:
         status_long("Join cluster from remaining nodes")
-        if not pssh("ha-cluster-join -y -c {}".format(nodelist[0]), nodes=" ".join(nodelist[1:])):
-            error("Failed to join cluster")
+        for n in nodelist:
+            if not do_remote(n, "ha-cluster-join -y -c {}".format(nodelist[0])):
+                error("Failed to join cluster from {}".format(n))
+            status_progress()
         status_done()
 
 
