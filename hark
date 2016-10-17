@@ -1043,9 +1043,11 @@ def main():
     global DOWNLOAD
     try:
         parser = argparse.ArgumentParser(description='''Hark! A tool for setting up a test cluster for SLE HA.
-        Configure your scenarios using the hark.ini and scenario files,
-        run configure-host to prepare SSH keys, libvirt and the hypervisor,
-        and then run deploy to create the virtual machines.''')
+        Configure your scenarios using the hark.ini and scenario files.
+        Run 'up' to prepare the host and create virtual machines,
+        run 'status' to see the state of the cluster, and once
+        installation completes, run 'bootstrap' to configure the
+        cluster.''')
 
         parser.add_argument('-q', '--quiet', help="Minimal output", action="store_true")
         parser.add_argument('-n', '--non-interactive', dest="noninteractive", help="Assume yes to all prompts", action="store_true")

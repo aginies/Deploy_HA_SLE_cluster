@@ -1,4 +1,49 @@
-# Easily Deploy an HA cluster in Virtual Machines
+# Hark! Deploy an HA cluster in Virtual Machines
+
+Hark! is a tool to deploy various types of HA clusters without having
+to create a base image. It uses libvirt and autoyast to automate the
+creation and base configuration of virtual machines.
+
+## Usage
+
+```
+usage: hark [-h] [-q] [-n] [-x] [-d] [-s SCENARIO]
+            {download,config,status,up,halt,destroy,bootstrap,test} ...
+
+Hark! A tool for setting up a test cluster for SLE HA. Configure your
+scenarios using the hark.ini and scenario files. Run 'up' to prepare the host
+and create virtual machines, run 'status' to see the state of the cluster, and
+once installation completes, run 'bootstrap' to configure the cluster.
+
+positional arguments:
+  {download,config,status,up,halt,destroy,bootstrap,test}
+    download            List available variants and download ISO files for
+                        variants
+    config              Display resolved configuration values
+    status              Display status of configuration
+    up                  Configure the host and bring virtual machines up
+    halt                Tell running VMs to halt
+    destroy             Halt and destroy any created VMs
+    bootstrap           Bootstrap initial cluster
+    test                Run cluster test
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -q, --quiet           Minimal output
+  -n, --non-interactive
+                        Assume yes to all prompts
+  -x, --debug           Halt in debugger on error
+  -d, --download        Download missing ISO files automatically
+  -s SCENARIO, --scenario SCENARIO
+                        Cluster scenario
+```
+
+## History
+
+Originally this was a set of scripts that did mostly the same thing
+but only for a 4 node cluster. Description of original scripts below:
+
+### Easily Deploy an HA cluster in Virtual Machines
 
 The goal was to easily and quickly deploy an HA cluster in Virtual
 Machine to be able to test latest release and test some scenarios.
@@ -18,71 +63,61 @@ this should not interact or destroy any other configuration (pool, net, etc...)
 Please report any bugs or improvments to:
 https://github.com/aginies/Deploy_HA_SLE_cluster.git
 
-*NOTE*: default root password for Virtual Machine is: "a"
+## Features
 
-* *WARNING* All guest installation will be done at the same time (4 nodes)
-* *NOTE* You need an HA DVD rom and an SLE12SPX ISO DVD as source for Zypper
-* *NOTE* Host server should be a SLE or an openSUSE (will use zypper)
-* *NOTE* HA1 will be the node where ha-cluster-init will be launched
-* *WARNING* Running the script will erase all previous deployment configuration
-* *NOTE* Scripts are written in shell to simplify external contribution and modification, of course this choice lead to some technical limitation
+* Automatically download the latest ISO
+* Configure different scenarios with minimal changes needed
+* Pre-install SSH keys for easy access after configuration
+* Parallel background installation of VMs
+
+## Configuration
+
+Create different configuration scenarios using the `scenarios/*.ini`
+files. See the existing scenarios for details on what can be
+configured.
+
+* Per-VM configuration (VCPUs, RAM, etc.)
+* Package list to install
+* Addons and base image
+
+Basic configuration (username, password, etc.) is done in the
+`hark.ini` file. See the `hark.ini.example` file for an example
+configuration. The ISO download URL, username and local storage paths
+will need to be modified.
+
+* *WARNING* All guest installation will be done at the same time.
 
 ## Install / HOWTO
 
 * Clone this repository
-* Adjust VARS in havm.conf file
-* Prepare the host: HA_testsuite_host_conf.sh
-* Deploy HA VM: HA_testsuite_deploy_vm.sh
-* Init the cluster: HA_testsuite_init_cluster.sh
-* Your HA cluster is now able to run some HA scenarios
+* Copy `hark.ini.example` to `hark.ini`
+* Adjust settings to your liking
+* Configure the host and create VMs: `sudo ./hark up`
+* Bootstrap the cluster (optional): `sudo ./hark bootstrap`
+* Your HA cluster is now able to run some HA tests
 
-## havm.conf configuration file
-All variables for VM guest and Host. Most of them should not be changed.
+## Scenario configuration files
 
-*NOTE*:
-You should adjust path to ISO for installation. Currently this is using local or NFS ISO via a pool.
-* HACDROM="/var/lib/libvirt/images/SLE-12-SP2-HA-DVD-x86_64-Buildxxxx-Media1.iso"
-* SLECDROM="/var/lib/libvirt/images/SLE-12-SP2-Server-DVD-x86_64-Buildxxxx-Media1.iso"
+Most variables should be self-explanatory. Define virtual machine
+instances with a section per virtual machine, with a section title as
+`[vm:<name>]`.
 
-If you want to specify another way to ISO (like http etc...) you maybe need to adjust
-install_vm() function in HA_testsuite_deploy_vm.sh script.
+Configure Addons to download and install using the `[addon:<name>]`
+syntax. The base addon is used as the installation image.
 
 ## Scripts
-
-### HA_testsuite_host_conf.sh
-Configure the host:
-* install virtualization tools and restart libvirtd
-* generate an ssh root key, and prepare a config to connect to HA nodes
-* pre-configure pssh (generate an /etc/hanodes)
-* add HA nodes in /etc/hosts
-* create a Virtual Network: DHCP with host/mac/name/ip for HA nodes
-* create an SBD pool
-* prepapre an image (raw) which contains autoyast file
-
-### HA_testsuite_deploy_vm.sh
-This script will install all nodes with needed data
-* clean-up all previous data: VM definition, VM images
-* create an hapool to store VM images
-* install all HA VM (using screen)
-* display information how to copy host root key to HA nodes (VM)
 
 ### HA_testsuite_init_cluster.sh
 Finish the nodes installation and run some tests.
 The ha-cluster-init script will be run on node HA1.
 
+*NOTE* This script still needs some work to handle the various
+ scenarios configurable by `hark`.
+
 *NOTE* Use the [force] option to bypass the HA cluster check.
 
+## AutoYast templates
 
-## AutoYast files
-
-Files used for auto-installation of HA nodes. Files are copied into
-a image file (havm_xml.raw) and used as a disk image under HA VM.
-
-### havm.xml
-This file is the autoyast profile with Graphical interface installation.
-
-### havm_mini.xml
-This file is the autoyast profile (simple without GUI).
-
-## functions
-Contains needed functions for all scripts.
+The AutoYast files used for auto-installation are based on the
+templates found in `templates/`. These may need to be modified for
+different versions of SLE or openSUSE.
