@@ -906,7 +906,7 @@ def cmd_up(args):
 
 
 def wait_to_bootstrap():
-    status_long("Wait for installation to complete")
+    status_long("Wait for nodes to start")
     nodes = [vm.name for vm in config.scenario.vm]
     while True:
         state = determine_status()
@@ -1102,6 +1102,12 @@ def cmd_bootstrap(args):
         nodelist = [vm.name for vm in config.scenario.vm]
     else:
         nodelist = args.nodes.split()
+
+    status("Check status of cluster nodes")
+    for n in nodelist:
+        if invoke("ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no root@{} systemctl -q is-active corosync.service".format(n),
+                  stderr_on=False):
+            error("Cluster already active on {}".format(n))
 
     status_long("Initialize cluster")
     if not pssh("ha-cluster-init -y -t ocfs2 -p /dev/vdb", nodes=nodelist[0]):
