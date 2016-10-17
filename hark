@@ -144,13 +144,15 @@ def invoke(*args, **kwargs):
     log("+ " + " ".join(args))
     rc, stdout, stderr = get_stdout_stderr(" ".join(args))
     if stdout:
+        stdout = stdout.decode('utf-8')
         log(stdout)
         if kwargs.get("echo_stdout"):
-            print(stdout.decode('utf-8'))
+            print(stdout)
     if stderr:
+        stderr = stderr.decode('utf-8')
         log(stderr)
         if kwargs.get("echo_stderr"):
-            print(stderr.decode('utf-8'), file=sys.stderr)
+            print(stderr, file=sys.stderr)
     return rc == 0
 
 
