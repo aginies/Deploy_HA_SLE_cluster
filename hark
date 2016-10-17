@@ -318,7 +318,10 @@ class Config(object):
                 lst, name = section.split(':', 1)
                 if not hasattr(self, lst):
                     setattr(self, lst, [])
-                getattr(self, lst).append(Section(cfg.items(section), name=name))
+                if lst == "vm":
+                    getattr(self, lst).append(Section(cfg.items("common") + cfg.items(section), name=name))
+                else:
+                    getattr(self, lst).append(Section(cfg.items(section), name=name))
             else:
                 setattr(self, section, Section(cfg.items(section)))
 
@@ -326,20 +329,13 @@ class Config(object):
             for k, v in s.__dict__.items():
                 s.__dict__[k] = v.format(**env)
 
-        def mkenv(s, is_common=False):
+        def mkenv(s):
             env = {}
             if root:
                 env["config"] = root
-            if "common" in cfg.sections():
-                for k, v in self.common.__dict__.items():
-                    env[k] = v
-            if not is_common:
-                for k, v in s.__dict__.items():
-                    env[k] = v
+            for k, v in s.__dict__.items():
+                env[k] = v
             return env
-
-        if "common" in cfg.sections():
-            resolve_section(self.common, mkenv(self.common, is_common=True))
 
         lists = []
         for section in cfg.sections():
@@ -470,7 +466,7 @@ def config_scenario(scenario):
 def install_virtualization_stack():
     if "ID=opensuse" in open("/etc/os-release").read():
         status_long("Install virtualization stack for openSUSE")
-        if config.vm.hypervisor == "kvm":
+        if config.host.hypervisor == "kvm":
             packages = "patterns-openSUSE-kvm_server"
         else:
             packages = "xen_server xen-tools"
@@ -478,7 +474,7 @@ def install_virtualization_stack():
             error("Failed to install hypervisor")
     else:
         status("Install virtualization stack for SLES")
-        if not invoke("zypper -q -n install -y patterns-sles-{0}_server patterns-sles-{0}_tools".format(config.vm.hypervisor)):
+        if not invoke("zypper -q -n install -y patterns-sles-{0}_server patterns-sles-{0}_tools".format(config.host.hypervisor)):
             error("Failed to install hypervisor")
     if not invoke("systemctl restart libvirtd"):
         error("Failed to restart libvirtd")
@@ -582,6 +578,16 @@ def ssh_root_key():
         status("Updated /root/.ssh/config")
 
 
+def destroy_shared_pool():
+    sharedpool = config.storage.sharedpool
+    shareddisk = os.path.join(config.storage.path, config.storage.sharedpool, config.storage.sharedpool + ".img")
+    log("Destroy current pool {}".format(sharedpool))
+    invoke("virsh", "pool-destroy", sharedpool)
+    log("Undefine current pool {}".format(sharedpool))
+    invoke("virsh", "pool-undefine", sharedpool)
+    if os.path.isfile(shareddisk):
+        os.remove(shareddisk)
+
 def prepare_shared_pool():
     """
     Create an shared volume pool on the host
@@ -589,30 +595,23 @@ def prepare_shared_pool():
     status_long("Prepare and create shard pool and volume")
     _, outp = get_stdout("virsh pool-list --all")
     outp = outp.decode('utf-8')
-    sharedname = config.storage.sharedname
-    shareddisk = os.path.join(config.storage.path, config.storage.sharedname, config.storage.sharedname + ".img")
-    if sharedname in outp:
+    sharedpool = config.storage.sharedpool
+    if sharedpool in outp:
         status_progress()
-        log("Destroy current pool {}".format(sharedname))
-        invoke("virsh", "pool-destroy", sharedname)
-        status_progress()
-        log("Undefine current pool {}".format(sharedname))
-        invoke("virsh", "pool-undefine", sharedname)
-        if os.path.isfile(shareddisk):
-            os.remove(shareddisk)
+        destroy_shared_pool()
     status_progress()
-    log("Define pool {}".format(sharedname))
-    mkdirp(os.path.join(config.storage.path, sharedname))
-    invoke("virsh", "pool-define-as", "--name", sharedname, "--type", "dir", "--target", os.path.join(config.storage.path, sharedname))
+    log("Define pool {}".format(sharedpool))
+    mkdirp(os.path.join(config.storage.path, sharedpool))
+    invoke("virsh", "pool-define-as", "--name", sharedpool, "--type", "dir", "--target", os.path.join(config.storage.path, sharedpool))
     status_progress()
     log("Start and Autostart the pool")
-    invoke("virsh", "pool-start", sharedname)
-    invoke("virsh", "pool-autostart", sharedname)
+    invoke("virsh", "pool-start", sharedpool)
+    invoke("virsh", "pool-autostart", sharedpool)
     status_progress()
     log("Create the shared volume")
     invoke("virsh", "vol-create-as",
-           "--pool", sharedname,
-           "--name", "{}.img".format(sharedname),
+           "--pool", sharedpool,
+           "--name", "{}.img".format(sharedpool),
            "--format", "raw",
            "--allocation", config.storage.sharedsize,
            "--capacity", config.storage.sharedsize)
@@ -630,22 +629,23 @@ def generate_vm_template(exedir, outputdir):
     t_package = open("{}/package.xml".format(t_path)).read()
     t_hosts_entry = open("{}/hosts_entry.xml".format(t_path)).read()
 
-    addons = "".join(t_addon.format(dev="/dev/sr{}".format(i)) for i, _ in enumerate(a for a in config.scenario.addon if a.name != "base"))
-    packages = "".join(t_package.format(name=pkg) for pkg in config.scenario.common.packages.split())
-    hosts = "".join(t_hosts_entry.format(**vm.__dict__) for vm in config.scenario.vm)
-    txt = t_vm.format(
-        addons=addons,
-        packages=packages,
-        hosts=hosts,
-        keymap=config.vm.keymap,
-        networkname=config.network.name,
-        timezone=config.vm.timezone,
-        username=config.user.name,
-        userpass=config.user.password
-    )
-    fn = os.path.join(outputdir, config.vm.autoyastfile)
-    str2file(txt, fn)
-    os.chmod(fn, 0o644)
+    for vm in config.scenario.vm:
+        addons = "".join(t_addon.format(dev="/dev/sr{}".format(i)) for i, _ in enumerate(a for a in config.scenario.addon if a.name != "base"))
+        packages = "".join(t_package.format(name=pkg) for pkg in vm.packages.split())
+        hosts = "".join(t_hosts_entry.format(**vm.__dict__) for vm in config.scenario.vm)
+        txt = t_vm.format(
+            addons=addons,
+            packages=packages,
+            hosts=hosts,
+            keymap=vm.keymap,
+            networkname=config.network.name,
+            timezone=vm.timezone,
+            username=config.user.name,
+            userpass=config.user.password
+        )
+        fn = os.path.join(outputdir, "{}.xml".format(vm.name))
+        str2file(txt, fn)
+        os.chmod(fn, 0o644)
 
 
 def prepare_auto_deploy_image():
@@ -659,11 +659,12 @@ def prepare_auto_deploy_image():
     os.chdir(config.storage.path)
     try:
         generate_vm_template(cwd, wdir)
-        invoke("qemu-img create {} -f raw 2M".format(config.storage.havmdisk))
-        invoke("mkfs.ext3 {}".format(config.storage.havmdisk))
-        invoke("mount {} {}".format(config.storage.havmdisk, tmpmount))
+        diskname = os.path.basename(config.storage.scenariodisk)
+        invoke("qemu-img create {} -f raw 2M".format(diskname))
+        invoke("mkfs.ext3 {}".format(diskname))
+        invoke("mount {} {}".format(diskname, tmpmount))
         invoke("mkdir {}/ssh".format(tmpmount))
-        invoke("cp -v {0}/{1} {2}".format(wdir, config.vm.autoyastfile, tmpmount))
+        invoke("cp -v {0}/*.xml {1}".format(wdir, tmpmount))
         invoke("cp -v /root/.ssh/{0} {1}/ssh/id_rsa".format(config.user.sshkey, tmpmount))
         invoke("cp -v /root/.ssh/{0}.pub {1}/ssh/id_rsa.pub".format(config.user.sshkey, tmpmount))
         invoke("cp -v /root/.ssh/{0}.pub {1}/ssh/authorized_keys".format(config.user.sshkey, tmpmount))
@@ -719,7 +720,7 @@ def check_isos():
 
 def cleanup_vm():
     status("Cleanup VM")
-    pooldir = os.path.join(config.storage.path, config.storage.libvirtpool)
+    pooldir = os.path.join(config.storage.path, config.storage.vmpool)
     if os.path.isdir(pooldir):
         images = [f for f in os.listdir(pooldir) if f.endswith(".qcow2")]
         if len(images) > 0:
@@ -731,13 +732,13 @@ def cleanup_vm():
     vmlist = vmlist.decode('utf-8')
 
     for vm in config.scenario.vm:
-        name = "{}{}".format(config.vm.distro, vm.name)
+        name = "{}{}".format(vm.distro, vm.name)
         if name in vmlist.split():
             status("Destroy VM: {}".format(name))
             invoke("virsh destroy {}".format(name))
             status("Undefine VM: {}".format(name))
             invoke("virsh undefine {}".format(name))
-        fname = os.path.join(config.storage.path, config.storage.libvirtpool, name)
+        fname = os.path.join(config.storage.path, config.storage.vmpool, name)
         if os.path.isfile(fname):
             status("Remove VM image {0}".format(name))
             invoke("rm -vf {}.qcow2".format(fname))
@@ -745,10 +746,17 @@ def cleanup_vm():
 
 def check_before_install():
     status("Check disks before install")
-    for disk in (os.path.join(config.storage.path, config.storage.havmdisk),
-                 os.path.join(config.storage.path, config.storage.sharedname, "{}.img".format(config.storage.sharedname))):
+    for disk in (os.path.join(config.storage.path, config.storage.scenariodisk),
+                 os.path.join(config.storage.path, config.storage.sharedpool, "{}.img".format(config.storage.sharedpool))):
         if not os.path.isfile(disk):
             error("{} not found, needed for autoinstallation".format(disk))
+
+
+def destroy_pool(poolname):
+    path = os.path.join(config.storage.path, poolname)
+    invoke("virsh pool-destroy {}".format(poolname))
+    invoke("virsh pool-undefine {}".format(poolname))
+    invoke("rm -rvf {}".format(path))
 
 
 def create_pool(poolname):
@@ -759,9 +767,7 @@ def create_pool(poolname):
     outp = outp.decode('utf-8')
     if poolname in [l.split()[0] for l in outp.split('\n') if l.strip()]:
         status("{} already present, deleting it".format(poolname))
-        invoke("virsh pool-destroy {}".format(poolname))
-        invoke("virsh pool-undefine {}".format(poolname))
-        invoke("rm -rvf {}".format(path))
+        destroy_pool(poolname)
     mkdirp(path)
     invoke("virsh pool-define-as --name {} --type dir --target {}".format(poolname, path))
     invoke("virsh pool-start {}".format(poolname))
@@ -769,32 +775,32 @@ def create_pool(poolname):
 
 
 def install_vms():
-    pool = config.storage.libvirtpool
+    pool = config.storage.vmpool
     for vm in config.scenario.vm:
-        vmname = "{}{}".format(config.vm.distro, vm.name)
+        vmname = "{}{}".format(vm.distro, vm.name)
         status("Install VM {}".format(vm.name))
         invoke("virsh pool-refresh {}".format(pool))
         invoke("virsh vol-create-as --pool {pool} --name {vmname}.qcow2 --capacity {size} --allocation {size} --format qcow2".format(
-            pool=pool, vmname=vmname, size=config.vm.imagesize))
+            pool=pool, vmname=vmname, size=vm.imagesize))
         invoke("virsh pool-refresh {}".format(pool))
 
-        vmdisk = "{}/{}/{}.qcow2".format(config.storage.path, config.storage.libvirtpool, vmname)
-        havmdisk = os.path.join(config.storage.path, config.storage.havmdisk)
-        shareddisk = os.path.join(config.storage.path, config.storage.sharedname, "{}.img".format(config.storage.sharedname))
+        vmdisk = "{}/{}/{}.qcow2".format(config.storage.path, config.storage.vmpool, vmname)
+        scenariodisk = os.path.join(config.storage.path, config.scenariodisk)
+        shareddisk = config.storage.shareddisk
 
         if not os.path.isfile(vmdisk):
             error("{} not present".format(vmdisk))
 
         cmd = ['screen -d -m -L -S "install_HA_VM_guest_', vmname, '" ',
                'virt-install --name ', vmname,
-               ' --ram ', config.vm.ram,
-               ' --vcpus ', config.vm.vcpu,
-               ' --virt-type ', config.vm.hypervisor,
+               ' --ram ', vm.ram,
+               ' --vcpus ', vm.vcpu,
+               ' --virt-type ', config.host.hypervisor,
                ' --graphics ', 'vnc,keymap=', config.user.keymap,
                ' --network network=', config.network.name, ',mac=', vm.mac,
                ' --disk path=', vmdisk, ',format=qcow2,bus=virtio,cache=none',
                ' --disk path=', shareddisk, ',bus=virtio',
-               ' --disk path=', havmdisk, ',bus=virtio']
+               ' --disk path=', scenariodisk, ',bus=virtio']
 
         baseloc = None
         for addon in config.scenario.addon:
@@ -805,7 +811,7 @@ def install_vms():
 
         cmd.extend([' --location ', baseloc,
                     ' --boot cdrom',
-                    ' --extra-args ', config.vm.extraargs,
+                    ' --extra-args autoyast=device://vdc/{}.xml'.format(vm.name),
                     ' --watchdog i6300esb,action=poweroff'
                     ' --console pty,target_type=virtio',
                     ' --check all=off'])
@@ -824,7 +830,7 @@ def cmd_deploy(args):
         error("Command has to run as root.")
     check_isos()
     cleanup_vm()
-    create_pool(config.storage.libvirtpool)
+    create_pool(config.storage.vmpool)
     wait_for_downloads()
     check_before_install()
     install_vms()
@@ -847,7 +853,7 @@ def cmd_up(args):
             warn("Failed to list virtual machines")
             return 'unknown'
         for line in outp.decode('utf-8').splitlines():
-            if config.vm.distro in line:
+            if config.scenario.common.distro in line:
                 if 'running' in line:
                     return 'running'
                 if 'shut off' in line:
@@ -857,7 +863,7 @@ def cmd_up(args):
     state = determine_status()
     if state == 'created':
         for vm in config.scenario.vm:
-            vmname = "{}{}".format(config.vm.distro, vm.name)
+            vmname = "{}{}".format(vm.distro, vm.name)
             invoke("virsh start {}".format(vmname))
     elif state == 'running':
         status("Already running")
@@ -881,7 +887,7 @@ def cmd_halt(args):
         error("Failed to list virtual machines")
 
     for line in outp.decode('utf-8').splitlines():
-        if config.vm.distro in line:
+        if config.scenario.common.distro in line:
             vmname = line.split()[1]
             if "running" not in line:
                 status("{} not running".format(vmname))
@@ -909,15 +915,16 @@ def cmd_status(args):
     if rc != 0:
         error("Failed to list pools")
     for line in outp.decode('utf-8').splitlines():
-        if config.storage.libvirtpool in line or config.storage.sharedname in line:
+        if config.storage.vmpool in line or config.storage.sharedpool in line:
             print("  ", line.strip())
     print("\n# Volumes:")
-    rc, outp = get_stdout("virsh -q vol-list {}".format(config.storage.sharedname))
-    if rc != 0:
-        error("Failed to list volumes")
-    for line in outp.decode('utf-8').splitlines():
-        if config.storage.path in line:
-            print("  ", line.strip())
+    for pool in (config.storage.vmpool, config.storage.sharedpool):
+        rc, outp = get_stdout("virsh -q vol-list {}".format(pool))
+        if rc != 0:
+            error("Failed to list volumes")
+        for line in outp.decode('utf-8').splitlines():
+            if config.storage.path in line:
+                print("  ", line.strip())
 
     # check vms
     print("\n# Virtual machines:")
@@ -926,7 +933,7 @@ def cmd_status(args):
     if rc != 0:
         error("Failed to list virtual machines")
     for line in outp.decode('utf-8').splitlines():
-        if config.vm.distro in line:
+        if config.scenario.common.distro in line:
             if "running" in line:
                 running = True
             print("  ", line.strip())
@@ -961,6 +968,22 @@ def cmd_status(args):
 def cmd_destroy(args):
     """
     Stop and remove VMs
+
+    TODO: clean up properly
+
+    vol-list <pool>
+    vol-delete --pool <pool> <vol>
+
+    pool-list --all
+    pool-destroy hashared
+    pool-delete hashared
+    pool-undefine hashared
+
+    net-list --all
+    if active:
+    net-destroy HAnet
+    if existing:
+    net-undefine HAnet
     """
     if getuser() != "root":
         error("Command has to run as root.")
