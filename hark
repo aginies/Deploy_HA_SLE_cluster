@@ -916,12 +916,18 @@ def wait_to_bootstrap():
         status_progress()
     status_done()
     status_long("Wait for nodes to appear on network")
+    nwaits = 0
     while True:
         rc, outp = get_stdout("virsh -q net-dhcp-leases {}".format(config.network.name))
         outp = outp.decode('utf-8')
         if rc == 0:
             if all(node in outp for node in nodes):
                 break
+        nwaits += 1
+        time.sleep(5)
+        status_progress()
+    # wait some more before bootstrapping
+    if nwaits > 0:
         time.sleep(5)
         status_progress()
     status_done()
