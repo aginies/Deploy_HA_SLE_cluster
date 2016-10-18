@@ -1124,6 +1124,11 @@ def cmd_bootstrap(args):
         error("Failed to initialize cluster")
     status_done()
     if len(nodelist) > 1:
+        if len(nodelist) > 2:
+            status("Adjust OCFS2 configuration for > 2 nodes")
+            if not do_remote(nodelist[0], "crm resource meta c-clusterfs show clone-max 2>/dev/null") and \
+               not do_remote(nodelist[0], "crm resource meta c-clusterfs set clone-max 2"):
+                error("Failed to update cluster configuration")
         status_long("Join cluster from remaining nodes")
         for n in nodelist[1:]:
             if not do_remote(n, "ha-cluster-join -y -c {}".format(nodelist[0])):
