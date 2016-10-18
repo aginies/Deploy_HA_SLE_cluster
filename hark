@@ -582,13 +582,10 @@ def ssh_root_key():
 
 def destroy_shared_pool():
     sharedpool = config.storage.sharedpool
-    shareddisk = config.storage.shareddisk
     log("Destroy current pool {}".format(sharedpool))
     invoke("virsh", "pool-destroy", sharedpool)
     log("Undefine current pool {}".format(sharedpool))
     invoke("virsh", "pool-undefine", sharedpool)
-    if os.path.isfile(shareddisk):
-        os.remove(shareddisk)
 
 def prepare_shared_pool():
     """
@@ -601,6 +598,9 @@ def prepare_shared_pool():
     if sharedpool in outp:
         status_progress()
         destroy_shared_pool()
+    shareddisk = config.storage.shareddisk
+    if os.path.isfile(shareddisk):
+        os.remove(shareddisk)
     status_progress()
     log("Define pool {}".format(sharedpool))
     mkdirp(os.path.join(config.storage.path, sharedpool))
@@ -1069,6 +1069,7 @@ def cmd_destroy(args):
 
         if invoke("virsh -q pool-info {}".format(config.storage.sharedpool)):
             status("Delete pool {}".format(config.storage.sharedpool))
+            invoke("virsh vol-delete --pool {} {}".format(config.storage.sharedpool, os.path.basename(config.storage.shareddisk)))
             virsh('pool-destroy pool-delete pool-undefine', config.storage.sharedpool)
 
         if invoke("virsh -q net-uuid {}".format(config.network.name)):
