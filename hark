@@ -1125,8 +1125,8 @@ def cmd_bootstrap(args):
     if len(nodelist) > 1:
         status_long("Join cluster from remaining nodes")
         for n in nodelist[1:]:
-            if not do_remote(n, "ha-cluster-join -y -c {}".format(n)):
-                error("Failed to join cluster from {}".format(n))
+            if not do_remote(n, "ha-cluster-join -y -c {}".format(nodelist[0])):
+                error("Failed to join cluster ({}) from {}".format(nodelist[0], n))
             status_progress()
         status_done()
 
