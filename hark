@@ -407,7 +407,7 @@ def wait_for_downloads():
         status_long("Waiting for {} downloads to complete".format(len(downloads)))
     while True:
         done = {}
-        for _, outname, dl in downloads:
+        for outname, dl in downloads.items():
             if dl.poll() is not None:
                 done[outname] = dl
         for outname, dl in done.items():
