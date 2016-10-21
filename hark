@@ -742,6 +742,42 @@ def check_isos():
             start_download(isourl, os.path.join(config.iso.path, isofile))
 
 
+def check_iso_sha1sums():
+    status_long("Download SHA1 checksums")
+    sha1sumurls = set()
+    sums = {}
+    for addon in config.scenario.addon:
+        sha1sumurl = addon.iso.rsplit('/', 1)[0] + '/SHA1SUMS'
+        sha1sumurls.add(sha1sumurl)
+    for url in sha1sumurls:
+        r = requests.get(url)
+        if r.status_code == 200:
+            for l in r.text.splitlines():
+                checksum, filename = l.split()
+                sums[filename] = checksum
+    status_done()
+    for addon in config.scenario.addon:
+        fname = resolve_iso_file(addon)
+        fpath = os.path.join(config.iso.path, fname)
+        if not os.path.isfile(fpath):
+            error("File not found: {}".format(fpath))
+        if fname in sums:
+            status_long("Verify {}".format(fname))
+            import hashlib
+            m = hashlib.sha1()
+            with open(fpath, 'rb') as f:
+                while True:
+                    block = f.read(2**10)  # Magic number: one-megabyte blocks.
+                    if not block:
+                        break
+                    m.update(block)
+            if m.hexdigest() != sums[fname]:
+                error("SHA1 sum not matching for {}: {} != {}".format(fname, m.hexdigest(), sums[fname]))
+            status_done()
+        else:
+            status("No checksum for {}, skipping".format(fname))
+
+
 def cleanup_vm():
     pooldir = os.path.join(config.storage.path, config.storage.vmpool)
     if os.path.isdir(pooldir):
@@ -851,6 +887,7 @@ def cmd_deploy(args):
     cleanup_vm()
     create_pool(config.storage.vmpool)
     wait_for_downloads()
+    check_iso_sha1sums()
     check_before_install()
     install_vms()
 
@@ -1033,6 +1070,10 @@ def cmd_status(args):
             print(outp.decode('utf-8'))
 
 
+def cmd_checkiso(args):
+    check_iso_sha1sums()
+
+
 def cmd_destroy(args):
     """
     Stop and remove VMs
@@ -1175,6 +1216,9 @@ def main():
         subparser.add_argument('variant', help="Name of variant", nargs='?')
         subparser.add_argument('iso', help="ISO file name", nargs='?')
         subparser.set_defaults(func=cmd_iso)
+
+        subparser = subparsers.add_parser('checkiso', help='Check ISO SHA1SUMS (if available on server)')
+        subparser.set_defaults(func=cmd_checkiso)
 
         subparser = subparsers.add_parser('config', help="Display resolved configuration values")
         subparser.set_defaults(func=cmd_config)
