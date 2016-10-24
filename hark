@@ -430,6 +430,14 @@ def cmd_iso(args):
         return
 
     if args.iso is None:
+        if args.variant == "iso":
+            global DOWNLOAD
+            DOWNLOAD = True
+            check_isos()
+            wait_for_downloads()
+            check_iso_sha1sums()
+            return
+
         baseurl = config.iso.url
         isos = get_isos(baseurl, args.variant)
         print('\n'.join(isos))
