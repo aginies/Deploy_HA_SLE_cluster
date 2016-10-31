@@ -12,6 +12,16 @@ otherwise, please restart your installation.
 Domain has shutdown. Continuing.
 ```
 
+* Fix VM creation race?
+
+```
+ERROR    Error: --disk
+path=/home/krig/vms/threenode.raw,format=raw,bus=virtio: Could not
+define storage pool: operation failed: pool 'vms' already exists with
+uuid 12e505c7-063f-4d08-8d46-b41272b16105
+```
+
+
 * Better clean up (don't leave disks lying around, don't destroy pools
 that may be used by others, release IP addresses)
 

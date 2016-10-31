@@ -15,6 +15,7 @@ LOG_ENABLED = True
 DEBUG = False
 QUIET = False
 NONINTERACTIVE = False
+OFFLINE = False # Offline mode
 DOWNLOAD = False  # Download isos if they aren't available locally
 
 
@@ -732,10 +733,16 @@ def resolve_iso_file(addon):
     import fnmatch
     varianturl, isofile = addon.iso.rsplit('/', 1)
     baseurl, variant = varianturl.rsplit('/', 1)
-    isos = get_isos(baseurl, variant)
-    for iso in isos:
-        if fnmatch.fnmatch(iso, isofile):
-            return iso
+
+    if OFFLINE:
+        for f in os.listdir(config.iso.path):
+            if fnmatch.fnmatch(f, isofile):
+                return f
+    else:
+        isos = get_isos(baseurl, variant)
+        for iso in isos:
+            if fnmatch.fnmatch(iso, isofile):
+                return iso
     error("Found no ISO matching {} at {}".format(isofile, varianturl))
 
 
@@ -743,6 +750,8 @@ def check_isos():
     for addon in config.scenario.addon:
         isofile = resolve_iso_file(addon)
         if not os.path.isfile(os.path.join(config.iso.path, isofile)):
+            if OFFLINE:
+                error("Missing ISO: {}".format(isofile))
             isourl = addon.iso.rsplit('/', 1)[0] + '/' + isofile
             if not DOWNLOAD:
                 error("Missing ISO: {}".format(isourl))
@@ -751,6 +760,8 @@ def check_isos():
 
 
 def check_iso_sha1sums():
+    if OFFLINE:
+        return
     status_long("Download SHA1 checksums")
     sha1sumurls = set()
     sums = {}
@@ -879,6 +890,8 @@ def install_vms():
                     ' --console pty,target_type=virtio',
                     ' --check all=off'])
         invoke("".join(cmd))
+        # stagger these a bit to try to avoid race (?)
+        time.sleep(1)
 
 
 def cmd_deploy(args):
@@ -1203,6 +1216,7 @@ def main():
     global DEBUG
     global NONINTERACTIVE
     global DOWNLOAD
+    global OFFLINE
     try:
         parser = argparse.ArgumentParser(description='''Hark! A tool for setting up a test cluster for SLE HA.
         Configure your scenarios using the hark.ini and scenario files.
@@ -1217,6 +1231,7 @@ def main():
         parser.add_argument('-x', '--debug', help="Halt in debugger on error", action="store_true")
         parser.add_argument('-d', '--download', help="Download missing ISO files automatically", action="store_true")
         parser.add_argument('-s', '--scenario', dest="scenario", metavar="SCENARIO", help="Cluster scenario")
+        parser.add_argument('--offline', dest="offline", action="store_true", help="Don't connect to ISO server")
 
         subparsers = parser.add_subparsers()
 
@@ -1261,6 +1276,7 @@ def main():
         NONINTERACTIVE = args.noninteractive
         QUIET = args.quiet
         DOWNLOAD = args.download
+        OFFLINE = args.offline
 
         log_start()
         config = mkconfig()
