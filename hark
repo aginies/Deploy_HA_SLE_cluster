@@ -1199,6 +1199,46 @@ def cmd_bootstrap(args):
         status_done()
 
 
+def cmd_run(args):
+    """
+    Run command on nodes (default: all nodes)
+    """
+    if args.once:
+        nodelist = [config.scenario.vm[0].name]
+    elif args.nodes is None:
+        nodelist = [vm.name for vm in config.scenario.vm]
+    else:
+        nodelist = args.nodes.split()
+
+    cmd = args.cmd.replace('"', "\\\"")
+    nodes = " ".join(nodelist)
+    invoke(
+        'pssh -H "{nodes}" -l root -p 30 -t 0 -x "-o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no" "{cmd}"'.format(
+            nodes=nodes, cmd=cmd))
+
+
+def cmd_ssh(args):
+    """
+    SSH to node
+    TODO: don't put SSH key in /root, no need for that.. can just
+    keep key in .hark/ and ssh via hark
+    """
+    if not os.path.isdir('.hark'):
+        mkdirp('.hark')
+    addr = args.node
+    for vm in config.scenario.vm:
+        if vm.name == args.node:
+            addr = vm.address
+    cmd = ['ssh',
+           '-o', 'UserKnownHostsFile=.hark/known_hosts',
+           '-o', 'StrictHostKeyChecking=no',
+           '-o', 'IdentityFile=/root/.ssh/{}'.format(config.user.sshkey),
+           'root@{}'.format(addr)]
+    if args.cmd is not None:
+        cmd.append(args.cmd)
+    subprocess.call(cmd)
+
+
 def cmd_test(args):
     """
     TODO: point to test script from scenario file
@@ -1269,6 +1309,17 @@ def main():
         subparser = subparsers.add_parser('test', help="Run cluster test")
         subparser.add_argument('test', help="Test case to run", nargs='?')
         subparser.set_defaults(func=cmd_test)
+
+        subparser = subparsers.add_parser('run', help="Run command on listed nodes")
+        subparser.add_argument('-n', '--nodes', dest="nodes", help="List of nodes to bootstrap cluster on")
+        subparser.add_argument('--once', dest="once", action="store_true", help="Run command on one node (ignore node list)")
+        subparser.add_argument('cmd', help="Command to run")
+        subparser.set_defaults(func=cmd_run)
+
+        subparser = subparsers.add_parser('ssh', help="SSH to given node")
+        subparser.add_argument('node', help="Node to connect to")
+        subparser.add_argument('cmd', help="Command to run", nargs='?')
+        subparser.set_defaults(func=cmd_ssh)
 
         args = parser.parse_args()
         LOG_ENABLED = not args.nolog
