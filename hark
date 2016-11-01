@@ -1214,7 +1214,7 @@ def cmd_run(args):
     nodes = " ".join(nodelist)
     invoke(
         'pssh -H "{nodes}" -l root -p 30 -t 0 -x "-o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no" "{cmd}"'.format(
-            nodes=nodes, cmd=cmd))
+            nodes=nodes, cmd=cmd), echo_stdout=True, echo_stderr=True)
 
 
 def cmd_ssh(args):
