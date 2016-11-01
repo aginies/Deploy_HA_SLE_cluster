@@ -10,12 +10,12 @@ import subprocess
 import requests
 from lxml import etree
 
-LOG_FILE = "hark.log"
+LOG_FILE = os.path.abspath("hark.log")
 LOG_ENABLED = True
 DEBUG = False
 QUIET = False
 NONINTERACTIVE = False
-OFFLINE = False # Offline mode
+OFFLINE = False  # Offline mode
 DOWNLOAD = False  # Download isos if they aren't available locally
 
 
@@ -60,7 +60,7 @@ def log(*args):
         with open(LOG_FILE, "a") as logfile:
             logfile.write(" ".join([str(arg) for arg in args]) + "\n")
     except IOError:
-        die("Can't append to {} - aborting".format(LOG_FILE))
+        die("Can't append to {}: Probably running hark as an unprivileged user.".format(LOG_FILE))
 
 
 def ask(msg):
