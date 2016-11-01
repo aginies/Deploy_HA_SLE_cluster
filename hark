@@ -474,6 +474,8 @@ def config_scenario(scenario):
 
 
 def install_virtualization_stack():
+    if OFFLINE:
+        return
     if "ID=opensuse" in open("/etc/os-release").read():
         status_long("Install virtualization stack for openSUSE")
         if config.host.hypervisor == "kvm":
@@ -1212,8 +1214,10 @@ def cmd_run(args):
 
     cmd = args.cmd.replace('"', "\\\"")
     nodes = " ".join(nodelist)
+    if not os.path.isdir('.hark'):
+        mkdirp('.hark')
     return invoke(
-        'pssh -H "{nodes}" -i -l root -p 30 -t 0 -x "-o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no" "{cmd}"'.format(
+        'pssh -H "{nodes}" -i -l root -p 30 -t 0 -x "-o UserKnownHostsFile=.hark/known_hosts -o StrictHostKeyChecking=no" "{cmd}"'.format(
             nodes=nodes, cmd=cmd), echo_stdout=True, echo_stderr=True)
 
 
