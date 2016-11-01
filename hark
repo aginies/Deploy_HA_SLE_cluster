@@ -474,20 +474,21 @@ def config_scenario(scenario):
 
 
 def install_virtualization_stack():
-    if OFFLINE:
-        return
-    if "ID=opensuse" in open("/etc/os-release").read():
-        status_long("Install virtualization stack for openSUSE")
-        if config.host.hypervisor == "kvm":
-            packages = "patterns-openSUSE-kvm_server"
+    if not OFFLINE:
+        if "ID=opensuse" in open("/etc/os-release").read():
+            status_long("Install virtualization stack for openSUSE")
+            if config.host.hypervisor == "kvm":
+                packages = "patterns-openSUSE-kvm_server"
+            else:
+                packages = "xen_server xen-tools"
+            if not invoke("zypper -q -n install -y {}".format(packages)):
+                error("Failed to install hypervisor")
         else:
-            packages = "xen_server xen-tools"
-        if not invoke("zypper -q -n install -y {}".format(packages)):
-            error("Failed to install hypervisor")
+            status("Install virtualization stack for SLES")
+            if not invoke("zypper -q -n install -y patterns-sles-{0}_server patterns-sles-{0}_tools".format(config.host.hypervisor)):
+                error("Failed to install hypervisor")
     else:
-        status("Install virtualization stack for SLES")
-        if not invoke("zypper -q -n install -y patterns-sles-{0}_server patterns-sles-{0}_tools".format(config.host.hypervisor)):
-            error("Failed to install hypervisor")
+        status_long("Initialize virtualization stack")
     if not invoke("systemctl restart libvirtd"):
         error("Failed to restart libvirtd")
     status_done()
