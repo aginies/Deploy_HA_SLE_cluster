@@ -959,6 +959,9 @@ def cmd_up(args):
         bargs = Bootstrapargs()
         bargs.nodes = None
         cmd_bootstrap(bargs)
+
+        if args.post_bootstrap:
+            subprocess.call(args.post_bootstrap, shell=True)
     elif args.wait:
         wait_to_bootstrap()
 
@@ -1297,6 +1300,7 @@ def main():
         subparser = subparsers.add_parser('up', help="Configure the host and bring virtual machines up")
         subparser.add_argument('--wait', dest="wait", action="store_true", help="Wait until VMs are ready")
         subparser.add_argument('--bootstrap', dest="bootstrap", action="store_true", help="Bootstrap HA cluster (unless already bootstrapped)")
+        subparser.add_argument('--post-bootstrap', dest="post_bootstrap", help="Command to execute after bootstrap completes")
         subparser.set_defaults(func=cmd_up)
 
         subparser = subparsers.add_parser('halt', help="Tell running VMs to halt")
