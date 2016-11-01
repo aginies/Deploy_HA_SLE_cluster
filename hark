@@ -1212,7 +1212,7 @@ def cmd_run(args):
 
     cmd = args.cmd.replace('"', "\\\"")
     nodes = " ".join(nodelist)
-    invoke(
+    return invoke(
         'pssh -H "{nodes}" -i -l root -p 30 -t 0 -x "-o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no" "{cmd}"'.format(
             nodes=nodes, cmd=cmd), echo_stdout=True, echo_stderr=True)
 
@@ -1236,7 +1236,7 @@ def cmd_ssh(args):
            'root@{}'.format(addr)]
     if args.cmd is not None:
         cmd.append(args.cmd)
-    subprocess.call(cmd)
+    return subprocess.call(cmd)
 
 
 def cmd_test(args):
@@ -1337,12 +1337,19 @@ def main():
         else:
             config_scenario(args.scenario)
 
+        rc = None
         if hasattr(args, "func"):
-            args.func(args)
+            rc = args.func(args)
             wait_for_downloads()
         else:
             parser.print_help()
             sys.exit(1)
+        if rc is None or rc is 0 or rc is True:
+            sys.exit(0)
+        elif rc is False:
+            sys.exit(1)
+        else:
+            sys.exit(int(rc))
     except ValueError as e:
         if DEBUG:
             import traceback
