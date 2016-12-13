@@ -10,7 +10,7 @@ import subprocess
 import requests
 from lxml import etree
 
-LOG_FILE = os.path.abspath("hark.log")
+LOG_FILE = os.path.abspath(os.path.expanduser("~/.cache/hark/hark.log"))
 LOG_ENABLED = True
 DEBUG = False
 QUIET = False
@@ -90,6 +90,10 @@ def log_start():
     Convenient side-effect: this will die immediately if the log file
     is not writable (e.g. if not running as root)
     """
+    try:
+        os.makedirs(os.path.dirname(LOG_FILE))
+    except os.error as e:
+        die("Failed to create {}: {}".format(os.path.dirname(LOG_FILE), str(e)))
     datestr = get_stdout("date --rfc-3339=seconds")[1].decode('utf-8')
     log('================================================================')
     log("{} {}".format(datestr, " ".join(sys.argv)))
@@ -382,7 +386,7 @@ def mkdirp(d, mode=0o777):
 
 
 def mkconfig():
-    config = Config(['hark.ini', os.path.expanduser('~/.hark.ini')])
+    config = Config(['hark.ini', os.path.expanduser('~/.hark.ini'), "/etc/hark/hark.ini"])
     if config.iso.url.endswith('/'):
         config.iso.url = config.iso.url[:-1]
     if not os.path.isdir(config.iso.path):
@@ -462,7 +466,7 @@ def config_scenario(scenario):
     if scenario is None:
         error("Scenario is required")
     if not os.path.isfile(scenario):
-        options = ("scenarios/{}.ini".format(scenario), "/usr/share/hark/scenarios/{}.ini".format(scenario))
+        options = ("scenarios/{}.ini".format(scenario), "/etc/hark/scenarios/{}.ini".format(scenario))
         if os.path.isfile(options[0]):
             scenario = options[0]
         elif os.path.isfile(options[1]):
