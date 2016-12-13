@@ -91,7 +91,8 @@ def log_start():
     is not writable (e.g. if not running as root)
     """
     try:
-        os.makedirs(os.path.dirname(LOG_FILE))
+        if not os.path.isdir(os.path.dirname(LOG_FILE)):
+            os.makedirs(os.path.dirname(LOG_FILE))
     except os.error as e:
         die("Failed to create {}: {}".format(os.path.dirname(LOG_FILE), str(e)))
     datestr = get_stdout("date --rfc-3339=seconds")[1].decode('utf-8')
