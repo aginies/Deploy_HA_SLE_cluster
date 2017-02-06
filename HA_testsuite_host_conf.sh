@@ -97,6 +97,7 @@ EOF
 
     echo "- Start ${NETWORKNAME}"
     systemctl restart libvirtd
+    virsh net-destroy ${NETWORKNAME}
     virsh net-autostart ${NETWORKNAME}
     virsh net-start ${NETWORKNAME}
 }
