@@ -79,10 +79,10 @@ prepare_virtual_HAnetwork() {
     cat > /etc/libvirt/qemu/networks/${NETWORKNAME}.xml << EOF
 <network>
   <name>${NETWORKNAME}</name>
-  <uuid>851e50f1-db72-475a-895f-28304baf8e8c</uuid>
+  <uuid>${UUID}</uuid>
   <forward mode='nat'/>
   <bridge name='virbr1' stp='on' delay='0'/>
-  <mac address='52:54:00:89:a0:b9'/>
+  <mac address='${NETMACHOST}'/>
   <domain name='${NETWORKNAME}'/>
   <ip address='${NETWORK}.1' netmask='255.255.255.0'>
     <dhcp>
