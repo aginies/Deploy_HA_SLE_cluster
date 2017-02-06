@@ -222,19 +222,19 @@
       <hosts_entry>
           <host_address>NETWORK.101</host_address>
         <names config:type="list">
-          <name>ha1.testing.com ha1</name>
+          <name>NODENAME1.NODEDOMAIN NODENAME1</name>
         </names>
       </hosts_entry>
       <hosts_entry>
         <host_address>NETWORK.102</host_address>
         <names config:type="list">
-          <name>ha2.testing.com ha2</name>
+          <name>NODENAME2.NODEDOMAIN NODENAME2</name>
         </names>
       </hosts_entry>
       <hosts_entry>
         <host_address>NETWORK.103</host_address>
         <names config:type="list">
-          <name>ha3.testing.com ha3</name>
+          <name>NODENAME3.NODEDOMAIN NODENAME3</name>
         </names>
       </hosts_entry>
     </hosts>

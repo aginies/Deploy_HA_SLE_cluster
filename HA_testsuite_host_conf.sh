@@ -58,13 +58,13 @@ EOF
 # ADD node to /etc/hosts (hosts)
 prepare_etc_hosts() {
     echo "############ START prepare_etc_hosts #############"
-    grep ha1.testing.com /etc/hosts
+    grep ${NODENAME}.${NODEDOMAIN} /etc/hosts
     if [ $? == "1" ]; then
         echo "- Prepare /etc/hosts (adding HA nodes)"
     cat >> /etc/hosts <<EOF
-${NETWORK}.101  ha1.testing.com ha1
-${NETWORK}.102  ha2.testing.com ha2
-${NETWORK}.103  ha3.testing.com ha3
+${NETWORK}.101  ${NODENAME}1.${NODEDOMAIN} ${NODENAME}1
+${NETWORK}.102  ${NODENAME}2.${NODEDOMAIN} ${NODENAME}2
+${NETWORK}.103  ${NODENAME}3.${NODEDOMAIN} ${NODENAME}3
 EOF
     else
         echo "- /etc/hosts already ok"
@@ -87,9 +87,9 @@ prepare_virtual_HAnetwork() {
   <ip address='${NETWORK}.1' netmask='255.255.255.0'>
     <dhcp>
       <range start='${NETWORK}.128' end='${NETWORK}.254'/>
-      <host mac="52:54:00:c7:92:da" name="ha1.testing.com" ip="${NETWORK}.101" />
-      <host mac="52:54:00:c7:92:db" name="ha2.testing.com" ip="${NETWORK}.102" />
-      <host mac="52:54:00:c7:92:dc" name="ha3.testing.com" ip="${NETWORK}.103" />
+      <host mac="52:54:00:c7:92:da" name="${NODENAME}1.${NODEDOMAIN}" ip="${NETWORK}.101" />
+      <host mac="52:54:00:c7:92:db" name="${NODENAME}2.${NODEDOMAIN}" ip="${NETWORK}.102" />
+      <host mac="52:54:00:c7:92:dc" name="${NODENAME}3.${NODEDOMAIN}" ip="${NETWORK}.103" />
     </dhcp>
   </ip>
 </network>
@@ -139,7 +139,11 @@ prepare_auto_deploy_image() {
     cp -avf ${WDIR}/havm*.xml ${WDIR2}
     sleep 1
     perl -pi -e "s/NETWORK/${NETWORK}/g" ${WDIR2}/havm.xml
+    perl -pi -e "s/NODEDOMAIN/${NODEDOMAIN}/g" ${WDIR2}/havm.xml
+    perl -pi -e "s/NODENAME/${NODENAME}/g" ${WDIR2}/havm.xml
     perl -pi -e "s/NETWORK/${NETWORK}/g" ${WDIR2}/havm_mini.xml
+    perl -pi -e "s/NODEDOMAIN/${NODEDOMAIN}/g" ${WDIR2}/havm_mini.xml
+    perl -pi -e "s/NODENAME/${NODENAME}/g" ${WDIR2}/havm_mini.xml
     qemu-img create havm_xml.raw -f raw 2M
     mkfs.ext3 havm_xml.raw
     mount havm_xml.raw ${WDIRMOUNT}
