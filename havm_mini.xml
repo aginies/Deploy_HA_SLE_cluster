@@ -233,12 +233,6 @@
           <name>ha3.testing.com ha3</name>
         </names>
       </hosts_entry>
-      <hosts_entry>
-        <host_address>NETWORK.104</host_address>
-        <names config:type="list">
-          <name>ha4.testing.com ha4</name>
-        </names>
-      </hosts_entry>
     </hosts>
   </host>
   <sysconfig config:type="list">

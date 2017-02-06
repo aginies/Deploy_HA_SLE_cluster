@@ -101,7 +101,6 @@ copy_ssh_key() {
 ssh-copy-id -f -i /root/.ssh/${IDRSAHA}.pub -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no ha1
 ssh-copy-id -f -i /root/.ssh/${IDRSAHA}.pub -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no ha2
 ssh-copy-id -f -i /root/.ssh/${IDRSAHA}.pub -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no ha3
-ssh-copy-id -f -i /root/.ssh/${IDRSAHA}.pub -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no ha4"
 echo 
 echo "- Clean up your /root/.ssh/known_hosts from previous config (dirty way below)
 rm -vf /root/.ssh/known_hosts"
