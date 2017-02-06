@@ -142,13 +142,7 @@ MAC="52:54:00:c7:92:dc"
 VMDISK="${STORAGEP}/${LIBVIRTPOOL}/${NAME}.qcow2"
 install_vm
 
-# Install HA4 VM
-NAME="${DISTRO}HA4"
-MAC="52:54:00:c7:92:dd"
-VMDISK="${STORAGEP}/${LIBVIRTPOOL}/${NAME}.qcow2"
-install_vm
-
-# Check VM HA1, HA2, HA3, HA4
+# Check VM HA1, HA2, HA3
 virsh list --all
 
 # Get IP address
