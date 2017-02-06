@@ -122,7 +122,7 @@ create_pool ${LIBVIRTPOOL}
 check_before_install
 
 # Install HA1 VM
-NAME="${DISTRO}HA1"
+NAME="${NODENAME}1"
 MAC="${MACA}"
 VMDISK="${STORAGEP}/${LIBVIRTPOOL}/${NAME}.qcow2"
 install_vm
@@ -131,13 +131,13 @@ install_vm
 EXTRAARGS="autoyast=device://vdc/havm_mini.xml"
 
 # Install HA2 VM
-NAME="${DISTRO}HA2"
+NAME="${NODENAME}2"
 MAC="${MACB}"
 VMDISK="${STORAGEP}/${LIBVIRTPOOL}/${NAME}.qcow2"
 install_vm
 
 # Install HA3 VM
-NAME="${DISTRO}HA3"
+NAME="${NODENAME}3"
 MAC="${MACC}"
 VMDISK="${STORAGEP}/${LIBVIRTPOOL}/${NAME}.qcow2"
 install_vm

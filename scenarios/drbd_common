@@ -86,8 +86,8 @@ delete_pool_name() {
 attach_disk_to_node() {
     echo "############ START attach_disk_to_node"
     echo "- Attach volume to node"
-    virsh attach-disk ${DISTRO}${NODENAME}1 --live --cache none --type disk ${STORAGEP}/${POOLNAME}/${POOLNAME}A.qcow2 --target ${TARGETVD}
-    virsh attach-disk ${DISTRO}${NODENAME}2 --live --cache none --type disk ${STORAGEP}/${POOLNAME}/${POOLNAME}B.qcow2 --target ${TARGETVD}
+    virsh attach-disk ${NODENAME}1 --live --cache none --type disk ${STORAGEP}/${POOLNAME}/${POOLNAME}A.qcow2 --target ${TARGETVD}
+    virsh attach-disk ${NODENAME}2 --live --cache none --type disk ${STORAGEP}/${POOLNAME}/${POOLNAME}B.qcow2 --target ${TARGETVD}
 }
 
 check_targetvd_on_node() {
@@ -116,6 +116,6 @@ check_targetvd_on_node() {
 detach_disk_from_node() {
     echo "############ START detach_disk_from_node"
     echo "- Detach volume from node"
-    virsh detach-disk ${DISTRO}${NODENAME}1 ${TARGETVD}
-    virsh detach-disk ${DISTRO}${NODENAME}2 ${TARGETVD}
+    virsh detach-disk ${NODENAME}1 ${TARGETVD}
+    virsh detach-disk ${NODENAME}2 ${TARGETVD}
 }
