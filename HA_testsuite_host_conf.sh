@@ -58,7 +58,7 @@ EOF
 # ADD node to /etc/hosts (hosts)
 prepare_etc_hosts() {
     echo "############ START prepare_etc_hosts #############"
-    grep ${NODENAME}.${NODEDOMAIN} /etc/hosts
+    grep ${NODENAME}1.${NODEDOMAIN} /etc/hosts
     if [ $? == "1" ]; then
         echo "- Prepare /etc/hosts (adding HA nodes)"
     cat >> /etc/hosts <<EOF
