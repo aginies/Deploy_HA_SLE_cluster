@@ -574,6 +574,8 @@ def prepare_virtual_network():
     status_progress()
     invoke("systemctl restart libvirtd")
     status_progress()
+    invoke("virsh net-destroy {}".format(config.network.name))
+    status_progress()
     invoke("virsh net-autostart {}".format(config.network.name))
     status_progress()
     invoke("virsh net-start {}".format(config.network.name))
