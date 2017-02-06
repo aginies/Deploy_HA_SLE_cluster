@@ -36,7 +36,7 @@ ssh_root_key() {
     ssh-keygen -t rsa -f ~/.ssh/${IDRSAHA} -N ""
     echo "- Create /root/.ssh/config for HA nodes access"
     cat > /root/.ssh/config<<EOF
-host ha1 ha2 ha3
+host ${NODENAME}1 ${NODENAME}2 ${NODENAME}3
 IdentityFile /root/.ssh/${IDRSAHA}
 EOF
 }
@@ -49,9 +49,9 @@ prepare_remote_pssh() {
     echo "- Install pssh and create /etc/hanodes"
     zypper in -y pssh
     cat > /etc/hanodes<<EOF
-ha1
-ha2
-ha3
+${NODENAME}1
+${NODENAME}2
+${NODENAME}3
 EOF
 }
 

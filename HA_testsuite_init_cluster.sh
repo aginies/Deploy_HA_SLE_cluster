@@ -16,13 +16,13 @@ fi
 check_load_config_file
 
 
-# ON HA1 NODE
+# ON ${NODENAME}1 NODE
 # Create an SBD device
 create_sbd_dev() {
     echo "############ START create SBD device"
-    exec_on_node ha1 "modprobe softdog"
-    exec_on_node ha1 "sbd -d /dev/vdb create"
-    exec_on_node ha1 "sbd -d /dev/vdb dump"
+    exec_on_node ${NODENAME}1 "modprobe softdog"
+    exec_on_node ${NODENAME}1 "sbd -d /dev/vdb create"
+    exec_on_node ${NODENAME}1 "sbd -d /dev/vdb dump"
 }
 
 # Enable SBD on all HA nodes
@@ -35,7 +35,7 @@ enable_sbd_all_nodes() {
 check_cluster_status() {
     echo "############ START check_cluster_status"
     if [ "$1" != "force" ]; then
-	exec_on_node ha1 "systemctl -q is-active corosync.service"
+	exec_on_node ${NODENAME}1 "systemctl -q is-active corosync.service"
 	if [ $? -eq 0 ]; then
             echo
             echo "! Cluster is active, need to stop it and reboot !"
@@ -44,7 +44,7 @@ check_cluster_status() {
             echo "- Login on each node and disable pacemaker and corosync service"
             echo "- Reboot all nodes"
             echo
-            echo "IE: on all nodes ha1 ha2 ha3, do:"
+            echo "IE: on all nodes ${NODENAME}1 ${NODENAME}2 ${NODENAME}3, do:"
             echo "systemctl disable pacemaker"
             echo "systemctl disable corosync"
             echo "reboot"
@@ -58,49 +58,49 @@ check_cluster_status() {
     fi
 }
 
-# Init the cluster on node HA1
+# Init the cluster on node ${NODENAME}1
 init_ha_cluster() {
     echo "############ START init the cluster"
-    echo "- run ha-cluster-init on node HA1"
-    exec_on_node ha1 "ha-cluster-init -s /dev/vdb -y"
+    echo "- run ha-cluster-init on node ${NODENAME}1"
+    exec_on_node ${NODENAME}1 "ha-cluster-init -s /dev/vdb -y"
 }
 
 copy_ssh_key_on_nodes() {
     echo "############ START copy_ssh_key_on_nodes"
-    echo "- Copy ssh root key from node HA1 to all nodes"
-    scp -o StrictHostKeyChecking=no root@ha1:~/.ssh/id_rsa.pub /tmp/
-    scp -o StrictHostKeyChecking=no root@ha1:~/.ssh/id_rsa /tmp/
-    scp_on_node "/tmp/id_rsa*" "ha2:/root/.ssh/"
-    scp_on_node "/tmp/id_rsa*" "ha3:/root/.ssh/"
+    echo "- Copy ssh root key from node ${NODENAME}1 to all nodes"
+    scp -o StrictHostKeyChecking=no root@${NODENAME}1:~/.ssh/id_rsa.pub /tmp/
+    scp -o StrictHostKeyChecking=no root@${NODENAME}1:~/.ssh/id_rsa /tmp/
+    scp_on_node "/tmp/id_rsa*" "${NODENAME}2:/root/.ssh/"
+    scp_on_node "/tmp/id_rsa*" "${NODENAME}3:/root/.ssh/"
     rm -vf /tmp/id_rsa*
-    exec_on_node ha2 "grep 'Cluster Internal' /root/.ssh/authorized_keys || cat /tmp/id_rsa.pub >> /root/.ssh/authorized_keys"
-    exec_on_node ha3 "grep 'Cluster Internal' /root/.ssh/authorized_keys || cat /tmp/id_rsa.pub >> /root/.ssh/authorized_keys"
+    exec_on_node ${NODENAME}2 "grep 'Cluster Internal' /root/.ssh/authorized_keys || cat /tmp/id_rsa.pub >> /root/.ssh/authorized_keys"
+    exec_on_node ${NODENAME}3 "grep 'Cluster Internal' /root/.ssh/authorized_keys || cat /tmp/id_rsa.pub >> /root/.ssh/authorized_keys"
 }
 
 # ADD all other NODES (from HOST)
 add_remove_node_test() {
     echo "############ START other HA nodes join the cluster"
-    echo "- Add Node HA2 HA3 to cluster"
-    exec_on_node ha2 "ha-cluster-join -y -c ${NETWORK}.101"
-    exec_on_node ha3 "ha-cluster-join -y -c ${NETWORK}.101"
-    echo "############ START remove node HA3 from cluster"
-    echo "- Remove HA3 from cluster (from node HA1)"
-    exec_on_node ha1 "ha-cluster-remove -c ${NETWORK}.103"
+    echo "- Add Node ${NODENAME}2 ${NODENAME}3 to cluster"
+    exec_on_node ${NODENAME}2 "ha-cluster-join -y -c ${NETWORK}.101"
+    exec_on_node ${NODENAME}3 "ha-cluster-join -y -c ${NETWORK}.101"
+    echo "############ START remove node ${NODENAME}3 from cluster"
+    echo "- Remove ${NODENAME}3 from cluster (from node ${NODENAME}1)"
+    exec_on_node ${NODENAME}1 "ha-cluster-remove -c ${NETWORK}.103"
     crm_status
-    echo "############ START re-add node HA3 to cluster"
-    echo "- Add HA3 back to cluster"
-    exec_on_node ha3 "ha-cluster-join -y -c ${NETWORK}.101"
+    echo "############ START re-add node ${NODENAME}3 to cluster"
+    echo "- Add ${NODENAME}3 back to cluster"
+    exec_on_node ${NODENAME}3 "ha-cluster-join -y -c ${NETWORK}.101"
     crm_status
 }
 
 # Test if SBD is usable (from an HA node)
 sbd_test() {
-    echo "############ START test SBD on HA1 (from HA2), reset HA3"
-    echo "- Send a test message from HA2 to HA1"
-    exec_on_node ha2 "sbd -d /dev/vdb message ha1 test"
-    exec_on_node ha1 "journalctl -u sbd --lines 10"
-    echo "- Reset node HA3 from node HA1"
-    exec_on_node ha1 "sbd -d /dev/vdb message ha3 reset"
+    echo "############ START test SBD on ${NODENAME}1 (from ${NODENAME}2), reset ${NODENAME}3"
+    echo "- Send a test message from ${NODENAME}2 to ${NODENAME}1"
+    exec_on_node ${NODENAME}2 "sbd -d /dev/vdb message ${NODENAME}1 test"
+    exec_on_node ${NODENAME}1 "journalctl -u sbd --lines 10"
+    echo "- Reset node ${NODENAME}3 from node ${NODENAME}1"
+    exec_on_node ${NODENAME}1 "sbd -d /dev/vdb message ${NODENAME}3 reset"
     echo "- Waiting node back (30s) ...."
     sleep 30
 }
@@ -108,54 +108,54 @@ sbd_test() {
 # list stonith ra available
 list_ra_stonith() {
     echo "############ START list stonith RA available"
-    exec_on_node ha1 "crm ra list stonith"
+    exec_on_node ${NODENAME}1 "crm ra list stonith"
 }
 
 # Test HAWK2
-# HAWK2 i sonly available on node HA1
+# HAWK2 i sonly available on node ${NODENAME}1
 #firefox https://${NETWORK}.101:7630
 
 # CRMshell test (from any nodes)
 crm_status() {
     echo "############ START crm status"
-    exec_on_node ha2 "crm status"
+    exec_on_node ${NODENAME}2 "crm status"
 }
 
 # Check corosync2 sync (from any node)
 coroysnc2_test() {
     echo "############ START corosync2 test"
-    exec_on_node ha2 "csync2 -xv"
+    exec_on_node ${NODENAME}2 "csync2 -xv"
 }
 
 # OCF check (from any node)
 ocf_check() {
     echo "############ START OCF check"
-    exec_on_node ha2 "OCF_ROOT=/usr/lib/ocf /usr/lib/ocf/resource.d/heartbeat/IPaddr meta-data"
+    exec_on_node ${NODENAME}2 "OCF_ROOT=/usr/lib/ocf /usr/lib/ocf/resource.d/heartbeat/IPaddr meta-data"
 }
 
 # Check maintenance mode works (from any node)
 maintenance_mode_check() {
-    echo "############ START try Maintenance on node HA1"
-    echo "- Switch HA1 in maintenance mode"
-    exec_on_node ha2 "crm node maintenance ha1"
+    echo "############ START try Maintenance on node ${NODENAME}1"
+    echo "- Switch ${NODENAME}1 in maintenance mode"
+    exec_on_node ${NODENAME}2 "crm node maintenance ${NODENAME}1"
     crm_status
-    echo "- Switch HA1 in ready mode"
-    exec_on_node ha2 "crm node ready ha1"
+    echo "- Switch ${NODENAME}1 in ready mode"
+    exec_on_node ${NODENAME}2 "crm node ready ${NODENAME}1"
     crm_status
 }
 
 health_test() {
 # Check health
     echo "############ START Check health"
-    exec_on_node ha2 "crm script describe health"
-    exec_on_node ha2 "crm script run health"
+    exec_on_node ${NODENAME}2 "crm script describe health"
+    exec_on_node ${NODENAME}2 "crm script run health"
 }
 
 
 # Check crm history
 crm_history() {
     echo "############ START crm history"
-    exec_on_node ha2 "crm history info"
+    exec_on_node ${NODENAME}2 "crm history info"
 }
 
 ##########################
@@ -224,15 +224,15 @@ case "$1" in
     Enable SBD on all HA nodes
 
  init
-    Init the cluster on node HA1
+    Init the cluster on node ${NODENAME}1
 
  sshkeynode
-    Copy Cluster Internal key (from HA1) to all other HA nodes
+    Copy Cluster Internal key (from ${NODENAME}1) to all other HA nodes
 
  addremove
     ADD all other NODES (you need to enter root password for all nodes)
-    Remove node HA3
-    Re-add node HA3
+    Remove node ${NODENAME}3
+    Re-add node ${NODENAME}3
 
  sbdtest
     Test if SBD is usable
