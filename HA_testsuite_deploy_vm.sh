@@ -36,7 +36,7 @@ cleanup_vm() {
     echo " press [ENTER] twice OR Ctrl+C to abort"
     read
     read
-    for nb in `seq 1 4`
+    for nb in `seq 1 3`
     do 
     NAME="${HANAME}${nb}"
     virsh list --all | grep ${NAME} > /dev/null
