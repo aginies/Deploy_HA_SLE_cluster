@@ -10,11 +10,20 @@ SBDDISK="${STORAGEP}/${SBDNAME}/${SBDNAME}.img"
 # Host ssh root key (will be 'ssh-copy-id' on HA node)
 IDRSAHA="id_rsa_HA"
 
+# CLUSTER NAME
+CLUSTER="sle12SP3test"
+
+# PSSH
+PSSHCONF="/etc/hanodes_${CLUSTER}"
+
 # Virtual network name
 NETMACHOST="52:54:00:89:a0:b9"
 UUID="851e50f1-db73-475a-895f-28304baf8e8c"
 BRIDGE="vibr1"
 NODENAME="ha"
+MACA="52:54:00:c7:92:ea"
+MACB="52:54:00:c7:92:eb"
+MACC="52:54:00:c7:92:ec"
 NODEDOMAIN="testing.com"
 NETWORKNAME="HAnet"
 NETWORK="192.168.12"

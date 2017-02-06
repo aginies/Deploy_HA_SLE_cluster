@@ -46,9 +46,9 @@ EOF
 # Command from Host
 prepare_remote_pssh() {
     echo "############ START prepare_remote_pssh #############"
-    echo "- Install pssh and create /etc/hanodes"
+    echo "- Install pssh and create ${PSSHCONF}"
     zypper in -y pssh
-    cat > /etc/hanodes<<EOF
+    cat > ${PSSHCONF}<<EOF
 ${NODENAME}1
 ${NODENAME}2
 ${NODENAME}3
@@ -87,9 +87,9 @@ prepare_virtual_HAnetwork() {
   <ip address='${NETWORK}.1' netmask='255.255.255.0'>
     <dhcp>
       <range start='${NETWORK}.128' end='${NETWORK}.254'/>
-      <host mac="52:54:00:c7:92:da" name="${NODENAME}1.${NODEDOMAIN}" ip="${NETWORK}.101" />
-      <host mac="52:54:00:c7:92:db" name="${NODENAME}2.${NODEDOMAIN}" ip="${NETWORK}.102" />
-      <host mac="52:54:00:c7:92:dc" name="${NODENAME}3.${NODEDOMAIN}" ip="${NETWORK}.103" />
+      <host mac="${MACA}" name="${NODENAME}1.${NODEDOMAIN}" ip="${NETWORK}.101" />
+      <host mac="${MACA}" name="${NODENAME}2.${NODEDOMAIN}" ip="${NETWORK}.102" />
+      <host mac="${MACA}" name="${NODENAME}3.${NODEDOMAIN}" ip="${NETWORK}.103" />
     </dhcp>
   </ip>
 </network>

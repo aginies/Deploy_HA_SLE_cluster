@@ -123,7 +123,7 @@ check_before_install
 
 # Install HA1 VM
 NAME="${DISTRO}HA1"
-MAC="52:54:00:c7:92:da"
+MAC="${MACA}"
 VMDISK="${STORAGEP}/${LIBVIRTPOOL}/${NAME}.qcow2"
 install_vm
 
@@ -132,13 +132,13 @@ EXTRAARGS="autoyast=device://vdc/havm_mini.xml"
 
 # Install HA2 VM
 NAME="${DISTRO}HA2"
-MAC="52:54:00:c7:92:db"
+MAC="${MACB}"
 VMDISK="${STORAGEP}/${LIBVIRTPOOL}/${NAME}.qcow2"
 install_vm
 
 # Install HA3 VM
 NAME="${DISTRO}HA3"
-MAC="52:54:00:c7:92:dc"
+MAC="${MACC}"
 VMDISK="${STORAGEP}/${LIBVIRTPOOL}/${NAME}.qcow2"
 install_vm
 

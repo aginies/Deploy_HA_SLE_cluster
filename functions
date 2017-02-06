@@ -33,8 +33,8 @@ exec_pssh() {
         exit 1
     fi
     CMD="$1"
-    echo "pssh -h /etc/hanodes -x \"-o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no\" \"$CMD\""
-    pssh -h /etc/hanodes -x "-o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no" "$CMD"
+    echo "pssh -h ${PSSHCONF} -x \"-o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no\" \"$CMD\""
+    pssh -h ${PSSHCONF} -x "-o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no" "$CMD"
 }
 
 # scp a file to a NODE from host
