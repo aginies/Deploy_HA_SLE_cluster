@@ -116,6 +116,7 @@
     <default_target>graphical</default_target>
     <services>
       <disable config:type="list"/>
+        <service>postfix</service>
       <enable config:type="list">
         <service>btrfsmaintenance-refresh</service>
         <service>corosync</service>
@@ -128,7 +129,6 @@
         <service>iscsi</service>
         <service>mcelog</service>
         <service>nscd</service>
-        <service>postfix</service>
         <service>purge-kernels</service>
         <service>rollback</service>
         <service>rsyslog</service>
