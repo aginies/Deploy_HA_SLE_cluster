@@ -81,7 +81,7 @@ prepare_virtual_HAnetwork() {
   <name>${NETWORKNAME}</name>
   <uuid>${UUID}</uuid>
   <forward mode='nat'/>
-  <bridge name='virbr1' stp='on' delay='0'/>
+  <bridge name='${BRIDGE}' stp='on' delay='0'/>
   <mac address='${NETMACHOST}'/>
   <domain name='${NETWORKNAME}'/>
   <ip address='${NETWORK}.1' netmask='255.255.255.0'>
