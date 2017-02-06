@@ -116,7 +116,7 @@ prepare_SBD_pool() {
         echo "- ${SBDNAME} pool is not present"
     fi
     echo "- Define pool ${SBDNAME}"
-    mkdir ${STORAGEP}/${SBDNAME}
+    mkdir -p ${STORAGEP}/${SBDNAME}
     virsh pool-define-as --name ${SBDNAME} --type dir --target ${STORAGEP}/${SBDNAME}
     echo "- Start and Autostart the pool"
     virsh pool-start ${SBDNAME}
