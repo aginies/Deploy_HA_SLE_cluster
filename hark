@@ -630,7 +630,7 @@ def prepare_shared_pool():
     status_progress()
     log("Define pool {}".format(sharedpool))
     mkdirp(os.path.join(clusterdef.storage.path, sharedpool))
-    invoke("virsh", "pool-define-as", "--name", sharedpool, "--type", "dir", "--target", os.path.join(clusterdef.torage.path, sharedpool))
+    invoke("virsh", "pool-define-as", "--name", sharedpool, "--type", "dir", "--target", os.path.join(clusterdef.storage.path, sharedpool))
     status_progress()
     log("Start and Autostart the pool")
     invoke("virsh", "pool-start", sharedpool)
@@ -956,10 +956,12 @@ def cmd_up(args):
         error("Installations in progress!")
 
     state = determine_status()
-    if state == 'created':
+    print("Status", state)
+    if state == 'create':
         for vm in clusterdef.vm:
             vmname = "{}{}".format(vm.distro, vm.name)
             invoke("virsh start {}".format(vmname))
+            print("DEBUG", vm.name)
     elif state == 'running':
         status("Already running")
     else:
