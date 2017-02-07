@@ -323,6 +323,7 @@ class Config(object):
     def __init__(self, fns, root=None):
         cfg = SafeConfigParser()
         cfg.read(fns)
+        print("", fns)
 
         for section in cfg.sections():
             if ':' in section:
@@ -338,6 +339,7 @@ class Config(object):
 
         def resolve_section(s, env):
             for k, v in s.__dict__.items():
+                print("-- DEBUG", k)
                 print("DEBUG", env)
                 s.__dict__[k] = v.format(**env)
 
