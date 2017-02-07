@@ -8,4 +8,4 @@ name=krig
 password=linux
 
 [scenario]
-default=3node
+default=sle12sp2_3nodes

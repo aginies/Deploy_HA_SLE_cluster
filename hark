@@ -394,7 +394,6 @@ def mkconfig(scenario):
     else:
         config_scenario(scenario)
 
-
     if clusterdef.iso.url.endswith('/'):
         clusterdef.iso.url = clusterdef.iso.url[:-1]
     if not os.path.isdir(clusterdef.iso.path):
@@ -1162,6 +1161,13 @@ def cmd_destroy(args):
 
 def cmd_config(args):
     print(config)
+    if args.scenario is None:
+        scenario = config.scenario.default
+    else:
+        scenario = args.scenario
+
+    print("\nCluterdef:", scenario)
+    print(clusterdef)
 
 
 def pssh(*args, nodes=None):
