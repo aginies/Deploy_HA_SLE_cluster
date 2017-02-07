@@ -67,7 +67,6 @@ init_ha_cluster() {
 
 copy_ssh_key_on_nodes() {
     echo "############ START copy_ssh_key_on_nodes"
-<<<<<<< HEAD
     echo "- Copy ssh root key from node HA1 to all nodes"
     scp -o StrictHostKeyChecking=no root@ha1:~/.ssh/id_rsa.pub /tmp/
     scp -o StrictHostKeyChecking=no root@ha1:~/.ssh/id_rsa /tmp/
@@ -75,13 +74,6 @@ copy_ssh_key_on_nodes() {
     scp_on_node "/tmp/id_rsa*" "ha3:/root/.ssh/"
     scp_on_node "/tmp/id_rsa*" "ha4:/root/.ssh/"
     scp_on_node "/tmp/id_rsa*" "ha5:/root/.ssh/"
-=======
-    echo "- Copy ssh root key from node ${NODENAME}1 to all nodes"
-    scp -o StrictHostKeyChecking=no root@${NODENAME}1:~/.ssh/id_rsa.pub /tmp/
-    scp -o StrictHostKeyChecking=no root@${NODENAME}1:~/.ssh/id_rsa /tmp/
-    scp_on_node "/tmp/id_rsa*" "${NODENAME}2:/root/.ssh/"
-    scp_on_node "/tmp/id_rsa*" "${NODENAME}3:/root/.ssh/"
->>>>>>> 64dee776f317ed060df56aae80551929f1ddde6b
     rm -vf /tmp/id_rsa*
     exec_on_node ${NODENAME}2 "grep 'Cluster Internal' /root/.ssh/authorized_keys || cat /tmp/id_rsa.pub >> /root/.ssh/authorized_keys"
     exec_on_node ${NODENAME}3 "grep 'Cluster Internal' /root/.ssh/authorized_keys || cat /tmp/id_rsa.pub >> /root/.ssh/authorized_keys"
@@ -90,7 +82,6 @@ copy_ssh_key_on_nodes() {
 # ADD all other NODES (from HOST)
 add_remove_node_test() {
     echo "############ START other HA nodes join the cluster"
-<<<<<<< HEAD
     echo "- Add Node HA2 HA3, HA4, HA5 to cluster"
     exec_on_node ha2 "ha-cluster-join -y -c ${NETWORK}.101"
     exec_on_node ha3 "ha-cluster-join -y -c ${NETWORK}.101"
@@ -99,14 +90,6 @@ add_remove_node_test() {
     echo "############ START remove node HA3 from cluster"
     echo "- Remove HA3 from cluster (from node HA1)"
     exec_on_node ha1 "ha-cluster-remove -c ${NETWORK}.103"
-=======
-    echo "- Add Node ${NODENAME}2 ${NODENAME}3 to cluster"
-    exec_on_node ${NODENAME}2 "ha-cluster-join -y -c ${NETWORK}.101"
-    exec_on_node ${NODENAME}3 "ha-cluster-join -y -c ${NETWORK}.101"
-    echo "############ START remove node ${NODENAME}3 from cluster"
-    echo "- Remove ${NODENAME}3 from cluster (from node ${NODENAME}1)"
-    exec_on_node ${NODENAME}1 "ha-cluster-remove -c ${NETWORK}.103"
->>>>>>> 64dee776f317ed060df56aae80551929f1ddde6b
     crm_status
     echo "############ START re-add node ${NODENAME}3 to cluster"
     echo "- Add ${NODENAME}3 back to cluster"
