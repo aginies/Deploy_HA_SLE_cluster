@@ -680,7 +680,7 @@ def generate_vm_template(exedir, outputdir):
     t_hosts_entry = open("{}/hosts_entry.xml".format(t_path)).read()
 
     for vm in clusterdef.vm:
-        addons = "".join(t_addon.format(name=a.name, dev="/dev/sr{}".format(i)) for i, a in enumerate(a for a in config.scenario.addon if a.name != "base"))
+        addons = "".join(t_addon.format(name=a.name, dev="/dev/sr{}".format(i)) for i, a in enumerate(a for a in clusterdef.addon if a.name != "base"))
         packages = "".join(t_package.format(name=pkg) for pkg in vm.packages.split())
         hosts = "".join(t_hosts_entry.format(**vm.__dict__) for vm in clusterdef.vm)
         txt = t_vm.format(
@@ -764,7 +764,7 @@ def resolve_iso_file(addon):
 
 
 def check_isos():
-    for addon in config.scenario.addon:
+    for addon in clusterdef.addon:
         isofile = resolve_iso_file(addon)
         if not os.path.isfile(os.path.join(clusterdef.iso.path, isofile)):
             if OFFLINE:
@@ -782,7 +782,7 @@ def check_iso_sha1sums():
     status_long("Download SHA1 checksums")
     sha1sumurls = set()
     sums = {}
-    for addon in config.scenario.addon:
+    for addon in clusterdef.addon:
         sha1sumurl = addon.iso.rsplit('/', 1)[0] + '/SHA1SUMS'
         sha1sumurls.add(sha1sumurl)
     for url in sha1sumurls:
@@ -792,7 +792,7 @@ def check_iso_sha1sums():
                 checksum, filename = l.split()
                 sums[filename] = checksum
     status_done()
-    for addon in config.scenario.addon:
+    for addon in clusterdef.addon:
         fname = resolve_iso_file(addon)
         fpath = os.path.join(clusterdef.iso.path, fname)
         if not os.path.isfile(fpath):
@@ -894,7 +894,7 @@ def install_vms():
                ' --disk path=', autoyastdisk, ',format=raw,bus=virtio']
 
         baseloc = None
-        for addon in config.scenario.addon:
+        for addon in clusterdef.addon:
             diskpath = os.path.join(clusterdef.iso.path, resolve_iso_file(addon))
             cmd.append(' --disk path={},device=cdrom'.format(diskpath))
             if addon.name == "base":
