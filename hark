@@ -389,19 +389,18 @@ def mkdirp(d, mode=0o777):
 
 def mkconfig(scenario):
     config = Config(['conf/hark.ini', os.path.expanduser('~/.hark.ini'), "/etc/hark/hark.ini"])
-    print("", config)
 
     if scenario is None:
         config_scenario(config.scenario.default)
     else:
         config_scenario(scenario)
 
-    if config.scenario.iso.url.endswith('/'):
-        config.scenario.iso.url = config.scenario.iso.url[:-1]
-    if not os.path.isdir(config.scenario.iso.path):
-        mkdirp(config.scenario.iso.path)
+
+    if clusterdef.iso.url.endswith('/'):
+        clusterdef.iso.url = clusterdef.iso.url[:-1]
+    if not os.path.isdir(clusterdef.iso.path):
+        mkdirp(clusterdef.iso.path)
     config.user.password = crypt_passwd(config.user.password)
-    print("", scenario)
     return config
 
 
@@ -439,7 +438,7 @@ def wait_for_downloads():
 
 def cmd_iso(args):
     if args.variant is None:
-        baseurl = config.scenario.iso.url
+        baseurl = clusterdef.iso.url
         variants = get_variants(baseurl)
         print("\n".join(variants))
         return
@@ -453,26 +452,27 @@ def cmd_iso(args):
             check_iso_sha1sums()
             return
 
-        baseurl = config.scenario.iso.url
+        baseurl = clusterdef.iso.url
         isos = get_isos(baseurl, args.variant)
         print('\n'.join(isos))
         return
 
-    baseurl = config.scenario.iso.url
+    baseurl = clusterdef.iso.url
     variant = args.variant
     iso = args.iso
 
-    if os.path.isfile(os.path.join(config.scenario.iso.path, iso)):
-        error("{} already exists in {}".format(iso, config.scenario.iso.path))
+    if os.path.isfile(os.path.join(clusterdef.iso.path, iso)):
+        error("{} already exists in {}".format(iso, clusterdef.iso.path))
 
     url = '{}/{}/{}'.format(baseurl, variant, iso)
-    start_download(url, os.path.join(config.scenario.iso.path, iso))
+    start_download(url, os.path.join(clusterdef.iso.path, iso))
 
 
 def config_scenario(scenario):
     """
     Load and add scenario to configuration
     """
+    global clusterdef
     if scenario is None:
         error("Scenario is required")
     if not os.path.isfile(scenario):
@@ -483,8 +483,9 @@ def config_scenario(scenario):
             scenario = options[1]
         else:
             error("Unknown scenario: {}".format(scenario))
-    print("+++", scenario)
-    config.scenario = Config([scenario], root=config)
+    print("+++ config_scenario: ", scenario)
+    clusterdef = Config([scenario], root=config)
+    return clusterdef
 
 
 def install_virtualization_stack():
@@ -754,7 +755,7 @@ def resolve_iso_file(addon):
     baseurl, variant = varianturl.rsplit('/', 1)
 
     if OFFLINE:
-        for f in os.listdir(config.scenario.iso.path):
+        for f in os.listdir(clusterdef.iso.path):
             if fnmatch.fnmatch(f, isofile):
                 return f
     else:
@@ -768,14 +769,14 @@ def resolve_iso_file(addon):
 def check_isos():
     for addon in config.scenario.addon:
         isofile = resolve_iso_file(addon)
-        if not os.path.isfile(os.path.join(config.scenario.iso.path, isofile)):
+        if not os.path.isfile(os.path.join(clusterdef.iso.path, isofile)):
             if OFFLINE:
                 error("Missing ISO: {}".format(isofile))
             isourl = addon.iso.rsplit('/', 1)[0] + '/' + isofile
             if not DOWNLOAD:
                 error("Missing ISO: {}".format(isourl))
             status("Downloading missing ISO: {}".format(isourl))
-            start_download(isourl, os.path.join(config.scenario.iso.path, isofile))
+            start_download(isourl, os.path.join(clusterdef.iso.path, isofile))
 
 
 def check_iso_sha1sums():
@@ -796,7 +797,7 @@ def check_iso_sha1sums():
     status_done()
     for addon in config.scenario.addon:
         fname = resolve_iso_file(addon)
-        fpath = os.path.join(config.scenario.iso.path, fname)
+        fpath = os.path.join(clusterdef.iso.path, fname)
         if not os.path.isfile(fpath):
             error("File not found: {}".format(fpath))
         if fname in sums:
@@ -897,7 +898,7 @@ def install_vms():
 
         baseloc = None
         for addon in config.scenario.addon:
-            diskpath = os.path.join(config.scenario.iso.path, resolve_iso_file(addon))
+            diskpath = os.path.join(clusterdef.iso.path, resolve_iso_file(addon))
             cmd.append(' --disk path={},device=cdrom'.format(diskpath))
             if addon.name == "base":
                 baseloc = diskpath
