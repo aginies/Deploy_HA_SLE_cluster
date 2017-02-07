@@ -548,7 +548,7 @@ def prepare_etc_hosts():
     """
     status("Prepare /etc/hosts")
     if replace_in_block("/etc/hosts",
-                        "".join("{}  {} {}\n".format(vm.address, vm.fqdn, vm.name) for vm in config.scenario.vm)):
+                        "".join("{}  {} {}\n".format(vm.address, vm.fqdn, vm.name) for vm in clusterdef.vm)):
         os.chmod("/etc/hosts", 0o644)
 
 
@@ -559,7 +559,7 @@ def prepare_virtual_network():
     """
     path = "/etc/libvirt/qemu/networks/{}.xml".format(clusterdef.network.name)
     hosts = ""
-    for vm in config.scenario.vm:
+    for vm in clusterdef.vm:
         hosts += '        <host mac="{mac}" name="{fqdn}" ip="{address}" />\n'.format(**vm.__dict__)
     status_long("Prepare virtual network ({})".format(path))
     str2file("""<network>
@@ -600,7 +600,7 @@ def ssh_root_key():
         status("Generate ~/.ssh/{} without password".format(config.user.sshkey))
         invoke('ssh-keygen', '-t', 'rsa', '-f', '~/.ssh/{}'.format(config.user.sshkey), '-N', '""')
 
-    vms = " ".join(vm.name for vm in config.scenario.vm)
+    vms = " ".join(vm.name for vm in clusterdef.vm)
     newconfig = "Host {}\nIdentityFile /root/.ssh/{}\n".format(vms, config.user.sshkey)
     if replace_in_block("/root/.ssh/config", newconfig):
         status("Updated /root/.ssh/config")
@@ -679,10 +679,10 @@ def generate_vm_template(exedir, outputdir):
     t_package = open("{}/package.xml".format(t_path)).read()
     t_hosts_entry = open("{}/hosts_entry.xml".format(t_path)).read()
 
-    for vm in config.scenario.vm:
+    for vm in clusterdef.vm:
         addons = "".join(t_addon.format(name=a.name, dev="/dev/sr{}".format(i)) for i, a in enumerate(a for a in config.scenario.addon if a.name != "base"))
         packages = "".join(t_package.format(name=pkg) for pkg in vm.packages.split())
-        hosts = "".join(t_hosts_entry.format(**vm.__dict__) for vm in config.scenario.vm)
+        hosts = "".join(t_hosts_entry.format(**vm.__dict__) for vm in clusterdef.vm)
         txt = t_vm.format(
             addons=addons,
             packages=packages,
@@ -826,7 +826,7 @@ def cleanup_vm():
     _, vmlist = get_stdout("virsh -q list --all")
     vmlist = vmlist.decode('utf-8')
 
-    for vm in config.scenario.vm:
+    for vm in clusterdef.vm:
         name = "{}{}".format(vm.distro, vm.name)
         if name in vmlist.split():
             status("Delete VM {}".format(name))
@@ -867,7 +867,7 @@ def create_pool(poolname):
 
 def install_vms():
     pool = clusterdef.storage.vmpool
-    for vm in config.scenario.vm:
+    for vm in clusterdef.vm:
         vmname = "{}{}".format(vm.distro, vm.name)
         status("Install VM {}".format(vm.name))
         invoke("virsh pool-refresh {}".format(pool))
@@ -957,7 +957,7 @@ def cmd_up(args):
 
     state = determine_status()
     if state == 'created':
-        for vm in config.scenario.vm:
+        for vm in clusterdef.vm:
             vmname = "{}{}".format(vm.distro, vm.name)
             invoke("virsh start {}".format(vmname))
     elif state == 'running':
@@ -983,7 +983,7 @@ def cmd_up(args):
 
 def wait_to_bootstrap():
     status_long("Wait for nodes to start")
-    nodes = [vm.name for vm in config.scenario.vm]
+    nodes = [vm.name for vm in clusterdef.vm]
     while True:
         state = determine_status()
         if state == 'running':
@@ -1172,7 +1172,7 @@ def cmd_config(args):
 
 def pssh(*args, nodes=None):
     if nodes is None:
-        nodes = " ".join(vm.name for vm in config.scenario.vm)
+        nodes = " ".join(vm.name for vm in clusterdef.vm)
     return invoke(
         'pssh -H "{nodes}" -l root -p 30 -t 0 -x "-o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no" "{cmd}"'.format(
             nodes=nodes, cmd=" ".join(args)))
@@ -1180,7 +1180,7 @@ def pssh(*args, nodes=None):
 
 def pscp(src, dst, nodes=None):
     if nodes is None:
-        nodes = " ".join(vm.name for vm in config.scenario.vm)
+        nodes = " ".join(vm.name for vm in clusterdef.vm)
     return invoke(
         'pscp -H "{nodes}" -r -l root -p 30 -t 0 -x "-o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no" "{src}" "{dst}"'.format(
             nodes=nodes, src=src, dst=dst))
@@ -1199,7 +1199,7 @@ def cmd_bootstrap(args):
         error("Command has to run as root.")
 
     if args.nodes is None:
-        nodelist = [vm.name for vm in config.scenario.vm]
+        nodelist = [vm.name for vm in clusterdef.vm]
     else:
         nodelist = args.nodes.split()
 
@@ -1231,9 +1231,9 @@ def cmd_run(args):
     Run command on nodes (default: all nodes)
     """
     if args.once:
-        nodelist = [config.scenario.vm[0].name]
+        nodelist = [clusterdef.vm[0].name]
     elif args.nodes is None:
-        nodelist = [vm.name for vm in config.scenario.vm]
+        nodelist = [vm.name for vm in clusterdef.vm]
     else:
         nodelist = args.nodes.split()
 
@@ -1255,7 +1255,7 @@ def cmd_ssh(args):
     if not os.path.isdir('.hark'):
         mkdirp('.hark')
     addr = args.node
-    for vm in config.scenario.vm:
+    for vm in clusterdef.vm:
         if vm.name == args.node:
             addr = vm.address
     cmd = ['ssh',
