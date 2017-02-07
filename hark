@@ -323,7 +323,6 @@ class Config(object):
     def __init__(self, fns, root=None):
         cfg = SafeConfigParser()
         cfg.read(fns)
-        print("", fns)
 
         for section in cfg.sections():
             if ':' in section:
