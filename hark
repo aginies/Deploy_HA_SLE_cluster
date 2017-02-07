@@ -483,7 +483,6 @@ def config_scenario(scenario):
             scenario = options[1]
         else:
             error("Unknown scenario: {}".format(scenario))
-    print("+++ config_scenario: ", scenario)
     clusterdef = Config([scenario], root=config)
     return clusterdef
 
@@ -560,7 +559,7 @@ def prepare_virtual_network():
     Define HAnet private HA network (NAT)
     NETWORK will be ${NETWORK}.0/24 gw/dns ${NETWORK}.1
     """
-    path = "/etc/libvirt/qemu/networks/{}.xml".format(config.scenario.network.name)
+    path = "/etc/libvirt/qemu/networks/{}.xml".format(clusterdef.network.name)
     hosts = ""
     for vm in config.scenario.vm:
         hosts += '        <host mac="{mac}" name="{fqdn}" ip="{address}" />\n'.format(**vm.__dict__)
@@ -579,16 +578,16 @@ def prepare_virtual_network():
     </dhcp>
   </ip>
 </network>
-""".format(hosts=hosts, **mkconfigenv(config.scenario.network)), path)
+""".format(hosts=hosts, **mkconfigenv(clusterdef.network)), path)
     os.chmod(path, 0o644)
     status_progress()
     invoke("systemctl restart libvirtd")
     status_progress()
-    invoke("virsh net-destroy {}".format(config.scenario.network.name))
+    invoke("virsh net-destroy {}".format(clusterdef.network.name))
     status_progress()
-    invoke("virsh net-autostart {}".format(config.scenario.network.name))
+    invoke("virsh net-autostart {}".format(clusterdef.network.name))
     status_progress()
-    invoke("virsh net-start {}".format(config.scenario.network.name))
+    invoke("virsh net-start {}".format(clusterdef.network.name))
     status_done()
 
 
@@ -610,7 +609,7 @@ def ssh_root_key():
 
 
 def destroy_shared_pool():
-    sharedpool = config.scenario.storage.sharedpool
+    sharedpool = clusterdef.storage.sharedpool
     log("Destroy current pool {}".format(sharedpool))
     invoke("virsh", "pool-destroy", sharedpool)
     log("Undefine current pool {}".format(sharedpool))
@@ -623,17 +622,17 @@ def prepare_shared_pool():
     status_long("Prepare and create shard pool and volume")
     _, outp = get_stdout("virsh pool-list --all")
     outp = outp.decode('utf-8')
-    sharedpool = config.scenario.storage.sharedpool
+    sharedpool = clusterdef.storage.sharedpool
     if sharedpool in outp:
         status_progress()
         destroy_shared_pool()
-    shareddisk = config.scenario.storage.shareddisk
+    shareddisk = clusterdef.storage.shareddisk
     if os.path.isfile(shareddisk):
         os.remove(shareddisk)
     status_progress()
     log("Define pool {}".format(sharedpool))
-    mkdirp(os.path.join(config.scenario.storage.path, sharedpool))
-    invoke("virsh", "pool-define-as", "--name", sharedpool, "--type", "dir", "--target", os.path.join(config.scenario.storage.path, sharedpool))
+    mkdirp(os.path.join(clusterdef.storage.path, sharedpool))
+    invoke("virsh", "pool-define-as", "--name", sharedpool, "--type", "dir", "--target", os.path.join(clusterdef.torage.path, sharedpool))
     status_progress()
     log("Start and Autostart the pool")
     invoke("virsh", "pool-start", sharedpool)
@@ -651,7 +650,7 @@ def prepare_shared_pool():
             return int(s[:-1]) * 1024
         return int(s)
 
-    diskname = os.path.basename(config.scenario.storage.shareddisk)
+    diskname = os.path.basename(clusterdef.storage.shareddisk)
 
     doc = """<volume>
   <name>{name}</name>
@@ -662,7 +661,7 @@ def prepare_shared_pool():
     <format type='raw'/>
   </target>
 </volume>
-""".format(name=diskname, capacity=sized(config.scenario.storage.sharedsize))
+""".format(name=diskname, capacity=sized(clusterdef.storage.sharedsize))
 
     with create_tempfile() as tmppath:
         with open(tmppath, "w") as f:
@@ -691,7 +690,7 @@ def generate_vm_template(exedir, outputdir):
             packages=packages,
             hosts=hosts,
             keymap=vm.keymap,
-            networkname=config.scenario.network.name,
+            networkname=clusterdef.network.name,
             timezone=vm.timezone,
             username=config.user.name,
             userpass=config.user.password
@@ -709,10 +708,10 @@ def prepare_auto_deploy_image():
     tmpmount = create_tempdir()
     wdir = create_tempdir()
     cwd = os.getcwd()
-    os.chdir(config.scenario.storage.path)
+    os.chdir(clusterdef.storage.path)
     try:
         generate_vm_template(cwd, wdir)
-        diskname = os.path.basename(config.scenario.storage.autoyastdisk)
+        diskname = os.path.basename(clusterdef.storage.autoyastdisk)
         invoke("qemu-img create {} -f raw 2M".format(diskname))
         invoke("mkfs.ext3 {}".format(diskname))
         invoke("mount {} {}".format(diskname, tmpmount))
@@ -818,7 +817,7 @@ def check_iso_sha1sums():
 
 
 def cleanup_vm():
-    pooldir = os.path.join(config.scenario.storage.path, config.scenario.storage.vmpool)
+    pooldir = os.path.join(clusterdef.storage.path, clusterdef.storage.vmpool)
     if os.path.isdir(pooldir):
         images = [f for f in os.listdir(pooldir) if f.endswith(".qcow2")]
         if len(images) > 0:
@@ -835,19 +834,19 @@ def cleanup_vm():
             status("Delete VM {}".format(name))
             invoke("virsh destroy {}".format(name))
             invoke("virsh undefine {}".format(name))
-            invoke("virsh vol-delete --pool {} {}.qcow2".format(config.scenario.storage.vmpool, name))
+            invoke("virsh vol-delete --pool {} {}.qcow2".format(clusterdef.storage.vmpool, name))
 
 
 def check_before_install():
     status("Check disks before install")
-    for disk in (config.scenario.storage.autoyastdisk,
-                 config.scenario.storage.shareddisk):
+    for disk in (clusterdef.storage.autoyastdisk,
+                 clusterdef.storage.shareddisk):
         if not os.path.isfile(disk):
             error("{} not found, needed for autoinstallation".format(disk))
 
 
 def destroy_pool(poolname):
-    path = os.path.join(config.scenario.storage.path, poolname)
+    path = os.path.join(clusterdef.storage.path, poolname)
     invoke("virsh pool-destroy {}".format(poolname))
     invoke("virsh pool-undefine {}".format(poolname))
     invoke("rm -rvf {}".format(path))
@@ -856,7 +855,7 @@ def destroy_pool(poolname):
 def create_pool(poolname):
     "Create a pool (on host)"
     status("Create pool {}".format(poolname))
-    path = os.path.join(config.scenario.storage.path, poolname)
+    path = os.path.join(clusterdef.storage.path, poolname)
     _, outp = get_stdout("virsh -q pool-list --all")
     outp = outp.decode('utf-8')
     if poolname in [l.split()[0] for l in outp.split('\n') if l.strip()]:
@@ -869,7 +868,7 @@ def create_pool(poolname):
 
 
 def install_vms():
-    pool = config.scenario.storage.vmpool
+    pool = clusterdef.storage.vmpool
     for vm in config.scenario.vm:
         vmname = "{}{}".format(vm.distro, vm.name)
         status("Install VM {}".format(vm.name))
@@ -878,9 +877,9 @@ def install_vms():
             pool=pool, vmname=vmname, size=vm.imagesize))
         invoke("virsh pool-refresh {}".format(pool))
 
-        vmdisk = "{}/{}/{}.qcow2".format(config.scenario.storage.path, config.scenario.storage.vmpool, vmname)
-        autoyastdisk = config.scenario.storage.autoyastdisk
-        shareddisk = config.scenario.storage.shareddisk
+        vmdisk = "{}/{}/{}.qcow2".format(clusterdef.storage.path, clusterdef.storage.vmpool, vmname)
+        autoyastdisk = clusterdef.storage.autoyastdisk
+        shareddisk = clusterdef.storage.shareddisk
 
         if not os.path.isfile(vmdisk):
             error("{} not present".format(vmdisk))
@@ -891,7 +890,7 @@ def install_vms():
                ' --vcpus ', vm.vcpu,
                ' --virt-type ', config.host.hypervisor,
                ' --graphics ', 'vnc,keymap=', config.user.keymap,
-               ' --network network=', config.scenario.network.name, ',mac=', vm.mac,
+               ' --network network=', clusterdef.network.name, ',mac=', vm.mac,
                ' --disk path=', vmdisk, ',format=qcow2,bus=virtio,cache=none',
                ' --disk path=', shareddisk, ',format=raw,bus=virtio,cache=none',
                ' --disk path=', autoyastdisk, ',format=raw,bus=virtio']
@@ -926,7 +925,7 @@ def cmd_deploy(args):
         error("Command has to run as root.")
     check_isos()
     cleanup_vm()
-    create_pool(config.scenario.storage.vmpool)
+    create_pool(cluterdef.storage.vmpool)
     wait_for_downloads()
     check_iso_sha1sums()
     check_before_install()
@@ -941,7 +940,7 @@ def determine_status():
         warn("Failed to list virtual machines")
         return 'unknown'
     for line in outp.decode('utf-8').splitlines():
-        if config.scenario.common.distro in line:
+        if clusterdef.common.distro in line:
             if 'running' in line:
                 return 'running'
             if 'shut off' in line:
@@ -996,7 +995,7 @@ def wait_to_bootstrap():
     status_done()
     status_long("Wait for nodes to appear on network")
     while True:
-        rc, outp = get_stdout("virsh -q net-dhcp-leases {}".format(config.scenario.network.name))
+        rc, outp = get_stdout("virsh -q net-dhcp-leases {}".format(clusterdef.network.name))
         outp = outp.decode('utf-8')
         if rc == 0:
             if all(node in outp for node in nodes):
@@ -1027,7 +1026,7 @@ def cmd_halt(args):
         error("Failed to list virtual machines")
 
     for line in outp.decode('utf-8').splitlines():
-        if config.scenario.common.distro in line:
+        if clusterdef.common.distro in line:
             vmname = line.split()[1]
             if "running" not in line:
                 status("{} not running".format(vmname))
@@ -1049,16 +1048,16 @@ def cmd_status(args):
     if rc != 0:
         error("Failed to list networks")
     for line in outp.decode('utf-8').splitlines():
-        if config.scenario.network.name in line:
+        if clusterdef.network.name in line:
             nnetworks += 1
             print("  ", line.strip())
 
     # get IP addresses
     if nnetworks > 0:
         print("")
-        rc, outp = get_stdout("virsh -q net-dhcp-leases {}".format(config.scenario.network.name))
+        rc, outp = get_stdout("virsh -q net-dhcp-leases {}".format(clusterdef.network.name))
         if rc != 0:
-            error("Failed to list IP addresses for {}".format(config.scenario.network.name))
+            error("Failed to list IP addresses for {}".format(clusterdef.network.name))
         for line in outp.decode('utf-8').splitlines():
             if line.strip():
                 print("  ", line.strip())
@@ -1069,18 +1068,18 @@ def cmd_status(args):
         error("Failed to list pools")
     pools = []
     for line in outp.decode('utf-8').splitlines():
-        if config.scenario.storage.vmpool in line:
-            pools.append(config.scenario.storage.vmpool)
+        if clusterdef.storage.vmpool in line:
+            pools.append(clusterdef.storage.vmpool)
             print("  ", line.strip())
-        elif config.scenario.storage.sharedpool in line:
-            pools.append(config.scenario.storage.sharedpool)
+        elif clusterdef.storage.sharedpool in line:
+            pools.append(clusterdef.storage.sharedpool)
             print("  ", line.strip())
     print("\n# Volumes:")
     for pool in pools:
         rc, outp = get_stdout("virsh -q vol-list {}".format(pool))
         if rc == 0:
             for line in outp.decode('utf-8').splitlines():
-                if config.scenario.storage.path in line:
+                if clusterdef.storage.path in line:
                     print("  ", line.strip())
 
     # check vms
@@ -1090,7 +1089,7 @@ def cmd_status(args):
     if rc != 0:
         error("Failed to list virtual machines")
     for line in outp.decode('utf-8').splitlines():
-        if config.scenario.common.distro in line:
+        if clusterdef.common.distro in line:
             if "running" in line:
                 running = True
             print("  ", line.strip())
@@ -1148,18 +1147,18 @@ def cmd_destroy(args):
             for cmd in cmds.split():
                 invoke("virsh -q {} {}".format(cmd, tgt))
 
-        if invoke("virsh -q pool-info {}".format(config.scenario.storage.vmpool)):
-            status("Delete pool {}".format(config.scenario.storage.vmpool))
-            virsh('pool-destroy pool-delete pool-undefine', config.scenario.storage.vmpool)
+        if invoke("virsh -q pool-info {}".format(clusterdef.storage.vmpool)):
+            status("Delete pool {}".format(clusterdef.storage.vmpool))
+            virsh('pool-destroy pool-delete pool-undefine', clusterdef.storage.vmpool)
 
-        if invoke("virsh -q pool-info {}".format(config.scenario.storage.sharedpool)):
-            status("Delete pool {}".format(config.scenario.storage.sharedpool))
-            invoke("virsh vol-delete --pool {} {}".format(config.scenario.storage.sharedpool, os.path.basename(config.scenario.storage.shareddisk)))
-            virsh('pool-destroy pool-delete pool-undefine', config.scenario.storage.sharedpool)
+        if invoke("virsh -q pool-info {}".format(clusterdef.storage.sharedpool)):
+            status("Delete pool {}".format(clusterdef.storage.sharedpool))
+            invoke("virsh vol-delete --pool {} {}".format(clusterdef.storage.sharedpool, os.path.basename(clusterdef.storage.shareddisk)))
+            virsh('pool-destroy pool-delete pool-undefine', clusterdef.storage.sharedpool)
 
-        if invoke("virsh -q net-uuid {}".format(config.scenario.network.name)):
-            status("Delete network {}".format(config.scenario.network.name))
-            virsh('net-destroy net-undefine', config.scenario.network.name)
+        if invoke("virsh -q net-uuid {}".format(clusterdef.network.name)):
+            status("Delete network {}".format(clusterdef.network.name))
+            virsh('net-destroy net-undefine', clusterdef.network.name)
 
 
 def cmd_config(args):
