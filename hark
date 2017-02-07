@@ -338,6 +338,7 @@ class Config(object):
 
         def resolve_section(s, env):
             for k, v in s.__dict__.items():
+                print("DEBUG", env)
                 s.__dict__[k] = v.format(**env)
 
         def mkenv(s):
@@ -386,12 +387,18 @@ def mkdirp(d, mode=0o777):
     os.makedirs(d, mode=mode)
 
 
-def mkconfig():
-    config = Config(['hark.ini', os.path.expanduser('~/.hark.ini'), "/etc/hark/hark.ini"])
-    if config.iso.url.endswith('/'):
-        config.iso.url = config.iso.url[:-1]
-    if not os.path.isdir(config.iso.path):
-        mkdirp(config.iso.path)
+def mkconfig(scenario):
+    config = Config(['conf/hark.ini', os.path.expanduser('~/.hark.ini'), "/etc/hark/hark.ini"])
+
+    if scenario is None:
+        config_scenario(config.scenario.default)
+    else:
+        config_scenario(scenario)
+
+    if config.scenario.iso.url.endswith('/'):
+        config.scenario.iso.url = config.scenario.iso.url[:-1]
+    if not os.path.isdir(config.scenario.iso.path):
+        mkdirp(config.scenario.iso.path)
     config.user.password = crypt_passwd(config.user.password)
     return config
 
@@ -430,7 +437,7 @@ def wait_for_downloads():
 
 def cmd_iso(args):
     if args.variant is None:
-        baseurl = config.iso.url
+        baseurl = config.scenario.iso.url
         variants = get_variants(baseurl)
         print("\n".join(variants))
         return
@@ -444,20 +451,20 @@ def cmd_iso(args):
             check_iso_sha1sums()
             return
 
-        baseurl = config.iso.url
+        baseurl = config.scenario.iso.url
         isos = get_isos(baseurl, args.variant)
         print('\n'.join(isos))
         return
 
-    baseurl = config.iso.url
+    baseurl = config.scenario.iso.url
     variant = args.variant
     iso = args.iso
 
-    if os.path.isfile(os.path.join(config.iso.path, iso)):
-        error("{} already exists in {}".format(iso, config.iso.path))
+    if os.path.isfile(os.path.join(config.scenario.iso.path, iso)):
+        error("{} already exists in {}".format(iso, config.scenario.iso.path))
 
     url = '{}/{}/{}'.format(baseurl, variant, iso)
-    start_download(url, os.path.join(config.iso.path, iso))
+    start_download(url, os.path.join(config.scenario.iso.path, iso))
 
 
 def config_scenario(scenario):
@@ -467,7 +474,7 @@ def config_scenario(scenario):
     if scenario is None:
         error("Scenario is required")
     if not os.path.isfile(scenario):
-        options = ("scenarios/{}.ini".format(scenario), "/etc/hark/scenarios/{}.ini".format(scenario))
+        options = ("conf/{}.ini".format(scenario), "/etc/hark/conf/{}.ini".format(scenario))
         if os.path.isfile(options[0]):
             scenario = options[0]
         elif os.path.isfile(options[1]):
@@ -550,7 +557,7 @@ def prepare_virtual_network():
     Define HAnet private HA network (NAT)
     NETWORK will be ${NETWORK}.0/24 gw/dns ${NETWORK}.1
     """
-    path = "/etc/libvirt/qemu/networks/{}.xml".format(config.network.name)
+    path = "/etc/libvirt/qemu/networks/{}.xml".format(config.scenario.network.name)
     hosts = ""
     for vm in config.scenario.vm:
         hosts += '        <host mac="{mac}" name="{fqdn}" ip="{address}" />\n'.format(**vm.__dict__)
@@ -569,16 +576,16 @@ def prepare_virtual_network():
     </dhcp>
   </ip>
 </network>
-""".format(hosts=hosts, **mkconfigenv(config.network)), path)
+""".format(hosts=hosts, **mkconfigenv(config.scenario.network)), path)
     os.chmod(path, 0o644)
     status_progress()
     invoke("systemctl restart libvirtd")
     status_progress()
-    invoke("virsh net-destroy {}".format(config.network.name))
+    invoke("virsh net-destroy {}".format(config.scenario.network.name))
     status_progress()
-    invoke("virsh net-autostart {}".format(config.network.name))
+    invoke("virsh net-autostart {}".format(config.scenario.network.name))
     status_progress()
-    invoke("virsh net-start {}".format(config.network.name))
+    invoke("virsh net-start {}".format(config.scenario.network.name))
     status_done()
 
 
@@ -600,7 +607,7 @@ def ssh_root_key():
 
 
 def destroy_shared_pool():
-    sharedpool = config.storage.sharedpool
+    sharedpool = config.scenario.storage.sharedpool
     log("Destroy current pool {}".format(sharedpool))
     invoke("virsh", "pool-destroy", sharedpool)
     log("Undefine current pool {}".format(sharedpool))
@@ -613,17 +620,17 @@ def prepare_shared_pool():
     status_long("Prepare and create shard pool and volume")
     _, outp = get_stdout("virsh pool-list --all")
     outp = outp.decode('utf-8')
-    sharedpool = config.storage.sharedpool
+    sharedpool = config.scenario.storage.sharedpool
     if sharedpool in outp:
         status_progress()
         destroy_shared_pool()
-    shareddisk = config.storage.shareddisk
+    shareddisk = config.scenario.storage.shareddisk
     if os.path.isfile(shareddisk):
         os.remove(shareddisk)
     status_progress()
     log("Define pool {}".format(sharedpool))
-    mkdirp(os.path.join(config.storage.path, sharedpool))
-    invoke("virsh", "pool-define-as", "--name", sharedpool, "--type", "dir", "--target", os.path.join(config.storage.path, sharedpool))
+    mkdirp(os.path.join(config.scenario.storage.path, sharedpool))
+    invoke("virsh", "pool-define-as", "--name", sharedpool, "--type", "dir", "--target", os.path.join(config.scenario.storage.path, sharedpool))
     status_progress()
     log("Start and Autostart the pool")
     invoke("virsh", "pool-start", sharedpool)
@@ -641,7 +648,7 @@ def prepare_shared_pool():
             return int(s[:-1]) * 1024
         return int(s)
 
-    diskname = os.path.basename(config.storage.shareddisk)
+    diskname = os.path.basename(config.scenario.storage.shareddisk)
 
     doc = """<volume>
   <name>{name}</name>
@@ -652,7 +659,7 @@ def prepare_shared_pool():
     <format type='raw'/>
   </target>
 </volume>
-""".format(name=diskname, capacity=sized(config.storage.sharedsize))
+""".format(name=diskname, capacity=sized(config.scenario.storage.sharedsize))
 
     with create_tempfile() as tmppath:
         with open(tmppath, "w") as f:
@@ -681,7 +688,7 @@ def generate_vm_template(exedir, outputdir):
             packages=packages,
             hosts=hosts,
             keymap=vm.keymap,
-            networkname=config.network.name,
+            networkname=config.scenario.network.name,
             timezone=vm.timezone,
             username=config.user.name,
             userpass=config.user.password
@@ -699,7 +706,7 @@ def prepare_auto_deploy_image():
     tmpmount = create_tempdir()
     wdir = create_tempdir()
     cwd = os.getcwd()
-    os.chdir(config.storage.path)
+    os.chdir(config.scenario.storage.path)
     try:
         generate_vm_template(cwd, wdir)
         diskname = os.path.basename(config.scenario.common.autoyastdisk)
@@ -745,7 +752,7 @@ def resolve_iso_file(addon):
     baseurl, variant = varianturl.rsplit('/', 1)
 
     if OFFLINE:
-        for f in os.listdir(config.iso.path):
+        for f in os.listdir(config.scenario.iso.path):
             if fnmatch.fnmatch(f, isofile):
                 return f
     else:
@@ -759,14 +766,14 @@ def resolve_iso_file(addon):
 def check_isos():
     for addon in config.scenario.addon:
         isofile = resolve_iso_file(addon)
-        if not os.path.isfile(os.path.join(config.iso.path, isofile)):
+        if not os.path.isfile(os.path.join(config.scenario.iso.path, isofile)):
             if OFFLINE:
                 error("Missing ISO: {}".format(isofile))
             isourl = addon.iso.rsplit('/', 1)[0] + '/' + isofile
             if not DOWNLOAD:
                 error("Missing ISO: {}".format(isourl))
             status("Downloading missing ISO: {}".format(isourl))
-            start_download(isourl, os.path.join(config.iso.path, isofile))
+            start_download(isourl, os.path.join(config.scenario.iso.path, isofile))
 
 
 def check_iso_sha1sums():
@@ -787,7 +794,7 @@ def check_iso_sha1sums():
     status_done()
     for addon in config.scenario.addon:
         fname = resolve_iso_file(addon)
-        fpath = os.path.join(config.iso.path, fname)
+        fpath = os.path.join(config.scenario.iso.path, fname)
         if not os.path.isfile(fpath):
             error("File not found: {}".format(fpath))
         if fname in sums:
@@ -808,7 +815,7 @@ def check_iso_sha1sums():
 
 
 def cleanup_vm():
-    pooldir = os.path.join(config.storage.path, config.storage.vmpool)
+    pooldir = os.path.join(config.scenario.storage.path, config.scenario.storage.vmpool)
     if os.path.isdir(pooldir):
         images = [f for f in os.listdir(pooldir) if f.endswith(".qcow2")]
         if len(images) > 0:
@@ -825,19 +832,19 @@ def cleanup_vm():
             status("Delete VM {}".format(name))
             invoke("virsh destroy {}".format(name))
             invoke("virsh undefine {}".format(name))
-            invoke("virsh vol-delete --pool {} {}.qcow2".format(config.storage.vmpool, name))
+            invoke("virsh vol-delete --pool {} {}.qcow2".format(config.scenario.storage.vmpool, name))
 
 
 def check_before_install():
     status("Check disks before install")
     for disk in (config.scenario.common.autoyastdisk,
-                 config.storage.shareddisk):
+                 config.scenario.storage.shareddisk):
         if not os.path.isfile(disk):
             error("{} not found, needed for autoinstallation".format(disk))
 
 
 def destroy_pool(poolname):
-    path = os.path.join(config.storage.path, poolname)
+    path = os.path.join(config.scenario.storage.path, poolname)
     invoke("virsh pool-destroy {}".format(poolname))
     invoke("virsh pool-undefine {}".format(poolname))
     invoke("rm -rvf {}".format(path))
@@ -846,7 +853,7 @@ def destroy_pool(poolname):
 def create_pool(poolname):
     "Create a pool (on host)"
     status("Create pool {}".format(poolname))
-    path = os.path.join(config.storage.path, poolname)
+    path = os.path.join(config.scenario.storage.path, poolname)
     _, outp = get_stdout("virsh -q pool-list --all")
     outp = outp.decode('utf-8')
     if poolname in [l.split()[0] for l in outp.split('\n') if l.strip()]:
@@ -859,7 +866,7 @@ def create_pool(poolname):
 
 
 def install_vms():
-    pool = config.storage.vmpool
+    pool = config.scenario.storage.vmpool
     for vm in config.scenario.vm:
         vmname = "{}{}".format(vm.distro, vm.name)
         status("Install VM {}".format(vm.name))
@@ -868,9 +875,9 @@ def install_vms():
             pool=pool, vmname=vmname, size=vm.imagesize))
         invoke("virsh pool-refresh {}".format(pool))
 
-        vmdisk = "{}/{}/{}.qcow2".format(config.storage.path, config.storage.vmpool, vmname)
+        vmdisk = "{}/{}/{}.qcow2".format(config.scenario.storage.path, config.scenario.storage.vmpool, vmname)
         autoyastdisk = config.scenario.common.autoyastdisk
-        shareddisk = config.storage.shareddisk
+        shareddisk = config.scenario.storage.shareddisk
 
         if not os.path.isfile(vmdisk):
             error("{} not present".format(vmdisk))
@@ -881,14 +888,14 @@ def install_vms():
                ' --vcpus ', vm.vcpu,
                ' --virt-type ', config.host.hypervisor,
                ' --graphics ', 'vnc,keymap=', config.user.keymap,
-               ' --network network=', config.network.name, ',mac=', vm.mac,
+               ' --network network=', config.scenario.network.name, ',mac=', vm.mac,
                ' --disk path=', vmdisk, ',format=qcow2,bus=virtio,cache=none',
                ' --disk path=', shareddisk, ',format=raw,bus=virtio,cache=none',
                ' --disk path=', autoyastdisk, ',format=raw,bus=virtio']
 
         baseloc = None
         for addon in config.scenario.addon:
-            diskpath = os.path.join(config.iso.path, resolve_iso_file(addon))
+            diskpath = os.path.join(config.scenario.iso.path, resolve_iso_file(addon))
             cmd.append(' --disk path={},device=cdrom'.format(diskpath))
             if addon.name == "base":
                 baseloc = diskpath
@@ -916,7 +923,7 @@ def cmd_deploy(args):
         error("Command has to run as root.")
     check_isos()
     cleanup_vm()
-    create_pool(config.storage.vmpool)
+    create_pool(config.scenario.storage.vmpool)
     wait_for_downloads()
     check_iso_sha1sums()
     check_before_install()
@@ -986,7 +993,7 @@ def wait_to_bootstrap():
     status_done()
     status_long("Wait for nodes to appear on network")
     while True:
-        rc, outp = get_stdout("virsh -q net-dhcp-leases {}".format(config.network.name))
+        rc, outp = get_stdout("virsh -q net-dhcp-leases {}".format(config.scenario.network.name))
         outp = outp.decode('utf-8')
         if rc == 0:
             if all(node in outp for node in nodes):
@@ -1039,16 +1046,16 @@ def cmd_status(args):
     if rc != 0:
         error("Failed to list networks")
     for line in outp.decode('utf-8').splitlines():
-        if config.network.name in line:
+        if config.scenario.network.name in line:
             nnetworks += 1
             print("  ", line.strip())
 
     # get IP addresses
     if nnetworks > 0:
         print("")
-        rc, outp = get_stdout("virsh -q net-dhcp-leases {}".format(config.network.name))
+        rc, outp = get_stdout("virsh -q net-dhcp-leases {}".format(config.scenario.network.name))
         if rc != 0:
-            error("Failed to list IP addresses for {}".format(config.network.name))
+            error("Failed to list IP addresses for {}".format(config.scenario.network.name))
         for line in outp.decode('utf-8').splitlines():
             if line.strip():
                 print("  ", line.strip())
@@ -1059,18 +1066,18 @@ def cmd_status(args):
         error("Failed to list pools")
     pools = []
     for line in outp.decode('utf-8').splitlines():
-        if config.storage.vmpool in line:
-            pools.append(config.storage.vmpool)
+        if config.scenario.storage.vmpool in line:
+            pools.append(config.scenario.storage.vmpool)
             print("  ", line.strip())
-        elif config.storage.sharedpool in line:
-            pools.append(config.storage.sharedpool)
+        elif config.scenario.storage.sharedpool in line:
+            pools.append(config.scenario.storage.sharedpool)
             print("  ", line.strip())
     print("\n# Volumes:")
     for pool in pools:
         rc, outp = get_stdout("virsh -q vol-list {}".format(pool))
         if rc == 0:
             for line in outp.decode('utf-8').splitlines():
-                if config.storage.path in line:
+                if config.scenario.storage.path in line:
                     print("  ", line.strip())
 
     # check vms
@@ -1138,18 +1145,18 @@ def cmd_destroy(args):
             for cmd in cmds.split():
                 invoke("virsh -q {} {}".format(cmd, tgt))
 
-        if invoke("virsh -q pool-info {}".format(config.storage.vmpool)):
-            status("Delete pool {}".format(config.storage.vmpool))
-            virsh('pool-destroy pool-delete pool-undefine', config.storage.vmpool)
+        if invoke("virsh -q pool-info {}".format(config.scenario.storage.vmpool)):
+            status("Delete pool {}".format(config.scenario.storage.vmpool))
+            virsh('pool-destroy pool-delete pool-undefine', config.scenario.storage.vmpool)
 
-        if invoke("virsh -q pool-info {}".format(config.storage.sharedpool)):
-            status("Delete pool {}".format(config.storage.sharedpool))
-            invoke("virsh vol-delete --pool {} {}".format(config.storage.sharedpool, os.path.basename(config.storage.shareddisk)))
-            virsh('pool-destroy pool-delete pool-undefine', config.storage.sharedpool)
+        if invoke("virsh -q pool-info {}".format(config.scenario.storage.sharedpool)):
+            status("Delete pool {}".format(config.scenario.storage.sharedpool))
+            invoke("virsh vol-delete --pool {} {}".format(config.scenario.storage.sharedpool, os.path.basename(config.scenario.storage.shareddisk)))
+            virsh('pool-destroy pool-delete pool-undefine', config.scenario.storage.sharedpool)
 
-        if invoke("virsh -q net-uuid {}".format(config.network.name)):
-            status("Delete network {}".format(config.network.name))
-            virsh('net-destroy net-undefine', config.network.name)
+        if invoke("virsh -q net-uuid {}".format(config.scenario.network.name)):
+            status("Delete network {}".format(config.scenario.network.name))
+            virsh('net-destroy net-undefine', config.scenario.network.name)
 
 
 def cmd_config(args):
@@ -1346,12 +1353,8 @@ def main():
         OFFLINE = args.offline
 
         log_start()
-        config = mkconfig()
 
-        if args.scenario is None:
-            config_scenario(config.scenario.default)
-        else:
-            config_scenario(args.scenario)
+        config = mkconfig(args.scenario)
 
         rc = None
         if hasattr(args, "func"):
