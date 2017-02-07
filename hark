@@ -339,8 +339,6 @@ class Config(object):
 
         def resolve_section(s, env):
             for k, v in s.__dict__.items():
-                print("-- DEBUG", k)
-                print("DEBUG", env)
                 s.__dict__[k] = v.format(**env)
 
         def mkenv(s):
@@ -391,6 +389,7 @@ def mkdirp(d, mode=0o777):
 
 def mkconfig(scenario):
     config = Config(['conf/hark.ini', os.path.expanduser('~/.hark.ini'), "/etc/hark/hark.ini"])
+    print("", config)
 
     if scenario is None:
         config_scenario(config.scenario.default)
@@ -402,6 +401,7 @@ def mkconfig(scenario):
     if not os.path.isdir(config.scenario.iso.path):
         mkdirp(config.scenario.iso.path)
     config.user.password = crypt_passwd(config.user.password)
+    print("", scenario)
     return config
 
 
@@ -483,7 +483,7 @@ def config_scenario(scenario):
             scenario = options[1]
         else:
             error("Unknown scenario: {}".format(scenario))
-
+    print("+++", scenario)
     config.scenario = Config([scenario], root=config)
 
 
@@ -711,7 +711,7 @@ def prepare_auto_deploy_image():
     os.chdir(config.scenario.storage.path)
     try:
         generate_vm_template(cwd, wdir)
-        diskname = os.path.basename(config.scenario.common.autoyastdisk)
+        diskname = os.path.basename(config.scenario.storage.autoyastdisk)
         invoke("qemu-img create {} -f raw 2M".format(diskname))
         invoke("mkfs.ext3 {}".format(diskname))
         invoke("mount {} {}".format(diskname, tmpmount))
@@ -839,7 +839,7 @@ def cleanup_vm():
 
 def check_before_install():
     status("Check disks before install")
-    for disk in (config.scenario.common.autoyastdisk,
+    for disk in (config.scenario.storage.autoyastdisk,
                  config.scenario.storage.shareddisk):
         if not os.path.isfile(disk):
             error("{} not found, needed for autoinstallation".format(disk))
@@ -878,7 +878,7 @@ def install_vms():
         invoke("virsh pool-refresh {}".format(pool))
 
         vmdisk = "{}/{}/{}.qcow2".format(config.scenario.storage.path, config.scenario.storage.vmpool, vmname)
-        autoyastdisk = config.scenario.common.autoyastdisk
+        autoyastdisk = config.scenario.storage.autoyastdisk
         shareddisk = config.scenario.storage.shareddisk
 
         if not os.path.isfile(vmdisk):
