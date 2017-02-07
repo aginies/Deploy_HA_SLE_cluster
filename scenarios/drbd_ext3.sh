@@ -15,7 +15,7 @@ fi
 
 # SOME VARS
 CIBNAME="drbd_ext3"
-DRBDRESOURCE="ha2"
+DRBDRESOURCE="${NODENAME}2"
 
 create_drbd_resource() {
     echo "############ START create_drbd_resource"
@@ -93,7 +93,7 @@ check_primary_secondary() {
     echo "- Create a file in the FS"
     exec_on_node ${NODEA} "dd if=/dev/zero of=${MNTTEST}/testing bs=1M count=24"
     exec_on_node ${NODEA} "dd if=/dev/random of=${MNTTEST}/random count=20240"
-    exec_on_node ${NODEA} "sha1sum  ${MNTTEST}/testing ${MNTTEST}/random > ${MNTTEST}/sha1sum"
+    exec_on_node ${NODEA} "s${NODENAME}1sum  ${MNTTEST}/testing ${MNTTEST}/random > ${MNTTEST}/sha1sum"
     exec_on_node ${NODEA} "drbdadm status"
     exec_on_node ${NODEA} "drbdadm dstate drbd"
     echo "- Wait to get drbd sync"
@@ -104,13 +104,13 @@ check_primary_secondary() {
     exec_on_node ${NODEA} "drbdadm secondary drbd"
     exec_on_node ${NODEB} "drbdadm primary drbd"
     exec_on_node ${NODEB} "mount /dev/drbd0 ${MNTTEST}"
-    exec_on_node ${NODEB} "cat ${MNTTEST}/sha1sum"
-    exec_on_node ${NODEB} "sha1sum ${MNTTEST}/testing ${MNTTEST}/random > /mnt/testing_from_${NODEB}"
-    exec_on_node ${NODEB} "diff -au ${MNTTEST}/sha1sum /mnt/testing_from_${NODEB}"
+    exec_on_node ${NODEB} "cat ${MNTTEST}/s${NODENAME}1sum"
+    exec_on_node ${NODEB} "s${NODENAME}1sum ${MNTTEST}/testing ${MNTTEST}/random > /mnt/testing_from_${NODEB}"
+    exec_on_node ${NODEB} "diff -au ${MNTTEST}/s${NODENAME}1sum /mnt/testing_from_${NODEB}"
     if [ $? -eq 1 ]; then 
-	echo "- ! Warning; Corruption in FILES detected: sha1 are different"
+	echo "- ! Warning; Corruption in FILES detected: s${NODENAME}1 are different"
     else
-	echo "- Same Sha1 from ${NODEA} and ${NODEB}: TEST OK"
+	echo "- Same S${NODENAME}1 from ${NODEA} and ${NODEB}: TEST OK"
     fi
     echo "- Test pause/resume sync "
     exec_on_node ${NODEB} "drbdadm pause-sync drbd"

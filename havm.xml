@@ -3,7 +3,11 @@
 <profile xmlns="http://www.suse.com/1.0/yast2ns" xmlns:config="http://www.suse.com/1.0/configns">
   <add-on>
     <add_on_products config:type="list">
-      {addons}
+      <listentry>
+        <media_url><![CDATA[dvd:///?devices=/dev/sr0]]></media_url>
+        <product>sle-ha</product>
+        <product_dir>/</product_dir>
+      </listentry>
     </add_on_products>
   </add-on>
   <bootloader>
@@ -31,11 +35,31 @@
     </mode>
     <signature-handling/>
   </general>
+  <cluster>
+    <autoid config:type="boolean">true</autoid>
+    <bindnetaddr1>NETWORK.0</bindnetaddr1>
+    <bindnetaddr2/>
+    <cluster_name>cluster</cluster_name>
+    <csync2_host config:type="list"/>
+    <csync2_include config:type="list"/>
+    <enable2 config:type="boolean">false</enable2>
+    <expected_votes/>
+    <ip_version>ipv4</ip_version>
+    <mcastaddr1>239.255.1.1</mcastaddr1>
+    <mcastaddr2/>
+    <mcastport1>5405</mcastport1>
+    <mcastport2/>
+    <memberaddr config:type="list"/>
+    <rrpmode>none</rrpmode>
+    <secauth config:type="boolean">false</secauth>
+    <transport>udp</transport>
+    <two_node/>
+  </cluster>
   <deploy_image>
     <image_installation config:type="boolean">false</image_installation>
   </deploy_image>
   <keyboard>
-    <keymap>{keymap}</keymap>
+    <keymap>french</keymap>
   </keyboard>
   <login_settings/>
   <networking>
@@ -45,7 +69,7 @@
     </dhcp_options>
     <dns>
       <dhcp_hostname config:type="boolean">true</dhcp_hostname>
-      <domain>{networkname}</domain>
+      <domain>HAnet</domain>
       <resolv_conf_policy>auto</resolv_conf_policy>
       <write_hostname config:type="boolean">false</write_hostname>
     </dns>
@@ -84,10 +108,10 @@
     </routing>
   </networking>
   <partitioning config:type="list">
-    <drive>
-      <use>all</use>
-    </drive>
-  </partitioning>
+  <drive>
+    <use>all</use>
+  </drive>
+</partitioning>
   <services-manager>
     <default_target>graphical</default_target>
     <services>
@@ -95,6 +119,7 @@
         <service>postfix</service>
       <enable config:type="list">
         <service>btrfsmaintenance-refresh</service>
+        <service>corosync</service>
         <service>cron</service>
         <service>display-manager</service>
         <service>getty@tty1</service>
@@ -122,7 +147,7 @@
   </services-manager>
   <timezone>
     <hwclock>UTC</hwclock>
-    <timezone>{timezone}</timezone>
+    <timezone>Europe/Paris</timezone>
   </timezone>
   <user_defaults>
     <expire/>
@@ -138,9 +163,9 @@
   <users config:type="list">
     <user>
       <encrypted config:type="boolean">true</encrypted>
-      <fullname>{username}</fullname>
+      <fullname>aginies</fullname>
       <gid>100</gid>
-      <home>/home/{username}</home>
+      <home>/home/aginies</home>
       <password_settings>
         <expire/>
         <flag/>
@@ -151,8 +176,8 @@
       </password_settings>
       <shell>/bin/bash</shell>
       <uid>1000</uid>
-      <user_password>{userpass}</user_password>
-      <username>{username}</username>
+      <user_password>$6$xY17NdMS0M9R$d3F8dm3B/.T4jhi3n/XWNhyRO9I6HthxdBBMxZ9LCIuKtI3wSVavBW64G86tOAAc0CklvsPViyT9lOuaHxc5L0</user_password>
+      <username>aginies</username>
     </user>
     <user>
       <encrypted config:type="boolean">true</encrypted>
@@ -169,29 +194,33 @@
       </password_settings>
       <shell>/bin/bash</shell>
       <uid>0</uid>
-      <user_password>{userpass}</user_password>
+      <user_password>$6$Wa9BNOQh5cjJ$0G99sgb1WtqYaCZulBBkPzHrmEj49zumisslpcitXmasNeFj63Yl97w.ODcxhNWix.XWYhbf9BLsnJjNZOdO8/</user_password>
       <username>root</username>
     </user>
 </users>
   <software>
-<!--
-    <install_recommended config:type="boolean">false</install_recommended>
--->
+    <!--
+	<install_recommended config:type="boolean">false</install_recommended>
+	-->
     <patterns config:type="list">
       <pattern>Minimal</pattern>
+      <pattern>gnome-basic</pattern>
+      <pattern>x11</pattern>
     </patterns>
     <packages config:type="list">
-{packages}
+      <package>openssh</package>
+      <package>gnome-terminal</package>
+      <package>vim</package>
+      <package>gdm</package>
+      <package>ntp</package>
+      <package>autoyast2</package>
+      <package>patterns-ha-ha_sles</package>
     </packages>
 </software>
  <host>
-<<<<<<< HEAD:templates/vm.xml
-   <hosts config:type="list">
-{hosts}
-=======
     <hosts config:type="list">
       <hosts_entry>
-        <host_address>NETWORK.101</host_address>
+          <host_address>NETWORK.101</host_address>
         <names config:type="list">
           <name>NODENAME1.NODEDOMAIN NODENAME1</name>
         </names>
@@ -208,28 +237,13 @@
           <name>NODENAME3.NODEDOMAIN NODENAME3</name>
         </names>
       </hosts_entry>
->>>>>>> 64dee776f317ed060df56aae80551929f1ddde6b:havm_mini.xml
     </hosts>
   </host>
-  <scripts>
-    <init-scripts config:type="list">
-      <script>
-        <debug config:type="boolean">true</debug>
-        <filename>prepare.sh</filename>
-        <interpreter>shell</interpreter>
-        <source><![CDATA[#!/bin/sh
-echo "UseDNS no" >> /etc/ssh/sshd_config
-echo "GSSAPIAuthentication no" >> /etc/ssh/sshd_config
-systemctl restart sshd
-mkdir /mnt/autoyastdisk
-mount /dev/vdc /mnt/autoyastdisk
-mkdir -p /root/.ssh
-chmod 700 /root/.ssh
-cp -r /mnt/autoyastdisk/ssh/* /root/.ssh/
-umount /mnt/autoyastdisk
-rmdir /mnt/autoyastdisk
-]]></source>
-      </script>
-    </init-scripts>
-  </scripts>
+  <sysconfig config:type="list">
+    <sysconfig_entry>
+      <sysconfig_key>SBD_DEVICE</sysconfig_key>
+      <sysconfig_path>/etc/sysconfig/sbd</sysconfig_path>
+      <sysconfig_value>/dev/vdb</sysconfig_value>
+    </sysconfig_entry>
+  </sysconfig>
 </profile>

@@ -19,8 +19,8 @@ DRBDDEV="/dev/drbd0"
 # by default DRBD
 POOLNAME="DRBD"
 TARGETVD="vdd"
-NODEA="ha1"
-NODEB="ha2"
+NODEA="${NODENAME}1"
+NODEB="${NODENAME}2"
 MNTTEST="/mnt/test"
 IPA=`grep ${NODEA} /var/lib/libvirt/dnsmasq/${NETWORKNAME}.hostsfile | cut -d , -f 2`
 IPB=`grep ${NODEB} /var/lib/libvirt/dnsmasq/${NETWORKNAME}.hostsfile | cut -d , -f 2`
@@ -86,8 +86,8 @@ delete_pool_name() {
 attach_disk_to_node() {
     echo "############ START attach_disk_to_node"
     echo "- Attach volume to node"
-    virsh attach-disk ${DISTRO}HA1 --live --cache none --type disk ${STORAGEP}/${POOLNAME}/${POOLNAME}A.qcow2 --target ${TARGETVD}
-    virsh attach-disk ${DISTRO}HA2 --live --cache none --type disk ${STORAGEP}/${POOLNAME}/${POOLNAME}B.qcow2 --target ${TARGETVD}
+    virsh attach-disk ${NODENAME}1 --live --cache none --type disk ${STORAGEP}/${POOLNAME}/${POOLNAME}A.qcow2 --target ${TARGETVD}
+    virsh attach-disk ${NODENAME}2 --live --cache none --type disk ${STORAGEP}/${POOLNAME}/${POOLNAME}B.qcow2 --target ${TARGETVD}
 }
 
 check_targetvd_on_node() {
@@ -116,6 +116,6 @@ check_targetvd_on_node() {
 detach_disk_from_node() {
     echo "############ START detach_disk_from_node"
     echo "- Detach volume from node"
-    virsh detach-disk ${DISTRO}HA1 ${TARGETVD}
-    virsh detach-disk ${DISTRO}HA2 ${TARGETVD}
+    virsh detach-disk ${NODENAME}1 ${TARGETVD}
+    virsh detach-disk ${NODENAME}2 ${TARGETVD}
 }

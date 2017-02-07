@@ -21,7 +21,7 @@ RESOURCEID="failover-ip"
 
 failover_ip_cib() {
     echo "############ START failover_ip_cib"
-    exec_on_node ha1 "crm<<EOF
+    exec_on_node ${NODENAME}1 "crm<<EOF
 cib new ${CIBNAME}
 configure primitive ${RESOURCEID} ocf:heartbeat:IPaddr2 params ip=${NETWORK}.${IPEND} cidr_netmask=32 op monitor interval=1s
 verify
@@ -34,47 +34,47 @@ EOF"
 
 check_failoverip_resource() {
     echo "############ START check_failoverip_resource"
-    exec_on_node ha1 "crm_resource -r ${RESOURCEID} -W"
-    exec_on_node ha1 "crm status"
+    exec_on_node ${NODENAME}1 "crm_resource -r ${RESOURCEID} -W"
+    exec_on_node ${NODENAME}1 "crm status"
 }
 
 standby_node_running_resource() {
     echo "############ START standby_node_running_resource"
-    exec_on_node ha1 "crm_resource -r ${RESOURCEID} -W" > /tmp/result
+    exec_on_node ${NODENAME}1 "crm_resource -r ${RESOURCEID} -W" > /tmp/result
     # use one line, and remove \r
     RNODE=`cat /tmp/result | tail -1 | cut -d ':' -f 2 | sed -e "s/\r//"`
-    echo "- Standby ${RNODE} from node HA1"
-    exec_on_node ha1 "crm node standby ${RNODE}"
+    echo "- Standby ${RNODE} from node ${NODENAME}1"
+    exec_on_node ${NODENAME}1 "crm node standby ${RNODE}"
 }
 
 put_node_maintenance() {
     echo "############ START put_node_maintenance"
-    exec_on_node ha1 "crm node maintenance ha2"
+    exec_on_node ${NODENAME}1 "crm node maintenance ${NODENAME}2"
 }
 
 restore_node_in_maintenance() {
     echo "############ START restore_node_in_maintenance"
-    exec_on_node ha1 "crm node ready ha2"
+    exec_on_node ${NODENAME}1 "crm node ready ${NODENAME}2"
 }
 
 online_rnode() {
     echo "############ START online_rnode"
     RNODE=`cat /tmp/result | tail -1 | cut -d ':' -f 2 | sed -e "s/\r//"`
     echo "- Restore online ${RNODE}"
-    exec_on_node ha1 "crm node online ${RNODE}"
+    exec_on_node ${NODENAME}1 "crm node online ${RNODE}"
 }
 
 delete_cib_resource() {
     echo "############ START delete_cib_resource"
-    exec_on_node ha1 "crm cib list | grep ${CIBNAME}"
+    exec_on_node ${NODENAME}1 "crm cib list | grep ${CIBNAME}"
     if [ $? -eq 0 ]; then
 	echo "- Deleting cib and resource ${RESOURCEID}"
-	exec_on_node ha1 "crm<<EOF
+	exec_on_node ${NODENAME}1 "crm<<EOF
 resource stop ${RESOURCEID}
 EOF"
 echo "- Wait stop/clear/delete resource (10s)"
        sleep 10
-       exec_on_node ha1 "crm<<EOF
+       exec_on_node ${NODENAME}1 "crm<<EOF
 resource clear ${RESOURCEID}
 configure delete ${RESOURCEID}
 cib delete ${CIBNAME}
@@ -86,7 +86,7 @@ EOF"
 	echo "- cib ${CIBNAME} doesnt exist "
     fi
     echo "- Show status"
-    exec_on_node ha1 "crm status"
+    exec_on_node ${NODENAME}1 "crm status"
 }
 
 ping_virtual_ip() {
@@ -109,7 +109,7 @@ ping_virtual_ip() {
 
 echo "############ FAILOVER IP SCENARIO #############"
 echo
-echo " One node will be in maintenance (ha2)"
+echo " One node will be in maintenance (${NODENAME}2)"
 echo " The one running the resource will be put in standby mode"
 echo " The IP address must be reachable: ${NETWORK}.${IPEND}"
 echo " (if manual debug, please check arp table!)"
