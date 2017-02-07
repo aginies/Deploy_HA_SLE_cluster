@@ -1,0 +1,11 @@
+[host]
+hypervisor=kvm
+
+[user]
+keymap=us
+sshkey=id_rsa_ha
+name=krig
+password=linux
+
+[scenario]
+default=3node
