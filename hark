@@ -923,7 +923,7 @@ def cmd_deploy(args):
         error("Command has to run as root.")
     check_isos()
     cleanup_vm()
-    create_pool(cluterdef.storage.vmpool)
+    create_pool(clusterdef.storage.vmpool)
     wait_for_downloads()
     check_iso_sha1sums()
     check_before_install()
