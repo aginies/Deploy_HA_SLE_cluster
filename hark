@@ -906,6 +906,8 @@ def install_vms():
                     ' --watchdog i6300esb,action=poweroff'
                     ' --console pty,target_type=virtio',
                     ' --check all=off'])
+        if DEBUG:
+            print("", cmd)
         invoke("".join(cmd))
         # stagger these a bit to try to avoid race (?)
         time.sleep(1)
@@ -961,7 +963,6 @@ def cmd_up(args):
         for vm in clusterdef.vm:
             vmname = "{}{}".format(vm.distro, vm.name)
             invoke("virsh start {}".format(vmname))
-            print("DEBUG", vm.name)
     elif state == 'running':
         status("Already running")
     else:

@@ -22,14 +22,24 @@ uuid 12e505c7-063f-4d08-8d46-b41272b16105
 ```
 
 
-* Better clean up (don't leave disks lying around, don't destroy pools
-that may be used by others, release IP addresses)
-
 * Don't replace /etc/hosts config for other scenarios
-
-* Don't destroy pools etc. before configuring, since other scenarios
-may share pools
 
 * Geo bootstrap for geo scenario
 
 * Cluster tests / run wizards
+
+# AVOID NETWORK ISSSUE
+
+```
+virsh # net-define /etc/libvirt/qemu/networks/HAnet3nodes.xml
+error: Failed to define network from /etc/libvirt/qemu/networks/HAnet3nodes.xml
+error: internal error: bridge name 'virbr1' already in use.
+
+error: Failed to define network from /etc/libvirt/qemu/networks/HAnet3nodes.xml
+error: operation failed: network 'HAnet' is already defined with uuid 851e50f1-db72-475a-895f-28304baf8e8c
+
+ERROR    Requested operation is not valid: network 'HAnet3nodes' is not active
+virsh # net-start HAnet3nodes
+error: Failed to start network HAnet3nodes
+error: internal error: Network is already in use by interface virbr1
+```
