@@ -3,12 +3,12 @@ from distutils.core import setup
 import os
 
 data_files = []
-data_files.append(('share/hark', ['hark.ini.example']))
 data_files.append(('share/hark/scenarios', ['scenarios/' + f for f in os.listdir('scenarios')]))
+data_files.append(('share/hark/conf', ['conf/' + f for f in os.listdir('conf')]))
 data_files.append(('share/hark/templates', ['templates/' + f for f in os.listdir('templates')]))
 
 setup(name='Hark!',
-      version='0.1',
+      version='0.2',
       description='SLE HA VM creation / management tool',
       author='Antoine Ginies + Kristoffer Gronlund',
       author_email='aginies@suse.com, kgronlund@suse.com',
