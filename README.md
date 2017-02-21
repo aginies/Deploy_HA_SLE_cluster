@@ -48,14 +48,10 @@ but only for a 4 node cluster. Description of original scripts below:
 The goal was to easily and quickly deploy an HA cluster in Virtual
 Machine to be able to test latest release and test some scenarios.
 
-Videos: Presentation and a demo at Youtube:
+Videos: Presentation and a demo at Youtube (based on pureshell version)
 * https://www.youtube.com/watch?v=y0herkr6x-A
 * https://www.youtube.com/watch?v=vmUpaabYV-o
 * https://www.youtube.com/watch?v=k77sa9y6Lwk
-
-This scripts will configure:
-* an host (by default KVM)
-* 4 HA nodes ready for HA scenario
 
 All configurations files on the host are dedicated for this cluster, which means
 this should not interact or destroy any other configuration (pool, net, etc...)
@@ -72,7 +68,7 @@ https://github.com/aginies/Deploy_HA_SLE_cluster.git
 
 ## Configuration
 
-Create different configuration scenarios using the `scenarios/*.ini`
+Create different configuration using the `conf/*.ini`
 files. See the existing scenarios for details on what can be
 configured.
 
@@ -90,7 +86,7 @@ will need to be modified.
 ## Install / HOWTO
 
 * Clone this repository
-* Copy `hark.ini.example` to `hark.ini`
+* Copy `conf/hark.ini.example` to `conf/hark.ini`
 * Adjust settings to your liking
 * Verify the configuration using `./hark config`
 * Configure the host and create VMs: `./hark up`
@@ -102,7 +98,7 @@ will need to be modified.
 
 *Note*: Background installation processes log to `./screenlog.0`.
 
-## Scenario configuration files
+## Configuration files
 
 Most variables should be self-explanatory. Define virtual machine
 instances with a section per virtual machine, with a section title as
@@ -177,8 +173,7 @@ ram=2048
 imagesize=8G
 keymap=english-us
 timezone=Europe/Stockholm
-packages=openssh vim autoyast2 ntp patterns-ha-ha_sles haproxy apache2 mariadb mariadb-tools bridge-utils
- git-core perl-Error
+packages=openssh vim autoyast2 ntp patterns-ha-ha_sles haproxy bridge-utils
 
 [addon:sle_ha]
 iso=/mnt/data/ISO/SLE-12-SP3-HA-DVD-x86_64-Buildxxxx-Media1.iso
@@ -190,6 +185,7 @@ iso=/mnt/data/ISO/SLE-12-SP3-Server-DVD-x86_64-Buildxxxx-Media1.iso
 ipend=31
 macend=da
 fqdn={name}.testing.com
+packages=hawk2
 
 [vm:ha32]
 ipend=32
@@ -200,6 +196,8 @@ fqdn={name}.testing.com
 ipend=33
 macend=dc
 fqdn={name}.testing.com
+vcpu=2
+ram=4096
 ```
 
 # Example installation run
