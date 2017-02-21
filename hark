@@ -548,7 +548,7 @@ def prepare_etc_hosts():
     """
     status("Prepare /etc/hosts")
     if replace_in_block("/etc/hosts",
-                        "".join("{}  {} {}\n".format(vm.address, vm.fqdn, vm.name) for vm in clusterdef.vm)):
+                        "".join("{}  {} {}\n".format(clusterdef.network.range + vm.ipend, vm.fqdn, vm.name) for vm in clusterdef.vm)):
         os.chmod("/etc/hosts", 0o644)
 
 
@@ -560,7 +560,7 @@ def prepare_virtual_network():
     path = "/etc/libvirt/qemu/networks/{}.xml".format(clusterdef.network.name)
     hosts = ""
     for vm in clusterdef.vm:
-        hosts += '        <host mac="{mac}" name="{fqdn}" ip="{address}" />\n'.format(**vm.__dict__)
+        hosts += '        <host mac="{}{macend}" name="{fqdn}" ip="{}{ipend}" />\n'.format(clusterdef.network.macbase, clusterdef.network.range, **vm.__dict__)
     status_long("Prepare virtual network ({})".format(path))
     str2file("""<network>
   <name>{name}</name>
@@ -569,9 +569,9 @@ def prepare_virtual_network():
   <bridge name='{interface}' stp='on' delay='0'/>
   <mac address='{hostmac}'/>
   <domain name='{name}'/>
-  <ip address='{range}.1' netmask='255.255.255.0'>
+  <ip address='{range}1' netmask='255.255.255.0'>
     <dhcp>
-      <range start='{range}.128' end='{range}.254'/>
+      <range start='{range}128' end='{range}254'/>
 {hosts}
     </dhcp>
   </ip>
@@ -682,7 +682,7 @@ def generate_vm_template(exedir, outputdir):
     for vm in clusterdef.vm:
         addons = "".join(t_addon.format(name=a.name, dev="/dev/sr{}".format(i)) for i, a in enumerate(a for a in clusterdef.addon if a.name != "base"))
         packages = "".join(t_package.format(name=pkg) for pkg in vm.packages.split())
-        hosts = "".join(t_hosts_entry.format(**vm.__dict__) for vm in clusterdef.vm)
+        hosts = "".join(t_hosts_entry.format(clusterdef.network.range, **vm.__dict__) for vm in clusterdef.vm)
         txt = t_vm.format(
             addons=addons,
             packages=packages,
@@ -888,7 +888,7 @@ def install_vms():
                ' --vcpus ', vm.vcpu,
                ' --virt-type ', config.host.hypervisor,
                ' --graphics ', 'vnc,keymap=', config.user.keymap,
-               ' --network network=', clusterdef.network.name, ',mac=', vm.mac,
+               ' --network network=', clusterdef.network.name, ',mac=', clusterdef.network.macbase + vm.macend,
                ' --disk path=', vmdisk, ',format=qcow2,bus=virtio,cache=none',
                ' --disk path=', shareddisk, ',format=raw,bus=virtio,cache=none',
                ' --disk path=', autoyastdisk, ',format=raw,bus=virtio']
@@ -1259,7 +1259,7 @@ def cmd_ssh(args):
     addr = args.node
     for vm in clusterdef.vm:
         if vm.name == args.node:
-            addr = vm.address
+            addr = cluster.network.range + vm.ipend
     cmd = ['ssh',
            '-o', 'UserKnownHostsFile=.hark/known_hosts',
            '-o', 'StrictHostKeyChecking=no',

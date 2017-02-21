@@ -1,6 +1,8 @@
 <hosts_entry>
-  <host_address>{address}</host_address>
+    <!-- range ipend -->
+  <host_address>{}{ipend}</host_address>
   <names config:type="list">
+      <!-- fqdn name -->
     <name>{fqdn} {name}</name>
   </names>
 </hosts_entry>

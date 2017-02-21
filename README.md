@@ -131,28 +131,8 @@ different versions of SLE or openSUSE.
 ## Example configuration (hark.ini)
 
 ```
-[iso]
-path=/mnt/ISO/
-url=http://repo.example.com/iso/
-
 [host]
 hypervisor=kvm
-
-[network]
-name=HAnet
-range=192.168.12
-uuid=851e50f1-db72-475a-895f-28304baf8e8c
-hostmac=52:54:00:89:a0:b9
-interface=virbr1
-mac=52:54:00:c7:92:
-
-[storage]
-path=/var/lib/libvirt/images
-vmpool=hapool
-sharedpool=hashared
-shareddisk={path}/{sharedpool}/{sharedpool}.img
-shareddevice=/dev/vdb
-sharedsize=1G
 
 [user]
 keymap=us
@@ -161,42 +141,65 @@ name=krig
 password=linux
 
 [scenario]
-default=2node
+default=sle12sp2_3nodes
 ```
 
-## Example scenario (scenarios/3node.ini)
+## Example scenario (scenarios/sle12sp2_3nodes.ini)
 
 ```
+[iso]
+path=/mnt/data/ISO
+url=http://download.opensuse.org/distribution/leap/42.2/iso/
+
+[network]
+name=HAnet
+# range must finish by a "."
+range=192.168.12.
+uuid=851e50f1-db72-475a-895f-28304baf8e8c
+hostmac=52:54:00:89:a0:b9
+interface=virbr1
+# macbase must finish with a ":"
+macbase=52:54:00:c7:92:
+
+[storage]
+path=/var/lib/libvirt/images
+vmpool=hapool
+sharedpool=hashared
+shareddisk={path}/{sharedpool}/{sharedpool}.raw
+shareddevice=/dev/vdb
+sharedsize=1G
+autoyastdisk={path}/threenode.raw
+
 [common]
-distro=SLE12SP1
+distro=SLE12SP2
 vcpu=2
 ram=2048
 imagesize=8G
 keymap=english-us
 timezone=Europe/Stockholm
-packages=openssh vim autoyast2 ntp patterns-ha-ha_sles haproxy apache2 mariadb mariadb-tools bridge-utils git-core perl-Error
-autoyastdisk={config.storage.path}/threenode.raw
+packages=openssh vim autoyast2 ntp patterns-ha-ha_sles haproxy apache2 mariadb mariadb-tools bridge-utils
+ git-core perl-Error
 
 [addon:sle_ha]
-iso={config.iso.url}/SLE-12-SP1-HA-DVD-x86_64-*-Media1.iso
+iso=/mnt/data/ISO/SLE-12-SP3-HA-DVD-x86_64-Buildxxxx-Media1.iso
 
 [addon:base]
-iso={config.iso.url}/SLE-12-SP1-Server-DVD-x86_64-*-Media1.iso
+iso=/mnt/data/ISO/SLE-12-SP3-Server-DVD-x86_64-Buildxxxx-Media1.iso
 
 [vm:ha31]
-address={config.network.range}.131
+ipend=31
+macend=da
 fqdn={name}.testing.com
-mac={config.network.mac}da
 
 [vm:ha32]
-address={config.network.range}.132
+ipend=32
+macend=db
 fqdn={name}.testing.com
-mac={config.network.mac}db
 
 [vm:ha33]
-address={config.network.range}.133
+ipend=33
+macend=dc
 fqdn={name}.testing.com
-mac={config.network.mac}db
 ```
 
 # Example installation run
