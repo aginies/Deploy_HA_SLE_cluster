@@ -1169,8 +1169,19 @@ def cmd_config(args):
     else:
         scenario = args.scenario
 
-    print("\nCluterdef:", scenario)
-    print(clusterdef)
+    print("\nCluterdef scenario:", scenario)
+    print("# iso:", clusterdef.iso)
+    print("# Network:", clusterdef.network)
+    print("# Storage:", clusterdef.storage)
+    print("# addon:")
+    for cluster in clusterdef.addon:
+        dataaddon = " iso: {name} {iso}" .format(**cluster.__dict__)
+        print("", dataaddon)
+    print("# Common:", clusterdef.common)
+    print("# Nodes:")
+    for vmdata in clusterdef.vm:
+        data = " {fqdn}: {}{macend} {}{ipend} {packages}" .format(clusterdef.network.macbase, clusterdef.network.range, **vmdata.__dict__)
+        print("", data)
 
 
 def pssh(*args, nodes=None):
