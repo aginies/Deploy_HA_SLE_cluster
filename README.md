@@ -8,7 +8,7 @@ creation and base configuration of virtual machines.
 
 ```
 usage: hark [-h] [-q] [-n] [-x] [-d] [-s SCENARIO]
-            {download,config,status,up,halt,destroy,bootstrap,test} ...
+            {download,config,status,up,halt,destroy,bootstrap,test,run,ssh} ...
 
 Hark! A tool for setting up a test cluster for SLE HA. Configure your
 scenarios using the hark.ini and scenario files. Run 'up' to prepare the host
@@ -16,16 +16,19 @@ and create virtual machines, run 'status' to see the state of the cluster, and
 once installation completes, run 'bootstrap' to configure the cluster.
 
 positional arguments:
-  {download,config,status,up,halt,destroy,bootstrap,test}
+  {download,config,status,up,start,halt,destroy,bootstrap,test}
     download            List available variants and download ISO files for
                         variants
     config              Display resolved configuration values
     status              Display status of configuration
     up                  Configure the host and bring virtual machines up
+    start               Start VMs
     halt                Tell running VMs to halt
     destroy             Halt and destroy any created VMs
     bootstrap           Bootstrap initial cluster
     test                Run cluster test
+    run                 Run command on listed nodes
+    ssh                 SSH to given node
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -36,6 +39,7 @@ optional arguments:
   -d, --download        Download missing ISO files automatically
   -s SCENARIO, --scenario SCENARIO
                         Cluster scenario
+  --offline             Don't connect to ISO server
 ```
 
 ## History
