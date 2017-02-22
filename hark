@@ -1193,7 +1193,7 @@ def cmd_config(args):
         scenario = args.scenario
 
     print("\n##############")
-    print("Cluterdef scenario:", scenario)
+    print("Clusterdef scenario:", scenario)
     print("\n# ISO:\n", clusterdef.iso)
     print("\n# Network base:\n", clusterdef.network)
     print("\n# Storage:\n", clusterdef.storage)
