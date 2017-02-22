@@ -1184,25 +1184,30 @@ def cmd_destroy(args):
 
 
 def cmd_config(args):
-    print(config)
+    print("\n##############")
+    print("# Host:", config.host)
+    print("# User:", config.user)
     if args.scenario is None:
         scenario = config.scenario.default
     else:
         scenario = args.scenario
 
-    print("\nCluterdef scenario:", scenario)
-    print("# iso:", clusterdef.iso)
-    print("# Network:", clusterdef.network)
+    print("\n##############")
+    print("Cluterdef scenario:", scenario)
+    print("# ISO:", clusterdef.iso)
+    print("# Network base:", clusterdef.network)
     print("# Storage:", clusterdef.storage)
-    print("# addon:")
+    print("# ISO Addon:")
     for cluster in clusterdef.addon:
         dataaddon = " iso: {name} {iso}" .format(**cluster.__dict__)
-        print("", dataaddon)
-    print("# Common:", clusterdef.common)
+        print(' |-->', dataaddon)
+
+    print("# Packages:", clusterdef.common)
     print("# Nodes:")
     for vmdata in clusterdef.vm:
         data = "VMname:{} {fqdn}: {}{macend} {}{ipend} {packages}" .format(clusterdef.common.distro + vmdata.name, clusterdef.network.macbase, clusterdef.network.range, **vmdata.__dict__)
         print("", data)
+        print(" |-->", data)
 
 
 def pssh(*args, nodes=None):
