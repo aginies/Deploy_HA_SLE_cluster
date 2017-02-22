@@ -1017,6 +1017,9 @@ def cmd_halt(args):
     """
     Tell running vms to halt
     """
+    print("VM name to halt:")
+    for vm in clusterdef.vm:
+        print(" |-->", clusterdef.common.distro + vm.name)
     _, outp = get_stdout("screen -list")
     if 'install_HA_VM_guest_' in outp.decode('utf-8'):
         if not ask("Installations in progress! Do you really want to tell VMs to halt?"):
@@ -1034,6 +1037,24 @@ def cmd_halt(args):
                 continue
             if not invoke("virsh -q destroy {} --graceful".format(vmname)):
                 warn("Failed to halt {}".format(vmname))
+
+
+def cmd_start(args):
+    """
+    Start all VMs which belong to a scenario
+    """
+    print("VM name to start:")
+    for vm in clusterdef.vm:
+        print(" |-->", clusterdef.common.distro + vm.name)
+    state = determine_status()
+    if state == 'running':
+        status("Already running")
+    elif state != 'running':
+        for vm in clusterdef.vm:
+            vmname = "{}{}".format(vm.distro, vm.name)
+            rc, outp = get_stdout("virsh start {}".format(vmname))
+            if rc != 0:
+                error("Failed to start virtual machines")
 
 
 def cmd_status(args):
@@ -1180,7 +1201,7 @@ def cmd_config(args):
     print("# Common:", clusterdef.common)
     print("# Nodes:")
     for vmdata in clusterdef.vm:
-        data = " {fqdn}: {}{macend} {}{ipend} {packages}" .format(clusterdef.network.macbase, clusterdef.network.range, **vmdata.__dict__)
+        data = "VMname:{} {fqdn}: {}{macend} {}{ipend} {packages}" .format(clusterdef.common.distro + vmdata.name, clusterdef.network.macbase, clusterdef.network.range, **vmdata.__dict__)
         print("", data)
 
 
@@ -1338,6 +1359,9 @@ def main():
         subparser.add_argument('--bootstrap', dest="bootstrap", action="store_true", help="Bootstrap HA cluster (unless already bootstrapped)")
         subparser.add_argument('--post-bootstrap', dest="post_bootstrap", help="Command to execute after bootstrap completes")
         subparser.set_defaults(func=cmd_up)
+
+        subparser = subparsers.add_parser('start', help="Start VMs")
+        subparser.set_defaults(func=cmd_start)
 
         subparser = subparsers.add_parser('halt', help="Tell running VMs to halt")
         subparser.set_defaults(func=cmd_halt)
