@@ -72,9 +72,9 @@ https://github.com/aginies/Deploy_HA_SLE_cluster.git
 
 ## Configuration
 
-Create different configuration using the `conf/*.ini`
-files. See the existing scenarios for details on what can be
-configured.
+There are example configurations in the `conf/` directory. Each `.ini`
+file is a complete cluster configuration. It's possible to create a
+variety of different configurations by modifying these examples.
 
 * Per-VM configuration (VCPUs, RAM, etc.)
 * Package list to install
@@ -85,7 +85,10 @@ Basic configuration (username, password, etc.) is done in the
 configuration. The ISO download URL, username and local storage paths
 will need to be modified.
 
-* *WARNING* All guest installation will be done at the same time.
+* *WARNING* All of the guest VMs will be created and configured in
+  parallel, at the same time. It is possible that installation will
+  sometimes fail due to concurrent access to host OS resources. Please
+  report any such issues you encounter.
 
 ## Install / HOWTO
 
