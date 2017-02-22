@@ -1185,8 +1185,8 @@ def cmd_destroy(args):
 
 def cmd_config(args):
     print("\n##############")
-    print("# Host:", config.host)
-    print("# User:", config.user)
+    print("# Host:\n", config.host)
+    print("# User:\n", config.user)
     if args.scenario is None:
         scenario = config.scenario.default
     else:
@@ -1194,20 +1194,23 @@ def cmd_config(args):
 
     print("\n##############")
     print("Cluterdef scenario:", scenario)
-    print("# ISO:", clusterdef.iso)
-    print("# Network base:", clusterdef.network)
-    print("# Storage:", clusterdef.storage)
-    print("# ISO Addon:")
+    print("\n# ISO:\n", clusterdef.iso)
+    print("\n# Network base:\n", clusterdef.network)
+    print("\n# Storage:\n", clusterdef.storage)
+    print("\n# ISO Addon:")
     for cluster in clusterdef.addon:
         dataaddon = " iso: {name} {iso}" .format(**cluster.__dict__)
         print(' |-->', dataaddon)
 
-    print("# Packages:", clusterdef.common)
-    print("# Nodes:")
+    print("\n# Packages:\n", clusterdef.common.packages)
     for vmdata in clusterdef.vm:
-        data = "VMname:{} {fqdn}: {}{macend} {}{ipend} {packages}" .format(clusterdef.common.distro + vmdata.name, clusterdef.network.macbase, clusterdef.network.range, **vmdata.__dict__)
-        print("", data)
-        print(" |-->", data)
+        if vmdata.packages:
+            print("{0}: {1}".format(vmdata.fqdn, vmdata.packages))
+
+    print("\n# Nodes:")
+    print('{0:15} | {1:20} | {2:17} | {3:13} | {4:4} | {5:6} | {6}'.format("VMname", "fqdn", "Mac", "IP", "VCPU", "Ram", "ImageSize"))
+    for vmdata in clusterdef.vm:
+        print( "{0:15} | {1:20} | {2:12} | {3:10} | {4:4} | {5:6} | {6}".format(clusterdef.common.distro + vmdata.name, vmdata.fqdn, clusterdef.network.macbase + vmdata.macend, clusterdef.network.range + vmdata.ipend, vmdata.vcpu, vmdata.ram, vmdata.imagesize))
 
 
 def pssh(*args, nodes=None):
