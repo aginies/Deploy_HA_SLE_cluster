@@ -1252,6 +1252,7 @@ def cmd_bootstrap(args):
         if do_remote(n, "systemctl -q is-active corosync.service", stderr_on=False):
             error("Cluster already active on {}".format(n))
 
+    cmd_sbd(args)
     status_long("Initialize cluster")
     if not do_remote(nodelist[0], "ha-cluster-init -y -t ocfs2 -p /dev/vdb -s /dev/vdc", stderr_on=True):
         error("Failed to initialize cluster")
