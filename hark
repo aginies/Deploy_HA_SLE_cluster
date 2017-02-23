@@ -1300,7 +1300,7 @@ def cmd_ssh(args):
     addr = args.node
     for vm in clusterdef.vm:
         if vm.name == args.node:
-            addr = cluster.network.range + vm.ipend
+            addr = clusterdef.network.range + vm.ipend
     cmd = ['ssh',
            '-o', 'UserKnownHostsFile=.hark/known_hosts',
            '-o', 'StrictHostKeyChecking=no',
@@ -1310,6 +1310,30 @@ def cmd_ssh(args):
         cmd.append(args.cmd)
     return subprocess.call(cmd)
 
+def cmd_scp(args):
+    """
+    SCP to node
+    first arg is SOURCE file, last arg is NODE:/destination_dir
+    """
+    if not os.path.isdir('.hark'):
+        mkdirp('.hark')
+    addr = args.node
+    for vm in clusterdef.vm:
+        if vm.name == args.node:
+            addr = clusterdef.network.range + vm.ipend
+    # avoid: No pseudo-tty detected! Use -t option to ssh if calling remotely
+    cmd = ['scp',
+           '-o', 'UserKnownHostsFile=.hark/known_hosts',
+           '-o', 'StrictHostKeyChecking=no',
+           '-o', 'IdentityFile=/root/.ssh/{}'.format(config.user.sshkey),
+           '{}'.format(args.files),
+           'root@{}:{}'.format(addr, args.dest),
+           ]
+    if args.files is None:
+        error("Please secify file top copy: {}".format(args.files))
+    if args.dest is None:
+        error("Please specify destination directory: {}".format(args.dest))
+    return subprocess.call(cmd)
 
 def cmd_test(args):
     """
@@ -1396,6 +1420,12 @@ def main():
         subparser.add_argument('node', help="Node to connect to")
         subparser.add_argument('cmd', help="Command to run", nargs='?')
         subparser.set_defaults(func=cmd_ssh)
+
+        subparser = subparsers.add_parser('scp', help="SCP to given node")
+        subparser.add_argument('node', help="Node to connect to")
+        subparser.add_argument('files', help="Files to copy", nargs='?')
+        subparser.add_argument('dest', help="Destination directory", nargs='?')
+        subparser.set_defaults(func=cmd_scp)
 
         args = parser.parse_args()
         LOG_ENABLED = not args.nolog

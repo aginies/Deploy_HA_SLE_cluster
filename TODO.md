@@ -24,8 +24,6 @@ uuid 12e505c7-063f-4d08-8d46-b41272b16105
 
 * Don't replace /etc/hosts config for other scenarios
 
-* Geo bootstrap for geo scenario
-
 * Cluster tests / run wizards
 
 # AVOID NETWORK ISSSUE
