@@ -2,7 +2,7 @@
 
 Hark! is a tool to deploy various types of HA clusters without having
 to create a base image. It uses libvirt and autoyast to automate the
-creation and base configuration of virtual machines.
+creation and base configuration of virtual machines. Python3 is required
 
 ## Usage
 

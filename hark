@@ -15,7 +15,7 @@ LOG_ENABLED = True
 DEBUG = False
 QUIET = False
 NONINTERACTIVE = False
-OFFLINE = False  # Offline mode
+OFFLINE = True  # Offline mode
 DOWNLOAD = False  # Download isos if they aren't available locally
 
 
@@ -889,7 +889,7 @@ def install_vms():
                ' --virt-type ', config.host.hypervisor,
                ' --graphics ', 'vnc,keymap=', config.user.keymap,
                ' --network network=', clusterdef.network.name, ',mac=', clusterdef.network.macbase + vm.macend,
-               ' --disk path=', vmdisk, ',format=qcow2,bus=virtio,cache=none',
+               ' --disk path=', vmdisk, ',format=qcow2,bus=virtio,cache=unsafe',
                ' --disk path=', shareddisk, ',format=raw,bus=virtio,cache=none',
                ' --disk path=', autoyastdisk, ',format=raw,bus=virtio']
 
@@ -1205,6 +1205,7 @@ def cmd_config(args):
     print("\n# Packages:\n", clusterdef.common.packages)
     for vmdata in clusterdef.vm:
         if vmdata.packages:
+            vmdata.packages = vmdata.packages + clusterdef.common.packages
             print("{0}: {1}".format(vmdata.fqdn, vmdata.packages))
 
     print("\n# Nodes:")
@@ -1252,7 +1253,7 @@ def cmd_bootstrap(args):
             error("Cluster already active on {}".format(n))
 
     status_long("Initialize cluster")
-    if not do_remote(nodelist[0], "ha-cluster-init -y -t ocfs2 -p /dev/vdb"):
+    if not do_remote(nodelist[0], "ha-cluster-init -y -t ocfs2 -p /dev/vdb -s /dev/vdc", stderr_on=True):
         error("Failed to initialize cluster")
     status_done()
     if len(nodelist) > 1:
@@ -1334,6 +1335,34 @@ def cmd_scp(args):
     if args.dest is None:
         error("Please specify destination directory: {}".format(args.dest))
     return subprocess.call(cmd)
+
+
+def cmd_sbd(args):
+    """
+    Enable SBD service on all nodes
+    Create an SBD devices and dump it
+    """
+    nodes = [vm.name for vm in clusterdef.vm]
+    (do_remote(n, "modprobe softdog", stderr_on=True) for n in nodes)
+    do_remote(nodes[0], "sbd -d /dev/vdc create")
+    do_remote(nodes[0], "sbd -d /dev/vdc dump")
+    (do_remote(n, "systemctl enable sbd", stderr_on=False) for n in nodes)
+    (do_remote(n, "systemctl status sbd", stderr_on=True) for n in nodes)
+ 
+
+
+def cmd_sbd_test(args):
+    """
+    Test the SBD devices
+    """
+    nodes = [ vm.name for vm in clusterdef.vm ]
+    do_remote(nodes[0], "sbd -d /dev/vdc message {} test".format(nodes[2]), stderr_on=True)
+    time.sleep(5)
+    do_remote(nodes[0], "journalctl -u sbd --lines 10", stderr_on=True)
+    print("Reset node {} from {}".format(nodes[2], nodes[0]))
+    do_remote(nodes[0], "sbd -d /dev/vdc message {} reset".format(nodes[2]), stderr_on=True)
+    time.sleep(30)
+
 
 def cmd_test(args):
     """
@@ -1426,6 +1455,15 @@ def main():
         subparser.add_argument('files', help="Files to copy", nargs='?')
         subparser.add_argument('dest', help="Destination directory", nargs='?')
         subparser.set_defaults(func=cmd_scp)
+
+        subparser = subparsers.add_parser('sbd', help="Enable SBD on all Nodes; Create an SBD devices")
+        subparser.set_defaults(func=cmd_sbd)
+
+        subparser = subparsers.add_parser('sbdtest', help="Test SBD message")
+        subparser.set_defaults(func=cmd_sbd_test)
+
+#        subparser = subparsers.add_parser('clusterstatus', help="check_cluster_status") 
+#        subparser.set_defaults(func=cmd_check_cluster_status)
 
         args = parser.parse_args()
         LOG_ENABLED = not args.nolog
