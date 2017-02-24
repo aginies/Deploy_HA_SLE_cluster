@@ -889,7 +889,7 @@ def install_vms():
                ' --virt-type ', config.host.hypervisor,
                ' --graphics ', 'vnc,keymap=', config.user.keymap,
                ' --network network=', clusterdef.network.name, ',mac=', clusterdef.network.macbase + vm.macend,
-               ' --disk path=', vmdisk, ',format=qcow2,bus=virtio,cache=unsafe',
+               ' --disk path=', vmdisk, ',format=qcow2,bus=virtio,cache=none',
                ' --disk path=', shareddisk, ',format=raw,bus=virtio,cache=none',
                ' --disk path=', autoyastdisk, ',format=raw,bus=virtio']
 
