@@ -21,15 +21,31 @@ positional arguments:
                         variants
     config              Display resolved configuration values
     status              Display status of configuration
+      -c / --crmmon       If set, try to run crm_mon on given node/ip
     up                  Configure the host and bring virtual machines up
+      --wait              Wait until VMs are ready
+      --bootstrap         Bootstrap HA cluster (unless already bootstrapped)
+      --post-bootstrap    Command to execute after bootstrap completes
     start               Start VMs
     halt                Tell running VMs to halt
     destroy             Halt and destroy any created VMs
+      -a / --all          Also destroy pools and network
     bootstrap           Bootstrap initial cluster
-    test                Run cluster test
     run                 Run command on listed nodes
-    ssh                 SSH to given node
+      -n / --nodes        List of nodes to bootstrap cluster on
+      --once              Run command on one node (ignore node list)
+      cmd                 Command to run
     scp                 SCP to given node
+      node                Node to connect to
+      files               Files to copy
+      dest                Destinaotion Directory
+    ssh                 SSH to given node
+      node                Node to connect to
+      cmd                 Command to run
+    sbd                 Enable SBD on all Nodes; Create an SBD devices
+    sbdtest             Test SBD message
+    clusterstatus       Check cluster status
+    test                Run cluster test
 
 optional arguments:
   -h, --help            show this help message and exit

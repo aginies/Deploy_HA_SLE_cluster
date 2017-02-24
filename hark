@@ -685,7 +685,7 @@ def generate_vm_template(exedir, outputdir):
         hosts = "".join(t_hosts_entry.format(clusterdef.network.range, **vm.__dict__) for vm in clusterdef.vm)
         txt = t_vm.format(
             addons=addons,
-            packages=packages,
+            packages=packages + " " + clusterdef.common.packages,
             hosts=hosts,
             keymap=vm.keymap,
             networkname=clusterdef.network.name,
@@ -1129,10 +1129,7 @@ def cmd_status(args):
 
     has_crmmon = hasattr(args, "crmmon") and args.crmmon
     if has_crmmon and running and no_installations:
-        rc, outp = get_stdout("ssh -q -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no root@{} crm_mon -D1jr".format(args.crmmon))
-        if rc == 0:
-            print("\n# Cluster status:")
-            print(outp.decode('utf-8'))
+        check_cluster_status(args)
 
 
 def cmd_checkiso(args):
@@ -1205,7 +1202,7 @@ def cmd_config(args):
     print("\n# Packages:\n", clusterdef.common.packages)
     for vmdata in clusterdef.vm:
         if vmdata.packages:
-            vmdata.packages = vmdata.packages + clusterdef.common.packages
+            vmdata.packages = vmdata.packages + " " + clusterdef.common.packages
             print("{0}: {1}".format(vmdata.fqdn, vmdata.packages))
 
     print("\n# Nodes:")
@@ -1351,7 +1348,6 @@ def cmd_sbd(args):
     (do_remote(n, "systemctl status sbd", stderr_on=True) for n in nodes)
  
 
-
 def cmd_sbd_test(args):
     """
     Test the SBD devices
@@ -1364,6 +1360,19 @@ def cmd_sbd_test(args):
     do_remote(nodes[0], "sbd -d /dev/vdc message {} reset".format(nodes[2]), stderr_on=True)
     time.sleep(30)
 
+
+def check_cluster_status(args):
+    """
+    Display Cluster status
+    """
+    if args.crmmon is not None:
+        rc, outp = get_stdout("ssh -q -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no root@{} crm_mon -D1jr".format(args.crmmon))
+        if rc == 0:
+            print("\n# Cluster status:")
+            print(outp.decode('utf-8'))
+    else:
+        nodes = [ vm.name for vm in clusterdef.vm ]
+        print("Provide a node name to connect to, available nodes are:", nodes)
 
 def cmd_test(args):
     """
@@ -1463,8 +1472,10 @@ def main():
         subparser = subparsers.add_parser('sbdtest', help="Test SBD message")
         subparser.set_defaults(func=cmd_sbd_test)
 
-#        subparser = subparsers.add_parser('clusterstatus', help="check_cluster_status") 
-#        subparser.set_defaults(func=cmd_check_cluster_status)
+        subparser = subparsers.add_parser('clusterstatus', help="Check cluster status") 
+        # to get help get this oprionnal and display help in the function
+        subparser.add_argument('crmmon', help="Node to connect to", nargs='?')
+        subparser.set_defaults(func=check_cluster_status)
 
         args = parser.parse_args()
         LOG_ENABLED = not args.nolog
