@@ -1117,11 +1117,11 @@ def cmd_status(args):
             print("  ", line.strip())
 
     # list installations in progress
-    print("\n# Installations in progress:")
     rc, outp = get_stdout("screen -list")
     # Ignore rc == 1 since it just means there are no screens to list
     no_installations = True
     if rc == 0:
+        print("\n# Installations in progress:")
         for line in outp.decode('utf-8').splitlines():
             if 'install_HA_VM_guest_' in line:
                 no_installations = False
