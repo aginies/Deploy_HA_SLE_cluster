@@ -48,6 +48,9 @@ positional arguments:
     maintenance         Test maintenance mode
     basictest           Some basic test: OCF; csync2; ra list; maintenace
     clusterstatus       Check cluster status
+    test                Run cluster test
+
+    
 
 
 optional arguments:
