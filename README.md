@@ -45,8 +45,10 @@ positional arguments:
     sbd                 Enable SBD on all Nodes; Create an SBD devices
     sbdtest             Test SBD message
     addremove           Test an add/remove of a node in the cluster
+    maintenance         Test maintenance mode
+    basictest           Some basic test: OCF; csync2; ra list; maintenace
     clusterstatus       Check cluster status
-    test                Run cluster test
+
 
 optional arguments:
   -h, --help            show this help message and exit

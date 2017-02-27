@@ -1384,6 +1384,34 @@ def add_remove_node_test(args):
     print("Re-add node {} to cluster from node {}".format(args.node, nodes[0]))
     invoke('ssh root@{} -t "ha-cluster-join -y -c {}"'.format(args.node, nodes[0]), echo_stdout=True, echo_stderr=True)
     check_cluster_status(args)
+
+
+def maintenance_test(args):
+    """
+    Do a basic maintenance test on given node
+    """
+    nodes = [ vm.name for vm in clusterdef.vm ]
+    nodes.remove(args.node)
+    print("Will put node {} in maintenance and then back to ready".format(args.node))
+    invoke('ssh root@{} -t "crm node maintenance {}"'.format(nodes[0], args.node))
+    check_cluster_status(args)
+    invoke('ssh root@{} -t "crm node ready {}"'.format(nodes[0], args.node))
+    check_cluster_status(args)
+
+def basic_test(args):
+    """
+    Run some basic tests
+    """
+    nodes = [ vm.name for vm in clusterdef.vm ]
+    print("Test csync2")
+    invoke('ssh root@{} -t "csync2 -xv"'.format(nodes[0]), echo_stdout=True, echo_stderr=True)
+    print("Check OCF")
+    invoke('ssh root@{} -t "OCF_ROOT=/usr/lib/ocf /usr/lib/ocf/resource.d/heartbeat/IPaddr meta-data"'.format(nodes[0]), echo_stdout=True, echo_stderr=True)
+    print("Test some CRM shell command")
+    invoke('ssh root@{} -t "crm ra list stonith"'.format(nodes[0]), echo_stdout=True, echo_stderr=True)
+    invoke('ssh root@{} -t "crm script describe health"'.format(nodes[0]), echo_stdout=True, echo_stderr=True)
+    invoke('ssh root@{} -t "crm script run health"'.format(nodes[0]), echo_stdout=True, echo_stderr=True)
+    invoke('ssh root@{} -t "crm history info"'.format(nodes[0]), echo_stdout=True, echo_stderr=True)
     
 
 def check_cluster_status(args):
@@ -1500,6 +1528,14 @@ def main():
         subparser = subparsers.add_parser('addremove', help="Test an add/remove of a node in the cluster") 
         subparser.add_argument('node', help="Node to connect to")
         subparser.set_defaults(func=add_remove_node_test)
+
+        subparser = subparsers.add_parser('maintenance', help="Test maintenance mode")
+        subparser.add_argument('node', help="Node to put in maintenance")
+        subparser.set_defaults(func=maintenance_test)
+
+        subparser = subparsers.add_parser('basictest', help="Some basic test: OCF; csync2; ra list; maintenace")
+        subparser.set_defaults(func=basic_test)
+
 
 
         subparser = subparsers.add_parser('clusterstatus', help="Check cluster status") 
