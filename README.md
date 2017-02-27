@@ -21,7 +21,7 @@ positional arguments:
                         variants
     config              Display resolved configuration values
     status              Display status of configuration
-      -c / --crmmon       If set, try to run crm_mon on given node/ip
+      -n / --node         If set, try to run crm_mon on given node/ip
     up                  Configure the host and bring virtual machines up
       --wait              Wait until VMs are ready
       --bootstrap         Bootstrap HA cluster (unless already bootstrapped)

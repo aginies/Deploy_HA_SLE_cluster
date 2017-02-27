@@ -1127,8 +1127,8 @@ def cmd_status(args):
                 no_installations = False
                 print("  ", line.strip())
 
-    has_crmmon = hasattr(args, "crmmon") and args.crmmon
-    if has_crmmon and running and no_installations:
+    has_node = hasattr(args, "node") and args.node
+    if has_node and running and no_installations:
         check_cluster_status(args)
 
 
@@ -1247,19 +1247,24 @@ def cmd_bootstrap(args):
     status("Check status of cluster nodes")
     for n in nodelist:
         if do_remote(n, "systemctl -q is-active corosync.service", stderr_on=False):
+            print("As Cluster is active, need to stop it and reboot !")
+            print("This can not been done automatically; just do:")
+            print("- Login on each node and disable pacemaker and corosync service")
+            print("- Reboot all nodes")
             error("Cluster already active on {}".format(n))
 
     cmd_sbd(args)
     status_long("Initialize cluster")
-    if not do_remote(nodelist[0], "ha-cluster-init -y -t ocfs2 -p /dev/vdb -s /dev/vdc", stderr_on=True):
+    if not do_remote(nodelist[0], "ha-cluster-init -y -s /dev/vdc", stderr_on=True):
         error("Failed to initialize cluster")
     status_done()
     if len(nodelist) > 1:
-        if len(nodelist) > 2:
-            status("Adjust OCFS2 configuration for > 2 nodes")
-            if not do_remote(nodelist[0], "crm resource meta c-clusterfs show clone-max 2>/dev/null") and \
-               not do_remote(nodelist[0], "crm resource meta c-clusterfs set clone-max 2"):
-                error("Failed to update cluster configuration")
+        # disable as ocsf2 is something than should be deployed in testing
+#        if len(nodelist) > 2:
+#            status("Adjust OCFS2 configuration for > 2 nodes")
+#            if not do_remote(nodelist[0], "crm resource meta c-clusterfs show clone-max 2>/dev/null") and \
+#               not do_remote(nodelist[0], "crm resource meta c-clusterfs set clone-max 2"):
+#                error("Failed to update cluster configuration")
         status_long("Join cluster from remaining nodes")
         for n in nodelist[1:]:
             if not do_remote(n, "ha-cluster-join -y -c {}".format(nodelist[0])):
@@ -1345,28 +1350,48 @@ def cmd_sbd(args):
     do_remote(nodes[0], "sbd -d /dev/vdc create")
     do_remote(nodes[0], "sbd -d /dev/vdc dump")
     (do_remote(n, "systemctl enable sbd", stderr_on=False) for n in nodes)
-    (do_remote(n, "systemctl status sbd", stderr_on=True) for n in nodes)
  
 
-def cmd_sbd_test(args):
+def sbd_test(args):
     """
     Test the SBD devices
     """
     nodes = [ vm.name for vm in clusterdef.vm ]
-    do_remote(nodes[0], "sbd -d /dev/vdc message {} test".format(nodes[2]), stderr_on=True)
+    # nodes[0] will be the "commander" node
+    args.node = nodes[0]
+    print("Message test to node {} from {}".format(nodes[2], nodes[0]))
+    invoke('ssh root@{} "sbd -d /dev/vdc message {} test"'.format(nodes[0], nodes[2]), echo_stdout=True, echo_stderr_on=True)
     time.sleep(5)
-    do_remote(nodes[0], "journalctl -u sbd --lines 10", stderr_on=True)
+    invoke('ssh root@{} "journalctl -u sbd --lines 10"'.format(nodes[2]), echo_stdout=True, echo_stderr=True)
+#    do_remote(nodes[0], "journalctl -u sbd --lines 10", stderr_on=True)
+    check_cluster_status(args)
     print("Reset node {} from {}".format(nodes[2], nodes[0]))
-    do_remote(nodes[0], "sbd -d /dev/vdc message {} reset".format(nodes[2]), stderr_on=True)
+    invoke('ssh root@{} "sbd -d /dev/vdc message {} reset"'.format(nodes[0], nodes[2]), echo_stdout=True, echo_stderr=True)
+    check_cluster_status(args)
+    print("Wait node {} return (sleep 30s)".format(nodes[2]))
     time.sleep(30)
+    check_cluster_status(args)
 
+
+def add_remove_node_test(args):
+    """
+    Test the add remove of a node
+    """
+    nodes = [ vm.name for vm in clusterdef.vm ]
+    nodes.remove(args.node)
+    print("Removing node {} from cluster from node {}".format(args.node, nodes[0]))
+    invoke('ssh root@{} -t "ha-cluster-remove -c {}"'.format(nodes[0], args.node), echo_stdout=True, echo_stderr=True)
+    print("Re-add node {} to cluster from node {}".format(args.node, nodes[0]))
+    invoke('ssh root@{} -t "ha-cluster-join -y -c {}"'.format(args.node, nodes[0]), echo_stdout=True, echo_stderr=True)
+    check_cluster_status(args)
+    
 
 def check_cluster_status(args):
     """
     Display Cluster status
     """
-    if args.crmmon is not None:
-        rc, outp = get_stdout("ssh -q -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no root@{} crm_mon -D1jr".format(args.crmmon))
+    if args.node is not None:
+        rc, outp = get_stdout("ssh -q -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no root@{} crm_mon -D1jr".format(args.node))
         if rc == 0:
             print("\n# Cluster status:")
             print(outp.decode('utf-8'))
@@ -1422,7 +1447,7 @@ def main():
         subparser.set_defaults(func=cmd_config)
 
         subparser = subparsers.add_parser('status', help="Display status of configuration")
-        subparser.add_argument('-c', '--crmmon', dest="crmmon", help="If set, try to run crm_mon on given node/ip")
+        subparser.add_argument('-n', '--node', dest="node", help="If set, try to run crm_mon on given node/ip")
         subparser.set_defaults(func=cmd_status)
 
         subparser = subparsers.add_parser('up', help="Configure the host and bring virtual machines up")
@@ -1470,11 +1495,16 @@ def main():
         subparser.set_defaults(func=cmd_sbd)
 
         subparser = subparsers.add_parser('sbdtest', help="Test SBD message")
-        subparser.set_defaults(func=cmd_sbd_test)
+        subparser.set_defaults(func=sbd_test)
+
+        subparser = subparsers.add_parser('addremove', help="Test add/remove of a node") 
+        subparser.add_argument('node', help="Node to connect to")
+        subparser.set_defaults(func=add_remove_node_test)
+
 
         subparser = subparsers.add_parser('clusterstatus', help="Check cluster status") 
         # to get help get this oprionnal and display help in the function
-        subparser.add_argument('crmmon', help="Node to connect to", nargs='?')
+        subparser.add_argument('node', help="Node to connect to", nargs='?')
         subparser.set_defaults(func=check_cluster_status)
 
         args = parser.parse_args()
