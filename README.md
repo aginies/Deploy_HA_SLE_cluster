@@ -44,6 +44,7 @@ positional arguments:
       cmd                 Command to run
     sbd                 Enable SBD on all Nodes; Create an SBD devices
     sbdtest             Test SBD message
+    addremove           Test an add/remove of a node in the cluster
     clusterstatus       Check cluster status
     test                Run cluster test
 

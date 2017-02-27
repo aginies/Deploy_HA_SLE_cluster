@@ -1497,7 +1497,7 @@ def main():
         subparser = subparsers.add_parser('sbdtest', help="Test SBD message")
         subparser.set_defaults(func=sbd_test)
 
-        subparser = subparsers.add_parser('addremove', help="Test add/remove of a node") 
+        subparser = subparsers.add_parser('addremove', help="Test an add/remove of a node in the cluster") 
         subparser.add_argument('node', help="Node to connect to")
         subparser.set_defaults(func=add_remove_node_test)
 
