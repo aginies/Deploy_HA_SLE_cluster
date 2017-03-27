@@ -3,7 +3,7 @@
 HYPERVISOR="kvm"
 
 # Path to image storage
-STORAGEP="/var/lib/libvirt/images"
+STORAGEP="/mnt/data/libvirt/images"
 SBDNAME="SBD"
 SBDDISK="${STORAGEP}/${SBDNAME}/${SBDNAME}.img"
 
@@ -30,8 +30,8 @@ NETWORK="192.168.12"
 
 # MODIFY THIS PATH to your ISO IMAGE
 # you should provide a SLE and HA ISO (MANDATORY for installation)
-HACDROM="/mnt/in/ISO/SP2devel/SLE-12-SP2-HA-DVD-x86_64-Buildxxxx-Media1.iso"
-SLECDROM="/mnt/in/ISO/SP2devel/SLE-12-SP2-Server-DVD-x86_64-Buildxxxx-Media1.iso"
+HACDROM="/mnt/in/ISO/SP3devel/SLE-12-SP3-HA-DVD-x86_64-Buildxxxx-Media1.iso"
+SLECDROM="/mnt/in/ISO/SP3devel/SLE-12-SP3-Server-DVD-x86_64-Buildxxxx-Media1.iso"
 
 # GENERAL VM Guest conf
 # default will be 4096M of Ram (you can use KSM under KVM to share VM memory)
