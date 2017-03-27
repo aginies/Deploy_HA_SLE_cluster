@@ -1,5 +1,9 @@
 # TODO
 
+* split hark
+
+needs modules, hark is too big now... painfull to debug/implement new stuff
+
 * Fix shared disk contention issue?
 
 ```
