@@ -102,13 +102,13 @@ EOF"
 
 check_cluster_md() {
     echo "############ START check_cluster_md"
-    exec_on_node ${NODEA} "mdadm --manage /dev/md/md0 --add /dev/vdd"
-    exec_on_node ${NODEA} "mdadm --manage /dev/md/md0 --add /dev/vde"
+    exec_on_node ${NODEA} "mdadm --manage /dev/md/md0 --add ${CLUSTERMDDEV1}"
+    exec_on_node ${NODEA} "mdadm --manage /dev/md/md0 --add ${CLUSTERMDDEV2}"
     echo "- Create ${MNTTEST} directory"
     exec_on_node ${NODEA} "mkdir ${MNTTEST}"
     exec_on_node ${NODEB} "mkdir ${MNTTEST}"
-    echo "- Mount on node ${NODEA} ${CLUSTERMDDEV1}"
-    exec_on_node ${NODEA} "mount ${CLUSTERMDDEV1} ${MNTTEST}"
+    echo "- Mount on node ${NODEA} /dev/md/md0"
+    exec_on_node ${NODEA} "mount /dev/md/md0 ${MNTTEST}"
     exec_on_node ${NODEA} "df -h ${MNTTEST}"
     echo "- Create a file in the FS"
     exec_on_node ${NODEA} "dd if=/dev/zero of=${MNTTEST}/testing bs=1M count=24"
@@ -137,7 +137,6 @@ create_dlm_resource() {
     exec_on_node ${NODEA} "crm configure<<EOF
 primitive dlm ocf:pacemaker:controld op monitor interval='60' timeout='60'
 group base-group dlm
-clone base-clone base-group meta interleave=true target-role=Started
 commit
 exit
 EOF"
@@ -148,6 +147,13 @@ create_raider_primitive() {
     exec_on_node ${NODEA} "crm configure<<EOF
 primitive ${RESOURCEID} Raid1 params raidconf='/etc/mdadm.conf' raiddev=/dev/md/md0 force_clones=true op monitor timeout=20s interval=10 op start timeout=20s interval=0 op stop timeout=20s interval=0
 modgroup base-group add ${RESOURCEID}
+show
+commit
+exit
+EOF"
+    exec_on_node ${NODEA} "crm configure<<EOF
+clone base-clone base-group meta interleave=true target-role=Started
+show
 commit
 exit
 EOF"
@@ -207,18 +213,22 @@ attach_disk_to_node ${NODEB} CLUSTERMD1 ${CLUSTERMDDEV1}
 attach_disk_to_node ${NODEB} CLUSTERMD2 ${CLUSTERMDDEV2}
 attach_disk_to_node ${NODEB} CLUSTERMD3 ${CLUSTERMDDEV3}
 cluster_md_ocfs2_cib
-create_RAID
-echo "ENTER"; read
 create_dlm_resource
 echo "ENTER"; read
-create_raider_primitive
+
+create_RAID
 echo "ENTER"; read
 finish_mdadm_conf
 echo "ENTER"; read
 cluster_md_csync2
 echo "ENTER"; read
+create_raider_primitive
+echo "ENTER"; read
 format_ocfs2
 echo "ENTER"; read
+check_cluster_md
+echo "ENTER"; read
+echo "ENTER BEFORE BACK"; read
 
 # restore before runnning the test
 back_to_begining
