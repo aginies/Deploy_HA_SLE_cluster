@@ -129,4 +129,4 @@ check_failoverip_resource
 ping_virtual_ip
 online_rnode
 restore_node_in_maintenance
-delete_cib_resource
+delete_cib_resource ${NODEA} ${CIBNAME} ${RESOURCEID}

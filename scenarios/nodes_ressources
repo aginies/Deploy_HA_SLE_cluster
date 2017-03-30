@@ -99,3 +99,34 @@ detach_disk_from_node() {
     echo "virsh detach-disk ${NODE} ${TARGETVD}"
     virsh detach-disk ${NODE} ${TARGETVD}
 }
+
+
+delete_cib_resource() {
+    if [ $# -ne 3 ]; then echo "- delete_cib_resource needs 3args: NODE / CIBNAME / RESOURCEID" ; exit 1; fi
+    NODE="$1"
+    CIBNAME="$2"
+    RESOURCEID="$3"
+    echo "############ START delete_cib_resource"
+    exec_on_node ${NODE} "crm cib list | grep ${CIBNAME}"
+    if [ $? -eq 0 ]; then
+        echo "- Deleting cib and resource ${RESOURCEID}"
+        exec_on_node ${NODE} "crm<<EOF
+resource stop ${RESOURCEID}
+EOF"
+echo "- Wait stop/clear/delete resource (10s)"
+       sleep 10
+       exec_on_node ${NODE} "crm<<EOF
+resource clear ${RESOURCEID}
+configure delete ${RESOURCEID}
+cib delete ${CIBNAME}
+verify
+configure commit
+exit
+EOF"
+    else
+        echo "- cib ${CIBNAME} doesnt exist "
+    fi
+    echo "- Show status"
+    exec_on_node ${NODE} "crm status"
+}
+
