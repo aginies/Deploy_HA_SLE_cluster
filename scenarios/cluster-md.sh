@@ -12,7 +12,6 @@ CLUSTERMDDEV1="vdd"
 CLUSTERMDDEV2="vdc"
 CLUSTERMDDEV3="vde"
 
-
 cluster-md_ocfs2_cib() {
     echo "############ START cluster-md_ocfs2_cib"
     exec_on_node ${NODEA} "crm<<EOF
@@ -139,12 +138,20 @@ read
 read
 
 install_packages_cluster-md
-stop_cluster-md
 umount_mnttest
 
-enable_clustermd
-create_vol_name CLUSTERMD
-attach_disk_to_node CLUSTERMD
+create_vol_name ${NODEA} CLUSTERMD1
+create_vol_name ${NODEA} CLUSTERMD2
+create_vol_name ${NODEA} CLUSTERMD3
+create_vol_name ${NODEB} CLUSTERMD1
+create_vol_name ${NODEB} CLUSTERMD2
+create_vol_name ${NODEB} CLUSTERMD3
+attach_disk_to_node ${NODEA} CLUSTERMD1 ${CLUSTERMDDEV1}
+attach_disk_to_node ${NODEA} CLUSTERMD2 ${CLUSTERMDDEV2}
+attach_disk_to_node ${NODEA} CLUSTERMD3 ${CLUSTERMDDEV3}
+attach_disk_to_node ${NODEB} CLUSTERMD1 ${CLUSTERMDDEV1}
+attach_disk_to_node ${NODEB} CLUSTERMD2 ${CLUSTERMDDEV2}
+attach_disk_to_node ${NODEB} CLUSTERMD3 ${CLUSTERMDDEV3}
 create_cluster-md_resource
 create_dlm_resource
 cluster-md_csync2
@@ -153,12 +160,18 @@ format_ocfs2
 
 # restore before runnning the test
 back_to_begining
-read
-stop_cluster-md
-disable_cluster-md
 
 # restore initial conf
-detach_disk_from_node
+detach_disk_from_node ${NODEA} ${CLUSTERMDDEV1}
+detach_disk_from_node ${NODEA} ${CLUSTERMDDEV2}
+detach_disk_from_node ${NODEA} ${CLUSTERMDDEV3}
+detach_disk_from_node ${NODEB} ${CLUSTERMDDEV1}
+detach_disk_from_node ${NODEB} ${CLUSTERMDDEV2}
+detach_disk_from_node ${NODEB} ${CLUSTERMDDEV3}
 delete_all_resources
-delete_vol_name CLUSTERMD
-delete_pool_name CLUSTERMD
+delete_vol_name CLUSTERMD1
+delete_vol_name CLUSTERMD2
+delete_vol_name CLUSTERMD3
+delete_pool_name CLUSTERMD1
+delete_pool_name CLUSTERMD2
+delete_pool_name CLUSTERMD3

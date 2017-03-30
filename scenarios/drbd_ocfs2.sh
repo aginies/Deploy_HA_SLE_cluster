@@ -32,8 +32,8 @@ create_drbd_resource() {
     echo "############ START create_drbd_resource"
     echo "- Create /etc/drbd.d/drbdo2.res file"
     check_targetvd_on_node ${NODEA} > /tmp/check_targetvd_on_node_${NODEA}
-    REALTARGETVDA=`cat /tmp/check_targetvd_on_node_${NODEA} | tail -1 | awk -F "/dev/" '{print $2}'`
-    check_targetvd_on_node ${NODEB} > /tmp/check_targetvd_on_node_${NODEB}
+    export REALTARGETVDA=`cat /tmp/check_targetvd_on_node_${NODEA} | tail -1 | awk -F "/dev/" '{print $2}'`
+    export check_targetvd_on_node ${NODEB} > /tmp/check_targetvd_on_node_${NODEB}
     REALTARGETVDB=`cat /tmp/check_targetvd_on_node_${NODEB} | tail -1 | awk -F "/dev/" '{print $2}'`
     exec_on_node ${NODEA} "cat >/etc/drbd.d/drbdo2.res<<EOF
 resource drbdo2 {
@@ -212,8 +212,10 @@ umount_mnttest
 
 enable_drbd
 create_pool DRBD
-create_vol_name DRBD
-attach_disk_to_node DRBD
+create_vol_name ${NODEA} DRBD DRBD${NODEA}
+create_vol_name ${NODEB} DRBD DRBD${NODEB}
+attach_disk_to_node ${NODEA} DRBD ${TARGETVD}
+attach_disk_to_node ${NODEB} DRBD ${TARGETVD}
 create_drbd_resource
 create_dlm_resource
 drbdconf_csync2
@@ -229,7 +231,9 @@ stop_drbd
 disable_drbd
 
 # restore initial conf
-detach_disk_from_node
+detach_disk_from_node ${NODEA} ${REALTARGETVDA}
+detach_disk_from_node ${NODEB} ${REALTARGETVDB}
 delete_all_resources
-delete_vol_name DRBD
+delete_vol_name ${NODEA} DRBD DRBD${NODEA}
+delete_vol_name ${NODEB} DRBD DRBD${NODEB}
 delete_pool_name DRBD
