@@ -68,7 +68,7 @@ cluster_md_csync2() {
 format_ocfs2() {
     # need DLM
     echo "############ START format_ocfs2"
-    exec_on_node ${NODEA} "mkfs.ocfs2 --force --cluster-stack pcmk -L 'VMtesting' --cluster-name hacluster /dev/md0"
+    exec_on_node ${NODEA} "mkfs.ocfs2 --force --cluster-stack pcmk -L 'VMtesting' --cluster-name hacluster /dev/md/md0"
 }
 
 umount_mnttest() {
@@ -93,16 +93,17 @@ create_RAID() {
 
 finish_mdadm_conf() {
     exec_on_node ${NODEA} "mdadm --detail --scan"
-    exec_on_node ${NODEA} "mdadm --detail --scan 2> /dev/null | grep UUID | cut -d " " -f 4 > /tmp/UUIDMDADM"
+    exec_on_node ${NODEA} "mdadm --detail --scan 2> /dev/null | grep UUID | cut -d ' ' -f 4 > /tmp/UUIDMDADM"
     exec_on_node ${NODEA} "export UUIDMDADM=`cat /tmp/UUIDMDADM` ; cat > /etc/mdadm.conf <<EOF
 DEVICE /dev/${CLUSTERMDDEV1} /dev/${CLUSTERMDDEV2}
-ARRAY /dev/md0 ${UUIDMDADM}
+ARRAY /dev/md/md0 ${UUIDMDADM}
 EOF"
 }
 
 check_cluster_md() {
     echo "############ START check_cluster_md"
-    exec_on_node ${NODEA} "mdadm --manage /dev/md0 --add /dev/vdd"
+    exec_on_node ${NODEA} "mdadm --manage /dev/md/md0 --add /dev/vdd"
+    exec_on_node ${NODEA} "mdadm --manage /dev/md/md0 --add /dev/vde"
     echo "- Create ${MNTTEST} directory"
     exec_on_node ${NODEA} "mkdir ${MNTTEST}"
     exec_on_node ${NODEB} "mkdir ${MNTTEST}"
@@ -145,7 +146,7 @@ EOF"
 create_raider_primitive() {
     echo "############ START create_raid1_primitive"
     exec_on_node ${NODEA} "crm configure<<EOF
-primitive ${RESOURCEID} Raid1 params raidconf='/etc/mdadm.conf' raiddev=/dev/md0 force_clones=true op monitor timeout=20s interval=10 op start timeout=20s interval=0 op stop timeout=20s interval=0
+primitive ${RESOURCEID} Raid1 params raidconf='/etc/mdadm.conf' raiddev=/dev/md/md0 force_clones=true op monitor timeout=20s interval=10 op start timeout=20s interval=0 op stop timeout=20s interval=0
 modgroup base-group add ${RESOURCEID}
 commit
 exit
