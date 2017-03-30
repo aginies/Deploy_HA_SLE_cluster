@@ -1,0 +1,96 @@
+#!/bin/sh
+#########################################################
+#
+#
+#########################################################
+## NODES RESSOURCES
+#########################################################
+
+if [ -f ../functions ] ; then
+    . ../functions
+else
+    echo "! functions file needed! ; Exiting"
+    exit 1
+fi
+check_load_config_file other
+
+# SOME VARS
+TARGETVD1="vdd"
+TARGETVD2="vde"
+TARGETVD3="vdf"
+NODEA="${NODENAME}1"
+NODEB="${NODENAME}2"
+MNTTEST="/mnt/test"
+IPA=`grep ${NODEA} /var/lib/libvirt/dnsmasq/${NETWORKNAME}.hostsfile | cut -d , -f 2`
+IPB=`grep ${NODEB} /var/lib/libvirt/dnsmasq/${NETWORKNAME}.hostsfile | cut -d , -f 2`
+
+
+create_vol_name() {
+    echo "############ START create_vol_name"
+    if [ $# -ne 1 ]; then echo "- create_vol_name needs one arg: POOL_NAME" ; exit 1; fi
+    POOLNAME="$1"
+    echo "- Create volume for device using ${POOLNAME}"
+    virsh vol-create-as --pool ${POOLNAME} --name ${POOLNAME}A.qcow2 --format qcow2 --capacity 1G --allocation 1G --prealloc-metadata
+    virsh vol-create-as --pool ${POOLNAME} --name ${POOLNAME}B.qcow2 --format qcow2 --capacity 1G --allocation 1G --prealloc-metadata
+    virsh vol-list ${POOLNAME} --details
+    virsh pool-refresh --pool ${POOLNAME}
+}
+
+delete_vol_name() {
+    if [ $# -ne 1 ]; then echo "- delete_vol_name needs one arg: POOL_NAME" ; exit 1; fi
+    POOLNAME="$1"
+    echo "############ START delete_vol_name"
+    virsh vol-delete --pool ${POOLNAME} ${POOLNAME}A.qcow2
+    virsh vol-delete --pool ${POOLNAME} ${POOLNAME}B.qcow2
+}
+
+delete_pool_name() {
+    echo "############ START delete_pool_name"
+    if [ $# -ne 1 ]; then echo "- delete_pool_name needs one arg: POOL_NAME" ; exit 1; fi
+    POOL="$1"
+    virsh pool-destroy ${POOL}
+    virsh pool-undefine ${POOL}
+    echo "- Delete path to volume"
+    rm -rf ${STORAGEP}/${POOL}
+}
+
+attach_disk_to_node() {
+    echo "############ START attach_disk_to_node"
+    POOLNAME="$1"
+    if [ $# -ne 1 ]; then echo "- attach_disk_to_node needs one arg: POOL_NAME" ; exit 1; fi
+    echo "- Attach volume to node"
+    virsh attach-disk ${NODENAME}1 --live --cache none --type disk ${STORAGEP}/${POOLNAME}/${POOLNAME}A.qcow2 --target ${TARGETVD1}
+    virsh attach-disk ${NODENAME}2 --live --cache none --type disk ${STORAGEP}/${POOLNAME}/${POOLNAME}B.qcow2 --target ${TARGETVD1}
+    exec_on_node ${NODEA} "fdisk -l"
+}
+
+check_targetvd_on_node() {
+    echo "############ START check_targetvd_on_node"
+    # workaround as this is not possible to garantee target device on VM guest
+    if [ $# -ne 1 ]; then echo "- check_targetvd_on_node need one arg: NODE_NAME" ; exit 1; fi
+    NODE=$1
+    exec_on_node ${NODE} "ls -la /dev/${TARGETVD1}"
+    if [ $? -eq 0 ]; then
+	export REALTARGETVD=${TARGETVD1}
+    else
+	for LETTER in {e..z}; do
+	    #echo "- Testing /dev/vd${LETTER}"
+	    export REALTARGETVD="vd${LETTER}"
+	    exec_on_node ${NODE} "ls -la /dev/vd${LETTER}"
+	    if [ $? -eq 0 ]; then
+		#echo "- Switching target on HA node to vd${LETTER}"
+		return REALTARGETVD="vd${LETTER}"
+		break
+	    #else
+	    #echo "- Trying another letter..."
+	    fi
+	done
+    fi
+}
+
+detach_disk_from_node() {
+    echo "############ START detach_disk_from_node"
+    echo "- Detach volume from node"
+    virsh detach-disk ${NODENAME}1 ${TARGETVD1}
+    virsh detach-disk ${NODENAME}2 ${TARGETVD1}
+}

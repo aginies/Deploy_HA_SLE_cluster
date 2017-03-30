@@ -212,8 +212,8 @@ umount_mnttest
 
 enable_drbd
 create_pool DRBD
-create_vol_name
-attach_disk_to_node
+create_vol_name DRBD
+attach_disk_to_node DRBD
 create_drbd_resource
 create_dlm_resource
 drbdconf_csync2
@@ -231,5 +231,5 @@ disable_drbd
 # restore initial conf
 detach_disk_from_node
 delete_all_resources
-delete_vol_name
+delete_vol_name DRBD
 delete_pool_name DRBD

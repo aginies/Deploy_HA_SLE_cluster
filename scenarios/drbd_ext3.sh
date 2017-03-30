@@ -61,10 +61,10 @@ finalize_DRBD_setup() {
     echo "- Create the /dev/drbd"
     exec_on_node ${NODEA} "drbdadm up drbd"
     exec_on_node ${NODEB} "drbdadm up drbd"
-    echo "- Create a new UUID to shorten the initial resynchronization of the DRBD resource"
-    exec_on_node ${NODEA} "drbdadm new-current-uuid drbd/0"
+    #echo "- Create a new UUID to shorten the initial resynchronization of the DRBD resource"
+    #exec_on_node ${NODEA} "drbdadm new-current-uuid drbd/0"
     echo "- Make ${NODEA} primary"
-    exec_on_node ${NODEA} "drbdadm primary drbd"
+    exec_on_node ${NODEA} "drbdadm primary --force drbd"
     echo "- Check the DRBD status"
     exec_on_node ${NODEA} "cat /proc/drbd"
     echo "- Start the resynchronization process on your intended primary node"
@@ -153,8 +153,8 @@ umount_mnttest
 
 enable_drbd
 create_pool DRBD
-create_vol_name
-attach_disk_to_node
+create_vol_name DRBD
+attach_disk_to_node DRBD
 create_drbd_resource
 drbdconf_csync2
 finalize_DRBD_setup
@@ -168,5 +168,5 @@ disable_drbd
 
 # restore initial conf
 detach_disk_from_node
-delete_vol_name
+delete_vol_name DRBD
 delete_pool_name DRBD
