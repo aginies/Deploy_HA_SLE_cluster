@@ -231,8 +231,8 @@ stop_drbd
 disable_drbd
 
 # restore initial conf
-detach_disk_from_node ${NODEA} ${REALTARGETVDA}
-detach_disk_from_node ${NODEB} ${REALTARGETVDB}
+detach_disk_from_node ${NODEA} ${TARGETVD}
+detach_disk_from_node ${NODEB} ${TARGETVD}
 delete_all_resources
 delete_vol_name ${NODEA} DRBD DRBD${NODEA}
 delete_vol_name ${NODEB} DRBD DRBD${NODEB}
