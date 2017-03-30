@@ -67,8 +67,7 @@ drbdconf_csync2() {
     exec_on_node ${NODEA} "perl -pi -e 's|usage-count.*|usage-count no;|' /etc/drbd.d/global_common.conf"
     exec_on_node ${NODEA} "grep /etc/drbd.conf /etc/csync2/csync2.cfg"
     if [ $? -eq 1 ]; then
-    	exec_on_node ${NODEA} "perl -pi -e 's|}|\tinclude /etc/drbd.conf;\n\tinclude /etc/drbd.d;\n}|' /et
-c/csync2/csync2.cfg"
+    	exec_on_node ${NODEA} "perl -pi -e 's|}|\tinclude /etc/drbd.conf;\n\tinclude /etc/drbd.d;\n}|' /etc/csync2/csync2.cfg"
     else
         echo "- /etc/csync2/csync2.cfg already contains drbd files to sync"
     fi
@@ -83,10 +82,10 @@ finalize_DRBD_setup() {
     echo "- Create the /dev/drbd"
     exec_on_node ${NODEA} "drbdadm up drbdo2"
     exec_on_node ${NODEB} "drbdadm up drbdo2"
-    echo "- Create a new UUID to shorten the initial resynchronization of the DRBD resource"
-    exec_on_node ${NODEA} "drbdadm new-current-uuid drbdo2/0"
+#    echo "- Create a new UUID to shorten the initial resynchronization of the DRBD resource"
+#    exec_on_node ${NODEA} "drbdadm new-current-uuid drbdo2/0"
     echo "- Make ${NODEA} primary"
-    exec_on_node ${NODEA} "drbdadm primary drbdo2"
+    exec_on_node ${NODEA} "drbdadm primary --force drbdo2"
     echo "- Check the DRBD status"
     exec_on_node ${NODEA} "cat /proc/drbd"
     echo "- Start the resynchronization process on your intended primary node"
@@ -139,7 +138,7 @@ check_primary_secondary() {
     exec_on_node ${NODEB} "drbdadm pause-sync drbdo2"
     exec_on_node ${NODEB} "dd if=/dev/zero of=${MNTTEST}/testing2 bs=1M count=24"
     exec_on_node ${NODEA} "touch ${MNTTEST}/bspl{0001..10001}.c"
-    exec_on_node ${NODEA} "ls ${MNTTEST}/*.c"
+    #exec_on_node ${NODEA} "ls ${MNTTEST}/*.c"
     exec_on_node ${NODEB} "chmod -R 777 ${MNTTEST}/" 
     exec_on_node ${NODEA} "chmod -R 775 ${MNTTEST}/" 
     exec_on_node ${NODEB} "drbdadm status"
