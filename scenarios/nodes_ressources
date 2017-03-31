@@ -69,19 +69,21 @@ attach_disk_to_node() {
 check_targetvd_on_node() {
     echo "############ START check_targetvd_on_node"
     # workaround as this is not possible to garantee target device on VM guest
-    if [ $# -ne 1 ]; then echo "- check_targetvd_on_node need one arg: NODE_NAME" ; exit 1; fi
-    NODE=$1
+    if [ $# -ne 3 ]; then echo "- check_targetvd_on_node needs 3arg: NODE_NAME / TARGET_VD / START_LETTER" ; exit 1; fi
+    NODE="$1"
+    TARGETVD="$2"
+    STARTLETTER="$3"
     exec_on_node ${NODE} "ls -la /dev/${TARGETVD}"
     if [ $? -eq 0 ]; then
 	export REALTARGETVD=${TARGETVD}
     else
-	for LETTER in {e..z}; do
+	for LETTER in {${STARTLETTER}..z}; do
 	    #echo "- Testing /dev/vd${LETTER}"
 	    export REALTARGETVD="vd${LETTER}"
 	    exec_on_node ${NODE} "ls -la /dev/vd${LETTER}"
 	    if [ $? -eq 0 ]; then
 		#echo "- Switching target on HA node to vd${LETTER}"
-		return REALTARGETVD="vd${LETTER}"
+		export REALTARGETVD="vd${LETTER}"
 		break
 	    #else
 	    #echo "- Trying another letter..."

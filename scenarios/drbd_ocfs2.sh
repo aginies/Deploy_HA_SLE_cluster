@@ -16,6 +16,7 @@ fi
 # SOME VARS
 CIBNAME="drbd_ocfs2"
 DRBDRESOURCE="${NODENAME}2"
+TARGETVD="vdd"
 
 drbd_ocfs2_cib() {
     echo "############ START drbd_ocfs2_cib"
@@ -31,10 +32,10 @@ EOF"
 create_drbd_resource() {
     echo "############ START create_drbd_resource"
     echo "- Create /etc/drbd.d/drbdo2.res file"
-    check_targetvd_on_node ${NODEA} > /tmp/check_targetvd_on_node_${NODEA}
+    check_targetvd_on_node ${NODEA} vdd d > /tmp/check_targetvd_on_node_${NODEA}
     export REALTARGETVDA=`cat /tmp/check_targetvd_on_node_${NODEA} | tail -1 | awk -F "/dev/" '{print $2}'`
-    export check_targetvd_on_node ${NODEB} > /tmp/check_targetvd_on_node_${NODEB}
-    REALTARGETVDB=`cat /tmp/check_targetvd_on_node_${NODEB} | tail -1 | awk -F "/dev/" '{print $2}'`
+    check_targetvd_on_node ${NODEB} vdd d > /tmp/check_targetvd_on_node_${NODEB}
+    export REALTARGETVDB=`cat /tmp/check_targetvd_on_node_${NODEB} | tail -1 | awk -F "/dev/" '{print $2}'`
     exec_on_node ${NODEA} "cat >/etc/drbd.d/drbdo2.res<<EOF
 resource drbdo2 {
   startup {

@@ -21,9 +21,9 @@ TARGETVD="vdd"
 create_drbd_resource() {
     echo "############ START create_drbd_resource"
     echo "- Create /etc/drbd.d/drbd.res file"
-    check_targetvd_on_node ${NODEA} > /tmp/check_targetvd_on_node_${NODEA}
+    check_targetvd_on_node ${NODEA} vdd e > /tmp/check_targetvd_on_node_${NODEA}
     export REALTARGETVDA=`cat /tmp/check_targetvd_on_node_${NODEA} | tail -1 | awk -F "/dev/" '{print $2}'`
-    check_targetvd_on_node ${NODEB} > /tmp/check_targetvd_on_node_${NODEB}
+    check_targetvd_on_node ${NODEB} vdd e > /tmp/check_targetvd_on_node_${NODEB}
     export REALTARGETVDB=`cat /tmp/check_targetvd_on_node_${NODEB} | tail -1 | awk -F "/dev/" '{print $2}'`
     exec_on_node ${NODEA} "cat >/etc/drbd.d/drbd.res<<EOF
 resource drbd {
