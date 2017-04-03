@@ -63,7 +63,7 @@ create_pool() {
         rm -rvf ${STORAGEP}/${POOL}
     fi
     echo "- Create ${POOL}"
-    mkdir ${STORAGEP}/${POOL}
+    mkdir -p ${STORAGEP}/${POOL}
     virsh pool-define-as --name ${POOL} --type dir --target ${STORAGEP}/${POOL}
     virsh pool-start ${POOL}
     virsh pool-autostart ${POOL}
