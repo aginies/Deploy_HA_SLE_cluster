@@ -68,8 +68,8 @@ finalize_DRBD_setup() {
     exec_on_node ${NODEA} "drbdadm primary --force drbd"
     echo "- Check the DRBD status"
     exec_on_node ${NODEA} "cat /proc/drbd"
-    echo "- Start the resynchronization process on your intended primary node"
-    exec_on_node ${NODEA} "drbdadm -- --overwrite-data-of-peer primary drbd"
+    #echo "- Start the resynchronization process on your intended primary node"
+    #exec_on_node ${NODEA} "drbdadm -- --overwrite-data-of-peer primary drbd"
 }
 
 format_ext3() {

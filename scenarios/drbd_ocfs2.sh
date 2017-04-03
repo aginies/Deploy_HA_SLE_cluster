@@ -84,13 +84,13 @@ finalize_DRBD_setup() {
     exec_on_node ${NODEA} "drbdadm up drbdo2"
     exec_on_node ${NODEB} "drbdadm up drbdo2"
 #    echo "- Create a new UUID to shorten the initial resynchronization of the DRBD resource"
-#    exec_on_node ${NODEA} "drbdadm new-current-uuid drbdo2/0"
+    exec_on_node ${NODEA} "drbdadm new-current-uuid drbdo2/0"
     echo "- Make ${NODEA} primary"
     exec_on_node ${NODEA} "drbdadm primary --force drbdo2"
     echo "- Check the DRBD status"
     exec_on_node ${NODEA} "cat /proc/drbd"
-    echo "- Start the resynchronization process on your intended primary node"
-    exec_on_node ${NODEA} "drbdadm -- --overwrite-data-of-peer primary drbdo2"
+    #echo "- Start the resynchronization process on your intended primary node"
+    #exec_on_node ${NODEA} "drbdadm -- --overwrite-data-of-peer primary drbdo2"
 }
 
 format_ocfs2() {
