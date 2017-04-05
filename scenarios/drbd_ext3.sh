@@ -156,8 +156,8 @@ enable_drbd
 create_pool DRBD
 create_vol_name ${NODEA} DRBD DRBD${NODEA}
 create_vol_name ${NODEB} DRBD DRBD${NODEB}
-attach_disk_to_node ${NODEA} DRBD ${TARGETVD}
-attach_disk_to_node ${NODEB} DRBD ${TARGETVD}
+attach_disk_to_node ${NODEA} DRBD DRBD${NODEA} ${TARGETVD}
+attach_disk_to_node ${NODEB} DRBD DRBD${NODEB} ${TARGETVD}
 create_drbd_resource
 drbdconf_csync2
 finalize_DRBD_setup

@@ -24,9 +24,11 @@ check_load_config_file other
 # SOME VARS
 CIBNAME="cluster_md_ocfs2"
 RESOURCEID="raider"
+CLUSTERMD="CLUSTERMD"
 CLUSTERMDDEV1="vdd"
 CLUSTERMDDEV2="vde"
 CLUSTERMDDEV3="vdf"
+diskname="disk"
 MDDEV="/dev/md0"
 
 cluster_md_ocfs2_cib() {
@@ -84,8 +86,8 @@ monitor_progress() {
 
 create_RAID() {
     echo "############ START create_RAID"
-#    exec_on_node ${NODEA} "mdadm --create md0 --bitmap=clustered --raid-devices=2 --level=mirror --spare-devices=1 /dev/${CLUSTERMDDEV1} /dev/${CLUSTERMDDEV2} /dev/${CLUSTERMDDEV3}"
-    exec_on_node ${NODEB} "mdadm --create md0 --bitmap=clustered --raid-devices=2 --level=mirror /dev/${CLUSTERMDDEV1} /dev/${CLUSTERMDDEV2} --metadata=1.2"
+    exec_on_node ${NODEA} "mdadm --create md0 --bitmap=clustered --raid-devices=2 --level=mirror --spare-devices=1 /dev/${CLUSTERMDDEV1} /dev/${CLUSTERMDDEV2} /dev/${CLUSTERMDDEV3}"
+#    exec_on_node ${NODEB} "mdadm --create md0 --bitmap=clustered --raid-devices=2 --level=mirror /dev/${CLUSTERMDDEV1} /dev/${CLUSTERMDDEV2} --metadata=1.2"
     monitor_progress
     sleep 10
     monitor_progress
@@ -93,20 +95,19 @@ create_RAID() {
 
 finish_mdadm_conf() {
     exec_on_node ${NODEB} "mdadm --detail --scan"
-    exec_on_node ${NODEB} "mdadm --detail --scan 2> /dev/null | grep UUID | cut -d ' ' -f 4 > /tmp/UUIDMDADM"
-    exec_on_node ${NODEB} "export UUIDMDADM=`cat /tmp/UUIDMDADM` ; cat > /etc/mdadm.conf <<EOF
-DEVICE /dev/${CLUSTERMDDEV1} /dev/${CLUSTERMDDEV2}
-ARRAY ${MDDEV} ${UUIDMDADM}
-EOF"
+    exec_on_node ${NODEB} "echo 'DEVICE /dev/${CLUSTERMDDEV1} /dev/${CLUSTERMDDEV2}' /dev/${CLUSTERMDDEV3} > /etc/mdadm.conf"
+    exec_on_node ${NODEB} "mdadm --detail --scan >> /etc/mdadm.conf"
 }
 
 check_cluster_md() {
     echo "############ START check_cluster_md"
     exec_on_node ${NODEA} "mdadm --manage ${MDDEV} --add ${CLUSTERMDDEV1}"
     exec_on_node ${NODEA} "mdadm --manage ${MDDEV} --add ${CLUSTERMDDEV2}"
+    exec_on_node ${NODEA} "mdadm --manage ${MDDEV} --add ${CLUSTERMDDEV3}"
     echo "- Create ${MNTTEST} directory"
     exec_on_node ${NODEA} "mkdir ${MNTTEST}"
     exec_on_node ${NODEB} "mkdir ${MNTTEST}"
+    exec_on_node ${NODEC} "mkdir ${MNTTEST}"
     echo "- Mount on node ${NODEA} ${MDDEV}"
     exec_on_node ${NODEA} "mount ${MDDEV} ${MNTTEST}"
     exec_on_node ${NODEA} "df -h ${MNTTEST}"
@@ -129,6 +130,7 @@ back_to_begining() {
     umount_mnttest
     exec_on_node ${NODEA} "rm -rf ${MNTTEST}"
     exec_on_node ${NODEB} "rm -rf ${MNTTEST}"
+    exec_on_node ${NODEC} "rm -rf ${MNTTEST}"
     pssh -h /etc/hanodes "rm -vf /etc/mdadm.conf"
 
 }
@@ -179,6 +181,40 @@ EOF"
     exec_on_node ${NODEB} "crm status"
 }
 
+create_3shared_storage() {
+    echo "############ START create_3shared_storage"
+    virsh pool-list --all | grep ${CLUSTERMD} > /dev/null
+    if [ $? == "0" ]; then
+        echo "- Destroy current pool ${CLUSTERMD}"
+        virsh pool-destroy ${CLUSTERMD}
+        echo "- Undefine current pool ${CLUSTERMD}"
+        virsh pool-undefine ${CLUSTERMD}
+        #rm -vf ${SBDDISK}
+    else
+        echo "- ${CLUSTERMD} pool is not present"
+    fi
+    echo "- Define pool ${CLUSTERMD}"
+    mkdir -p ${STORAGEP}/${CLUSTERMD}
+    virsh pool-define-as --name ${CLUSTERMD} --type dir --target ${STORAGEP}/${CLUSTERMD}
+    echo "- Start and Autostart the pool"
+    virsh pool-start ${CLUSTERMD}
+    virsh pool-autostart ${CLUSTERMD}
+
+    # Create 3 VOLUMES disk1 disk2 disk3
+    for vol in `seq 1 3` 
+    do
+	echo "- Create ${diskname}${vol}.qcow2"
+	virsh vol-create-as --pool ${CLUSTERMD} --name ${diskname}${vol}.qcow2 --format qcow2 --allocation 2G --capacity 2G
+    done
+}
+
+delete_3shared_storage() {
+	echo "############ START delete_3shared_storage"
+	echo "- Destroy current pool ${CLUSTERMD}"
+	virsh pool-destroy ${CLUSTERMD}
+	echo "- Undefine current pool ${CLUSTERMD}"
+	virsh pool-undefine ${CLUSTERMD}
+}
 
 ##########################
 ##########################
@@ -186,7 +222,7 @@ EOF"
 ##########################
 ##########################
 
-echo "############ CLUSTER-mD / OSCFS2 SCENARIO #############"
+echo "############ CLUSTER-MD / OSCFS2 SCENARIO #############"
 echo "  !! WARNING !! "
 echo "  !! WARNING !! "
 #echo " NOT USABLE NOW .... please QUIT or debug :)"
@@ -201,21 +237,16 @@ case $1 in
 	;;
     prepare)
 	umount_mnttest
-	create_pool CLUSTERMD1
-	create_pool CLUSTERMD2
-	create_pool CLUSTERMD3
-	create_vol_name ${NODEA} CLUSTERMD1 CLUSTERMD1${NODEA}
-	create_vol_name ${NODEA} CLUSTERMD2 CLUSTERMD2${NODEA}
-	create_vol_name ${NODEA} CLUSTERMD3 CLUSTERMD3${NODEA}
-	create_vol_name ${NODEB} CLUSTERMD1 CLUSTERMD1${NODEB}
-	create_vol_name ${NODEB} CLUSTERMD2 CLUSTERMD2${NODEB}
-	create_vol_name ${NODEB} CLUSTERMD3 CLUSTERMD3${NODEB}
-	attach_disk_to_node ${NODEA} CLUSTERMD1 ${CLUSTERMDDEV1}
-	attach_disk_to_node ${NODEA} CLUSTERMD2 ${CLUSTERMDDEV2}
-	attach_disk_to_node ${NODEA} CLUSTERMD3 ${CLUSTERMDDEV3}
-	attach_disk_to_node ${NODEB} CLUSTERMD1 ${CLUSTERMDDEV1}
-	attach_disk_to_node ${NODEB} CLUSTERMD2 ${CLUSTERMDDEV2}
-	attach_disk_to_node ${NODEB} CLUSTERMD3 ${CLUSTERMDDEV3}
+	create_3shared_storage
+	attach_disk_to_node ${NODEA} ${CLUSTERMD} ${diskname}1 ${CLUSTERMDDEV1}
+	attach_disk_to_node ${NODEA} ${CLUSTERMD} ${diskname}2 ${CLUSTERMDDEV2}
+	attach_disk_to_node ${NODEA} ${CLUSTERMD} ${diskname}3 ${CLUSTERMDDEV3}
+	attach_disk_to_node ${NODEB} ${CLUSTERMD} ${diskname}1 ${CLUSTERMDDEV1}
+	attach_disk_to_node ${NODEB} ${CLUSTERMD} ${diskname}2 ${CLUSTERMDDEV2}
+	attach_disk_to_node ${NODEB} ${CLUSTERMD} ${diskname}3 ${CLUSTERMDDEV3}
+	attach_disk_to_node ${NODEC} ${CLUSTERMD} ${diskname}1 ${CLUSTERMDDEV1}
+	attach_disk_to_node ${NODEC} ${CLUSTERMD} ${diskname}2 ${CLUSTERMDDEV2}
+	attach_disk_to_node ${NODEC} ${CLUSTERMD} ${diskname}3 ${CLUSTERMDDEV3}
 	;;
     crm)
 	cluster_md_ocfs2_cib
@@ -246,36 +277,32 @@ case $1 in
 	detach_disk_from_node ${NODEB} ${CLUSTERMDDEV1}
 	detach_disk_from_node ${NODEB} ${CLUSTERMDDEV2}
 	detach_disk_from_node ${NODEB} ${CLUSTERMDDEV3}
+	detach_disk_from_node ${NODEC} ${CLUSTERMDDEV1}
+	detach_disk_from_node ${NODEC} ${CLUSTERMDDEV2}
+	detach_disk_from_node ${NODEC} ${CLUSTERMDDEV3}
 	delete_all_resources
+	delete_3shared_storage
 	delete_vol_name ${NODEA} CLUSTERMD1 CLUSTERMD1${NODEA}
 	delete_vol_name ${NODEA} CLUSTERMD2 CLUSTERMD2${NODEA}
 	delete_vol_name ${NODEA} CLUSTERMD3 CLUSTERMD3${NODEA}
 	delete_vol_name ${NODEB} CLUSTERMD1 CLUSTERMD1${NODEB}
 	delete_vol_name ${NODEB} CLUSTERMD2 CLUSTERMD2${NODEB}
 	delete_vol_name ${NODEB} CLUSTERMD3 CLUSTERMD3${NODEB}
-	delete_pool_name CLUSTERMD1
-	delete_pool_name CLUSTERMD2
-	delete_pool_name CLUSTERMD3
 	delete_cib_resource ${NODEA} ${CIBNAME} ${RESOURCEID}
 	;;
     all)
 	install_packages_cluster_md
 	umount_mnttest
-	create_pool CLUSTERMD1
-	create_pool CLUSTERMD2
-	create_pool CLUSTERMD3
-	create_vol_name ${NODEA} CLUSTERMD1 CLUSTERMD1${NODEA}
-	create_vol_name ${NODEA} CLUSTERMD2 CLUSTERMD2${NODEA}
-	create_vol_name ${NODEA} CLUSTERMD3 CLUSTERMD3${NODEA}
-	create_vol_name ${NODEB} CLUSTERMD1 CLUSTERMD1${NODEB}
-	create_vol_name ${NODEB} CLUSTERMD2 CLUSTERMD2${NODEB}
-	create_vol_name ${NODEB} CLUSTERMD3 CLUSTERMD3${NODEB}
-	attach_disk_to_node ${NODEA} CLUSTERMD1 ${CLUSTERMDDEV1}
-	attach_disk_to_node ${NODEA} CLUSTERMD2 ${CLUSTERMDDEV2}
-	attach_disk_to_node ${NODEA} CLUSTERMD3 ${CLUSTERMDDEV3}
-	attach_disk_to_node ${NODEB} CLUSTERMD1 ${CLUSTERMDDEV1}
-	attach_disk_to_node ${NODEB} CLUSTERMD2 ${CLUSTERMDDEV2}
-	attach_disk_to_node ${NODEB} CLUSTERMD3 ${CLUSTERMDDEV3}
+	create_3shared_storage
+	attach_disk_to_node ${NODEA} ${CLUSTERMD} ${diskname}1 ${CLUSTERMDDEV1}
+	attach_disk_to_node ${NODEA} ${CLUSTERMD} ${diskname}2 ${CLUSTERMDDEV2}
+	attach_disk_to_node ${NODEA} ${CLUSTERMD} ${diskname}3 ${CLUSTERMDDEV3}
+	attach_disk_to_node ${NODEB} ${CLUSTERMD} ${diskname}1 ${CLUSTERMDDEV1}
+	attach_disk_to_node ${NODEB} ${CLUSTERMD} ${diskname}2 ${CLUSTERMDDEV2}
+	attach_disk_to_node ${NODEB} ${CLUSTERMD} ${diskname}3 ${CLUSTERMDDEV3}
+	attach_disk_to_node ${NODEC} ${CLUSTERMD} ${diskname}1 ${CLUSTERMDDEV1}
+	attach_disk_to_node ${NODEC} ${CLUSTERMD} ${diskname}2 ${CLUSTERMDDEV2}
+	attach_disk_to_node ${NODEC} ${CLUSTERMD} ${diskname}3 ${CLUSTERMDDEV3}
 	cluster_md_ocfs2_cib
 	create_dlm_resource
 	check_cluster_md_resource
@@ -310,6 +337,7 @@ case $1 in
 	echo "
 usage of $0
 
+all
 install
 prepare
 crm
