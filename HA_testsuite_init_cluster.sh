@@ -21,6 +21,9 @@ check_load_config_file
 create_sbd_dev() {
     echo "############ START create SBD device"
     exec_on_node ${NODENAME}1 "modprobe softdog"
+    exec_on_node ${NODENAME}1 "echo softdog > /etc/modules-load.d/watchdog.conf"
+    exec_on_node ${NODENAME}2 "echo softdog > /etc/modules-load.d/watchdog.conf"
+    exec_on_node ${NODENAME}3 "echo softdog > /etc/modules-load.d/watchdog.conf"
     exec_on_node ${NODENAME}1 "sbd -d /dev/vdb create"
     exec_on_node ${NODENAME}1 "sbd -d /dev/vdb dump"
 }

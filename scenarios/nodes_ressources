@@ -62,9 +62,10 @@ attach_disk_to_node() {
     POOLNAME="$2"
     VOLNAME="$3"
     TARGETVD="$4"
-    if [ $# -ne 4 ]; then echo "- attach_disk_to_node needs 4args: NODE / POOL_NAME / VOL_NAME / TARGET VD" ; exit 1; fi
+    EXT="$5"
+    if [ $# -ne 5 ]; then echo "- attach_disk_to_node needs 4args: NODE / POOL_NAME / VOL_NAME / TARGET VD / EXTENSION" ; exit 1; fi
     echo "- Attach volume ${POOLNAME} to ${NODE}, target is ${TARGETVD}"
-    virsh attach-disk ${NODE} --live --cache none --type disk ${STORAGEP}/${POOLNAME}/${VOLNAME}.qcow2 --target ${TARGETVD}
+    virsh attach-disk ${NODE} --live --cache none --type disk ${STORAGEP}/${POOLNAME}/${VOLNAME}.${EXT} --target ${TARGETVD}
     exec_on_node ${NODE} "fdisk -l /dev/${TARGETVD}"
 }
 

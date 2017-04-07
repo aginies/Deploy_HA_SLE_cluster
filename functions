@@ -22,8 +22,8 @@ exec_on_node() {
     NODE="$1"
     CMD="$2"
     # avoid: No pseudo-tty detected! Use -t option to ssh if calling remotely
-    echo "${NODE}: ssh -t -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no ${NODE} \"${CMD}\"" ;
-    ssh -q -t -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no ${NODE} "${CMD}"
+    echo "${NODE}: ssh -T -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no ${NODE} \"${CMD}\"" ;
+    ssh -q -T -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no ${NODE} "${CMD}"
 }
 
 exec_pssh() {

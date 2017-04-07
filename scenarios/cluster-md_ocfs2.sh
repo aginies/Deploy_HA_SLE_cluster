@@ -65,6 +65,8 @@ cluster_md_csync2() {
     else
         echo "- /etc/csync2/csync2.cfg already contains /etc/mdadm.conf files to sync"
     fi
+    exec_on_node ${NODEB} "cat /etc/mdadm.conf"
+    exec_on_node ${NODEB} "sync; csync2 -f /etc/mdadm.conf"
     exec_on_node ${NODEB} "csync2 -xv"
 }
 
@@ -81,48 +83,48 @@ umount_mnttest() {
 }
 
 monitor_progress() {
-    exec_on_node ${NODEA} "cat /proc/mdstat"
+    exec_on_node ${NODEB} "cat /proc/mdstat"
 }
 
 create_RAID() {
     echo "############ START create_RAID"
-    exec_on_node ${NODEA} "mdadm --create md0 --bitmap=clustered --raid-devices=2 --level=mirror --spare-devices=1 /dev/${CLUSTERMDDEV1} /dev/${CLUSTERMDDEV2} /dev/${CLUSTERMDDEV3}"
-#    exec_on_node ${NODEB} "mdadm --create md0 --bitmap=clustered --raid-devices=2 --level=mirror /dev/${CLUSTERMDDEV1} /dev/${CLUSTERMDDEV2} --metadata=1.2"
-    monitor_progress
-    sleep 10
+#    exec_on_node ${NODEB} "mdadm --create md0 --bitmap=clustered --raid-devices=2 --level=mirror --spare-devices=1 /dev/${CLUSTERMDDEV1} /dev/${CLUSTERMDDEV2} /dev/${CLUSTERMDDEV3} --metadata=1.2"
+    # exec_on_node ${NODEB} "yes| mdadm --create md0 --bitmap=clustered \
+    echo "mdadm --create md0 --bitmap=clustered --raid-devices=2 --level=mirror --spare-devices=1 /dev/vdd /dev/vde /dev/vdf --metadata=1.2"
+    exec_on_node ${NODEB} "mdadm --create md0 --bitmap=clustered --raid-devices=2 --level=mirror --spare-devices=1 /dev/vdd /dev/vde /dev/vdf --metadata=1.2"
     monitor_progress
 }
 
 finish_mdadm_conf() {
     exec_on_node ${NODEB} "mdadm --detail --scan"
-    exec_on_node ${NODEB} "echo 'DEVICE /dev/${CLUSTERMDDEV1} /dev/${CLUSTERMDDEV2}' /dev/${CLUSTERMDDEV3} > /etc/mdadm.conf"
+    exec_on_node ${NODEB} "echo 'DEVICE /dev/${CLUSTERMDDEV1} /dev/${CLUSTERMDDEV2} /dev/${CLUSTERMDDEV3}' > /etc/mdadm.conf"
     exec_on_node ${NODEB} "mdadm --detail --scan >> /etc/mdadm.conf"
 }
 
 check_cluster_md() {
     echo "############ START check_cluster_md"
-    exec_on_node ${NODEA} "mdadm --manage ${MDDEV} --add ${CLUSTERMDDEV1}"
-    exec_on_node ${NODEA} "mdadm --manage ${MDDEV} --add ${CLUSTERMDDEV2}"
-    exec_on_node ${NODEA} "mdadm --manage ${MDDEV} --add ${CLUSTERMDDEV3}"
+    #exec_on_node ${NODEA} "mdadm --manage ${MDDEV} --add ${CLUSTERMDDEV1}"
+    #exec_on_node ${NODEA} "mdadm --manage ${MDDEV} --add ${CLUSTERMDDEV2}"
+    #exec_on_node ${NODEA} "mdadm --manage ${MDDEV} --add ${CLUSTERMDDEV3}"
     echo "- Create ${MNTTEST} directory"
     exec_on_node ${NODEA} "mkdir ${MNTTEST}"
     exec_on_node ${NODEB} "mkdir ${MNTTEST}"
     exec_on_node ${NODEC} "mkdir ${MNTTEST}"
     echo "- Mount on node ${NODEA} ${MDDEV}"
     exec_on_node ${NODEA} "mount ${MDDEV} ${MNTTEST}"
+    exec_on_node ${NODEB} "mount ${MDDEV} ${MNTTEST}"
     exec_on_node ${NODEA} "df -h ${MNTTEST}"
+    exec_on_node ${NODEB} "df -h ${MNTTEST}"
     echo "- Create a file in the FS"
     exec_on_node ${NODEA} "dd if=/dev/zero of=${MNTTEST}/testing bs=1M count=24"
     exec_on_node ${NODEA} "dd if=/dev/random of=${MNTTEST}/random count=20240"
-    exec_on_node ${NODEA} "s${NODENAME}1sum  ${MNTTEST}/testing ${MNTTEST}/random > ${MNTTEST}/sha1sum"
-    exec_on_node ${NODEA} "mdadm --detail --scan"
-    exec_on_node ${NODEA} "umount ${MNTTEST}"
+    exec_on_node ${NODEA} "sha1sum  ${MNTTEST}/testing ${MNTTEST}/random > ${MNTTEST}/sha1sum"
     exec_on_node ${NODEB} "cat ${MNTTEST}/s${NODENAME}1sum"
-    exec_on_node ${NODEB} "s${NODENAME}1sum ${MNTTEST}/testing ${MNTTEST}/random > /mnt/testing_from_${NODEB}"
+    exec_on_node ${NODEB} "sha1sum ${MNTTEST}/testing ${MNTTEST}/random > /mnt/testing_from_${NODEB}"
     exec_on_node ${NODEB} "dd if=/dev/zero of=${MNTTEST}/testing2 bs=1M count=24"
     exec_on_node ${NODEA} "touch ${MNTTEST}/bspl{0001..10001}.c"
     #exec_on_node ${NODEA} "ls ${MNTTEST}/*.c"
-    exec_on_node ${NODEA} "chmod -R 775 ${MNTTEST}/" 
+    exec_on_node ${NODEA} "journalctl --lines 10 --no-pager"
 }
 
 back_to_begining() {
@@ -165,13 +167,16 @@ EOF"
 delete_all_resources() {
     echo "############ START delete_all_resources"
     exec_on_node ${NODEA} "crm resource<<EOF
+cleanup raider
+stop raider
 stop base-clone
 stop base-group
 stop dlm
 status
 EOF"
-    sleep 25;
+    sleep 10;
     exec_on_node ${NODEA} "crm configure<<EOF
+delete raider
 delete base-clone
 delete base-group
 delete dlm
@@ -179,6 +184,11 @@ commit
 exit
 EOF"
     exec_on_node ${NODEB} "crm status"
+    exec_on_node ${NODEB} "crm resource restart base-clone"
+    exec_on_node ${NODEB} "crm resource restart dlm"
+    exec_on_node ${NODEB} "crm resource cleanup dlm"
+    exec_on_node ${NODEB} "crm resource cleanup raider"
+    exec_on_node ${NODEB} "crm resource status"
 }
 
 create_3shared_storage() {
@@ -203,8 +213,8 @@ create_3shared_storage() {
     # Create 3 VOLUMES disk1 disk2 disk3
     for vol in `seq 1 3` 
     do
-	echo "- Create ${diskname}${vol}.qcow2"
-	virsh vol-create-as --pool ${CLUSTERMD} --name ${diskname}${vol}.qcow2 --format qcow2 --allocation 2G --capacity 2G
+	echo "- Create ${diskname}${vol}.img"
+	virsh vol-create-as --pool ${CLUSTERMD} --name ${diskname}${vol}.img --format raw --allocation 1024M --capacity 1024M
     done
 }
 
@@ -214,6 +224,7 @@ delete_3shared_storage() {
 	virsh pool-destroy ${CLUSTERMD}
 	echo "- Undefine current pool ${CLUSTERMD}"
 	virsh pool-undefine ${CLUSTERMD}
+	rm -rv ${STORAGEP}/${CLUSTERMD}
 }
 
 ##########################
@@ -227,10 +238,6 @@ echo "  !! WARNING !! "
 echo "  !! WARNING !! "
 #echo " NOT USABLE NOW .... please QUIT or debug :)"
 echo
-echo " press [ENTER] twice OR Ctrl+C to abort"
-read
-read
-
 case $1 in
     install)
 	install_packages_cluster_md
@@ -238,15 +245,17 @@ case $1 in
     prepare)
 	umount_mnttest
 	create_3shared_storage
-	attach_disk_to_node ${NODEA} ${CLUSTERMD} ${diskname}1 ${CLUSTERMDDEV1}
-	attach_disk_to_node ${NODEA} ${CLUSTERMD} ${diskname}2 ${CLUSTERMDDEV2}
-	attach_disk_to_node ${NODEA} ${CLUSTERMD} ${diskname}3 ${CLUSTERMDDEV3}
-	attach_disk_to_node ${NODEB} ${CLUSTERMD} ${diskname}1 ${CLUSTERMDDEV1}
-	attach_disk_to_node ${NODEB} ${CLUSTERMD} ${diskname}2 ${CLUSTERMDDEV2}
-	attach_disk_to_node ${NODEB} ${CLUSTERMD} ${diskname}3 ${CLUSTERMDDEV3}
-	attach_disk_to_node ${NODEC} ${CLUSTERMD} ${diskname}1 ${CLUSTERMDDEV1}
-	attach_disk_to_node ${NODEC} ${CLUSTERMD} ${diskname}2 ${CLUSTERMDDEV2}
-	attach_disk_to_node ${NODEC} ${CLUSTERMD} ${diskname}3 ${CLUSTERMDDEV3}
+	;;
+   attach)
+	attach_disk_to_node ${NODEA} ${CLUSTERMD} ${diskname}1 ${CLUSTERMDDEV1} img
+	attach_disk_to_node ${NODEA} ${CLUSTERMD} ${diskname}2 ${CLUSTERMDDEV2} img
+	attach_disk_to_node ${NODEA} ${CLUSTERMD} ${diskname}3 ${CLUSTERMDDEV3} img
+	attach_disk_to_node ${NODEB} ${CLUSTERMD} ${diskname}1 ${CLUSTERMDDEV1} img
+	attach_disk_to_node ${NODEB} ${CLUSTERMD} ${diskname}2 ${CLUSTERMDDEV2} img
+	attach_disk_to_node ${NODEB} ${CLUSTERMD} ${diskname}3 ${CLUSTERMDDEV3} img
+	attach_disk_to_node ${NODEC} ${CLUSTERMD} ${diskname}1 ${CLUSTERMDDEV1} img
+	attach_disk_to_node ${NODEC} ${CLUSTERMD} ${diskname}2 ${CLUSTERMDDEV2} img
+	attach_disk_to_node ${NODEC} ${CLUSTERMD} ${diskname}3 ${CLUSTERMDDEV3} img
 	;;
     crm)
 	cluster_md_ocfs2_cib
@@ -265,7 +274,7 @@ case $1 in
 	format_ocfs2
 	;;
     check)
-	#check_cluster_md
+	check_cluster_md
 	;;
     cleanup)
 	# restore before runnning the test
@@ -282,70 +291,37 @@ case $1 in
 	detach_disk_from_node ${NODEC} ${CLUSTERMDDEV3}
 	delete_all_resources
 	delete_3shared_storage
-	delete_vol_name ${NODEA} CLUSTERMD1 CLUSTERMD1${NODEA}
-	delete_vol_name ${NODEA} CLUSTERMD2 CLUSTERMD2${NODEA}
-	delete_vol_name ${NODEA} CLUSTERMD3 CLUSTERMD3${NODEA}
-	delete_vol_name ${NODEB} CLUSTERMD1 CLUSTERMD1${NODEB}
-	delete_vol_name ${NODEB} CLUSTERMD2 CLUSTERMD2${NODEB}
-	delete_vol_name ${NODEB} CLUSTERMD3 CLUSTERMD3${NODEB}
 	delete_cib_resource ${NODEA} ${CIBNAME} ${RESOURCEID}
 	;;
     all)
-	install_packages_cluster_md
-	umount_mnttest
-	create_3shared_storage
-	attach_disk_to_node ${NODEA} ${CLUSTERMD} ${diskname}1 ${CLUSTERMDDEV1}
-	attach_disk_to_node ${NODEA} ${CLUSTERMD} ${diskname}2 ${CLUSTERMDDEV2}
-	attach_disk_to_node ${NODEA} ${CLUSTERMD} ${diskname}3 ${CLUSTERMDDEV3}
-	attach_disk_to_node ${NODEB} ${CLUSTERMD} ${diskname}1 ${CLUSTERMDDEV1}
-	attach_disk_to_node ${NODEB} ${CLUSTERMD} ${diskname}2 ${CLUSTERMDDEV2}
-	attach_disk_to_node ${NODEB} ${CLUSTERMD} ${diskname}3 ${CLUSTERMDDEV3}
-	attach_disk_to_node ${NODEC} ${CLUSTERMD} ${diskname}1 ${CLUSTERMDDEV1}
-	attach_disk_to_node ${NODEC} ${CLUSTERMD} ${diskname}2 ${CLUSTERMDDEV2}
-	attach_disk_to_node ${NODEC} ${CLUSTERMD} ${diskname}3 ${CLUSTERMDDEV3}
-	cluster_md_ocfs2_cib
-	create_dlm_resource
-	check_cluster_md_resource
-	create_RAID
-	finish_mdadm_conf
-	cluster_md_csync2
-	create_raider_primitive
-	format_ocfs2
-	#check_cluster_md
-	# restore before runnning the test
-	back_to_begining
-	# restore initial conf
-	detach_disk_from_node ${NODEA} ${CLUSTERMDDEV1}
-	detach_disk_from_node ${NODEA} ${CLUSTERMDDEV2}
-	detach_disk_from_node ${NODEA} ${CLUSTERMDDEV3}
-	detach_disk_from_node ${NODEB} ${CLUSTERMDDEV1}
-	detach_disk_from_node ${NODEB} ${CLUSTERMDDEV2}
-	detach_disk_from_node ${NODEB} ${CLUSTERMDDEV3}
-	delete_all_resources
-	delete_vol_name ${NODEA} CLUSTERMD1 CLUSTERMD1${NODEA}
-	delete_vol_name ${NODEA} CLUSTERMD2 CLUSTERMD2${NODEA}
-	delete_vol_name ${NODEA} CLUSTERMD3 CLUSTERMD3${NODEA}
-	delete_vol_name ${NODEB} CLUSTERMD1 CLUSTERMD1${NODEB}
-	delete_vol_name ${NODEB} CLUSTERMD2 CLUSTERMD2${NODEB}
-	delete_vol_name ${NODEB} CLUSTERMD3 CLUSTERMD3${NODEB}
-	delete_pool_name CLUSTERMD1
-	delete_pool_name CLUSTERMD2
-	delete_pool_name CLUSTERMD3
-	delete_cib_resource ${NODEA} ${CIBNAME} ${RESOURCEID}
+	$0 install
+	$0 prepare
+	$0 attach
+	$0 crm
+	$0 raid
+	$0 crmfinish
+	$0 format
+	$0 check
+	$0 cleanup
 	;;
     *)
 	echo "
 usage of $0
 
-all
-install
-prepare
-crm
-raid
-crmfinish
-format
-check
-cleanup
+all:		do everything
+install:	install all needed packages on nodes
+prepare:	umount /mnt/test; create 3 shared storage
+attach:		attach disks to nodes
+crm:		create a CIB cluster_md_ocfs2
+	        create the dlm resource
+raid:		verify available disk for nodes 
+        	create the RAID device
+	        finish the mdadm configuration
+	        csync2 the configuration
+format:		format in OCFS2 the /dev/md0 device
+check:		various test on Raid1
+crmfinish:	create the raider primitive
+cleanup:	restore everything to initial statement
 "
 	;;
 esac
