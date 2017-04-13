@@ -14,6 +14,7 @@ else
 fi
 check_load_config_file other
 
+
 # SOME VARS
 NODEA="${NODENAME}1"
 NODEB="${NODENAME}2"
@@ -24,55 +25,55 @@ IPB=`grep ${NODEB} /var/lib/libvirt/dnsmasq/${NETWORKNAME}.hostsfile | cut -d , 
 
 
 create_vol_name() {
-    echo "############ START create_vol_name"
-    if [ $# -ne 3 ]; then echo "- create_vol_name needs 3args: NODE / POOL_NAME / VOL_NAME" ; exit 1; fi
+    echo $I "############ START create_vol_name" $O
+    if [ $# -ne 3 ]; then echo $F "- create_vol_name needs 3args: NODE / POOL_NAME / VOL_NAME" $O ; exit 1; fi
     NODE="$1"
     POOLNAME="$2"
     VOLNAME="$3"
-    echo "- Create volume for device using ${POOLNAME} on ${NODE}"
+    echo $I "- Create volume for device using ${POOLNAME} on ${NODE}" $O
     virsh vol-create-as --pool ${POOLNAME} --name ${VOLNAME}.qcow2 --format qcow2 --capacity 1G --allocation 1G --prealloc-metadata
     virsh vol-list ${POOLNAME} --details
     virsh pool-refresh --pool ${POOLNAME}
 }
 
 delete_vol_name() {
-    if [ $# -ne 3 ]; then echo "- delete_vol_name needs 3args: NODE / POOL_NAME / VOL_NAME" ; exit 1; fi
+    if [ $# -ne 3 ]; then echo $F "- delete_vol_name needs 3args: NODE / POOL_NAME / VOL_NAME" $O ; exit 1; fi
     NODE="$1"
     POOLNAME="$2"
     VOLNAME="$3"
-    echo "############ START delete_vol_name"
-    echo "- Delete volume ${VOLNAME} ${POOLNAME} on ${NODE}"
+    echo $I "############ START delete_vol_name" $O
+    echo $W "- Delete volume ${VOLNAME} ${POOLNAME} on ${NODE}" $O
     virsh vol-delete --pool ${POOLNAME} ${VOLNAME}.qcow2
 }
 
 delete_pool_name() {
-    echo "############ START delete_pool_name"
-    if [ $# -ne 1 ]; then echo "- delete_pool_name needs one arg: POOL_NAME" ; exit 1; fi
+    echo $I "############ START delete_pool_name" $O
+    if [ $# -ne 1 ]; then echo $F "- delete_pool_name needs one arg: POOL_NAME" $O; exit 1; fi
     POOLNAME="$1"
-    echo "- Delete pool ${POOLNAME}"
+    echo $W "- Delete pool ${POOLNAME}" $O
     virsh pool-destroy ${POOLNAME}
     virsh pool-undefine ${POOLNAME}
-    echo "- Delete path to volume"
+    echo $W "- Delete path to volume ${STORAGEP}/${POOLNAME}" $O
     rm -rf ${STORAGEP}/${POOLNAME}
 }
 
 attach_disk_to_node() {
-    echo "############ START attach_disk_to_node"
+    echo $I "############ START attach_disk_to_node" $O
     NODE="$1"
     POOLNAME="$2"
     VOLNAME="$3"
     TARGETVD="$4"
     EXT="$5"
-    if [ $# -ne 5 ]; then echo "- attach_disk_to_node needs 4args: NODE / POOL_NAME / VOL_NAME / TARGET VD / EXTENSION" ; exit 1; fi
-    echo "- Attach volume ${POOLNAME} to ${NODE}, target is ${TARGETVD}"
+    if [ $# -ne 5 ]; then echo $F "- attach_disk_to_node needs 4args: NODE / POOL_NAME / VOL_NAME / TARGET VD / EXTENSION" $O ; exit 1; fi
+    echo $I "- Attach volume ${POOLNAME} to ${NODE}, target is ${TARGETVD}" $O
     virsh attach-disk ${NODE} --live --cache none --type disk ${STORAGEP}/${POOLNAME}/${VOLNAME}.${EXT} --target ${TARGETVD}
     exec_on_node ${NODE} "fdisk -l /dev/${TARGETVD}"
 }
 
 check_targetvd_on_node() {
-    echo "############ START check_targetvd_on_node"
+    echo $I "############ START check_targetvd_on_node" $O
     # workaround as this is not possible to garantee target device on VM guest
-    if [ $# -ne 3 ]; then echo "- check_targetvd_on_node needs 3arg: NODE_NAME / TARGET_VD / START_LETTER" ; exit 1; fi
+    if [ $# -ne 3 ]; then echo $F "- check_targetvd_on_node needs 3arg: NODE_NAME / TARGET_VD / START_LETTER" $O ; exit 1; fi
     NODE="$1"
     TARGETVD="$2"
     STARTLETTER="$3"
@@ -96,29 +97,29 @@ check_targetvd_on_node() {
 }
 
 detach_disk_from_node() {
-    echo "############ START detach_disk_from_node"
-    if [ $# -ne 2 ]; then echo "- detach_disk_from_node needs 2args: NODE / DISK" ; exit 1; fi
-    echo "- Detach disk ${TARGETVD} from ${NODE}"
+    echo $I "############ START detach_disk_from_node" $O
+    if [ $# -ne 2 ]; then echo $F "- detach_disk_from_node needs 2args: NODE / DISK" $O ; exit 1; fi
+    echo $W "- Detach disk ${TARGETVD} from ${NODE}" $O
     NODE="$1"
     TARGETVD="$2"
-    echo "virsh detach-disk ${NODE} ${TARGETVD}"
+    echo $W "virsh detach-disk ${NODE} ${TARGETVD}" $O
     virsh detach-disk ${NODE} ${TARGETVD}
 }
 
 
 delete_cib_resource() {
-    if [ $# -ne 3 ]; then echo "- delete_cib_resource needs 3args: NODE / CIBNAME / RESOURCEID" ; exit 1; fi
+    if [ $# -ne 3 ]; then echo $F "- delete_cib_resource needs 3args: NODE / CIBNAME / RESOURCEID" $O ; exit 1; fi
     NODE="$1"
     CIBNAME="$2"
     RESOURCEID="$3"
-    echo "############ START delete_cib_resource"
+    echo $I "############ START delete_cib_resource" $O
     exec_on_node ${NODE} "crm cib list | grep ${CIBNAME}"
     if [ $? -eq 0 ]; then
-        echo "- Deleting cib and resource ${RESOURCEID}"
+        echo $W "- Deleting cib and resource ${RESOURCEID}" $O
         exec_on_node ${NODE} "crm<<EOF
 resource stop ${RESOURCEID}
 EOF"
-echo "- Wait stop/clear/delete resource (10s)"
+echo $I "- Wait stop/clear/delete resource (10s)" $O
        sleep 10
        exec_on_node ${NODE} "crm<<EOF
 resource clear ${RESOURCEID}
@@ -129,9 +130,9 @@ configure commit
 exit
 EOF"
     else
-        echo "- cib ${CIBNAME} doesnt exist "
+        echo $F "- cib ${CIBNAME} doesnt exist " $O
     fi
-    echo "- Show status"
+    echo $I "- Show status" $O
     exec_on_node ${NODE} "crm status"
 }
 

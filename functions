@@ -1,6 +1,22 @@
 #!/bin/sh
 CONF="havm.conf"
 
+## color
+# NORMAL
+N=`echo -en "\\033[0;32m"`
+# SUCCESS
+S=`echo -en "\\033[1;32m"`
+#INFO
+I=`echo -en "\\033[1;34m"`
+# WARNING / DELETE
+W=`echo -en "\\033[1;33m"`
+# OTHER
+#O=`echo -en "\\033[0;39m"`
+O=`echo -en "\\033[0m"`
+#O=`echo -en ""
+# FAILURE
+F=`echo -en "\\033[1;31m"`
+
 check_load_config_file() {
 if [ "$1" == "other" ]; then CDIR=`dirname $PWD`; else CDIR=$PWD; fi
 if [ -f $CDIR/${CONF} ]; then
@@ -16,14 +32,20 @@ exec_on_node() {
     # first arg is NODE name, second arg is command
     if [ $# -lt 2 ]
     then
-	echo "! Two args needed (NODE CMD); Exiting"
+	echo $F "! Two args needed (NODE CMD); Exiting" $O
         exit 1
     fi
     NODE="$1"
     CMD="$2"
     # avoid: No pseudo-tty detected! Use -t option to ssh if calling remotely
-    echo "${NODE}: ssh -T -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no ${NODE} \"${CMD}\"" ;
+    echo "${NODE}: ssh -T -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no ${NODE} \"${CMD}\"";
     ssh -q -T -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no ${NODE} "${CMD}"
+    if [ "$?" -eq 0 ]
+	then
+	echo $S "- ssh command sucessful" $O
+    else
+	echo $F "- ! Return of the ssh command is not 0" $O
+    fi
 }
 
 exec_pssh() {
@@ -49,6 +71,12 @@ scp_on_node() {
     # avoid: No pseudo-tty detected! Use -t option to ssh if calling remotely
     echo "${NODE}: scp -o StrictHostKeyChecking=no ${FILE} ${DEST}"
     scp -q -o StrictHostKeyChecking=no ${FILE} ${DEST}
+    if [ "$?" -eq 0 ]
+	then
+	echo $S "- scp command sucessful" $O
+    else
+	echo $F "- ! Return of scp command is not 0" $O
+    fi
 }
 
 # create a pool (on host)

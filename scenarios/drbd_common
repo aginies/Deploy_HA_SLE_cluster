@@ -29,34 +29,34 @@ NODEB="${NODENAME}2"
 MNTTEST="/mnt/test"
 
 install_packages_drbd() {
-    echo "############ START install_packages_drbd"
+    echo $I "############ START install_packages_drbd" $O
     pssh -h /etc/hanodes "zypper in -y drbd-kmp-default drbd drbd-utils"
 }
 
 disable_drbd() {
-    echo "############ START disable_drbd"
-    echo "- Disable drbd service on node"
+    echo $I "############ START disable_drbd"
+    echo "- Disable drbd service on node" $O
     exec_on_node ${NODEA} "systemctl disable drbd"
     exec_on_node ${NODEB} "systemctl disable drbd"
 }
 
 enable_drbd() {
-    echo "############ START enable_drbd"
-    echo "- Enable drbd service on node"
+    echo $I "############ START enable_drbd"
+    echo "- Enable drbd service on node" $O
     exec_on_node ${NODEA} "systemctl enable drbd"
     exec_on_node ${NODEB} "systemctl enable drbd"
 }
 
 stop_drbd() {
-    echo "############ START stop_drbd"
-    echo "- Stop drbd service on node"
+    echo $I "############ START stop_drbd"
+    echo "- Stop drbd service on node" $O
     exec_on_node ${NODEA} "systemctl stop drbd"
     exec_on_node ${NODEB} "systemctl stop drbd"
 }
 
 start_drbd() {
-    echo "############ START start_drbd"
-    echo "- Start drbd service on node"
+    echo $I "############ START start_drbd"
+    echo "- Start drbd service on node" $O
     exec_on_node ${NODEA} "systemctl start drbd"
     exec_on_node ${NODEB} "systemctl start drbd"
 }
