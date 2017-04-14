@@ -32,7 +32,7 @@ diskname="disk"
 MDDEV="/dev/md0"
 
 cluster_md_ocfs2_cib() {
-    echo "############ START cluster_md_ocfs2_cib"
+    echo $I "############ START cluster_md_ocfs2_cib" $O
     exec_on_node ${NODEA} "crm<<EOF
 cib new ${CIBNAME}
 verify
@@ -43,66 +43,82 @@ EOF"
 }
 
 install_packages_cluster_md() {
-    echo "############ START install_packages_cluster"
+    echo $I "############ START install_packages_cluster" $O
     pssh -h /etc/hanodes "zypper in -y cluster-md-kmp-default mdadm"
 }
 
 check_cluster_md_resource() {
-    echo "############ START check_cluster_md_resource"
+    echo $I "############ START check_cluster_md_resource" $O
     check_targetvd_on_node ${NODEB} vdd d > /tmp/check_targetvd_on_node_${NODEB}
-    CLUSTERMDDEV1=`cat /tmp/check_targetvd_on_node_${NODEB} | tail -1 | awk -F "/dev/" '{print $2}'`
+    CLUSTERMDDEV1=`cat /tmp/check_targetvd_on_node_${NODEB} | tail -2 | awk -F "/dev/" '{print $2}' | head -1`
     check_targetvd_on_node ${NODEB} vde e > /tmp/check_targetvd_on_node_${NODEB}
-    CLUSTERMDDEV2=`cat /tmp/check_targetvd_on_node_${NODEB} | tail -1 | awk -F "/dev/" '{print $2}'`
+    CLUSTERMDDEV2=`cat /tmp/check_targetvd_on_node_${NODEB} | tail -2 | awk -F "/dev/" '{print $2}' | head -1`
 }
 
 cluster_md_csync2() {
-    echo "############ START cluster_md_csync2"
-    echo "- Corosync2 /etc/mdadm.conf"
-    exec_on_node ${NODEB} "perl -pi -e 's|usage-count.*|usage-count no;|' /etc/drbd.d/global_common.conf"
-    exec_on_node ${NODEB} "grep /etc/mdadm.conf /etc/csync2/csync2.cfg"
+    echo $i "############ START cluster_md_csync2" $O
+    echo $I "- Corosync2 /etc/mdadm.conf" $O
+    find_resource_running_dlm
+    exec_on_node ${RNODE} "perl -pi -e 's|usage-count.*|usage-count no;|' /etc/drbd.d/global_common.conf"
+    exec_on_node ${RNODE} "grep /etc/mdadm.conf /etc/csync2/csync2.cfg"
     if [ $? -eq 1 ]; then
-    	exec_on_node ${NODEB} "perl -pi -e 's|}|\tinclude /etc/mdadm.conf;}|' /etc/csync2/csync2.cfg"
+    	exec_on_node ${RNODE} "perl -pi -e 's|}|\tinclude /etc/mdadm.conf;}|' /etc/csync2/csync2.cfg"
     else
-        echo "- /etc/csync2/csync2.cfg already contains /etc/mdadm.conf files to sync"
+        echo $W "- /etc/csync2/csync2.cfg already contains /etc/mdadm.conf files to sync" $O
     fi
-    exec_on_node ${NODEB} "cat /etc/mdadm.conf"
-    exec_on_node ${NODEB} "sync; csync2 -f /etc/mdadm.conf"
-    exec_on_node ${NODEB} "csync2 -xv"
+    exec_on_node ${RNODE} "cat /etc/mdadm.conf"
+    exec_on_node ${RNODE} "sync; csync2 -f /etc/mdadm.conf"
+    exec_on_node ${RNODE} "csync2 -xv"
 }
 
 format_ocfs2() {
     # need DLM
-    echo "############ START format_ocfs2"
-    exec_on_node ${NODEB} "mkfs.ocfs2 --force --cluster-stack pcmk -L 'VMtesting' --cluster-name hacluster ${MDDEV}"
+    echo $I "############ START format_ocfs2" $O
+    find_resource_running_dlm
+    exec_on_node ${RNODE} "mkfs.ocfs2 --force --cluster-stack pcmk -L 'VMtesting' --cluster-name hacluster ${MDDEV}"
 }
 
 umount_mnttest() {
-    echo "############ START umount_mnttest"
+    echo $I "############ START umount_mnttest" $O
     exec_on_node ${NODEA} "umount ${MNTTEST}"
     exec_on_node ${NODEB} "umount ${MNTTEST}"
 }
 
 monitor_progress() {
-    exec_on_node ${NODEB} "cat /proc/mdstat"
+    echo $I "############ START monitor_progress" $O
+    find_resource_running_dlm
+    exec_on_node ${RNODE} "cat /proc/mdstat"
 }
 
 create_RAID() {
-    echo "############ START create_RAID"
+    echo $I "############ START create_RAID" $O
 #    exec_on_node ${NODEB} "mdadm --create md0 --bitmap=clustered --raid-devices=2 --level=mirror --spare-devices=1 /dev/${CLUSTERMDDEV1} /dev/${CLUSTERMDDEV2} /dev/${CLUSTERMDDEV3} --metadata=1.2"
     # exec_on_node ${NODEB} "yes| mdadm --create md0 --bitmap=clustered \
     echo "mdadm --create md0 --bitmap=clustered --raid-devices=2 --level=mirror --spare-devices=1 /dev/vdd /dev/vde /dev/vdf --metadata=1.2"
-    exec_on_node ${NODEB} "mdadm --create md0 --bitmap=clustered --raid-devices=2 --level=mirror --spare-devices=1 /dev/vdd /dev/vde /dev/vdf --metadata=1.2"
+    find_resource_running_dlm
+    exec_on_node ${RNODE} "mdadm --create md0 --bitmap=clustered --raid-devices=2 --level=mirror --spare-devices=1 /dev/vdd /dev/vde /dev/vdf --metadata=1.2"
     monitor_progress
 }
 
+find_resource_running_dlm() {
+    echo $I "############ START find_resource_running_dlm" $0
+    exec_on_node ${NODENAME}1 "crm_resource -r dlm -W" > /tmp/result
+    # use one line, and remove \r
+    RNODE=`cat /tmp/result | tail -2 | cut -d ':' -f 2 | sed -e "s/\r//" | head -1`
+    echo $I "- found the resource is running on node ${RNODE}" $O
+    export $RNODE
+}
+
 finish_mdadm_conf() {
-    exec_on_node ${NODEB} "mdadm --detail --scan"
-    exec_on_node ${NODEB} "echo 'DEVICE /dev/${CLUSTERMDDEV1} /dev/${CLUSTERMDDEV2} /dev/${CLUSTERMDDEV3}' > /etc/mdadm.conf"
-    exec_on_node ${NODEB} "mdadm --detail --scan >> /etc/mdadm.conf"
+    echo $I "############ START finish_mdadm_conf" $O
+    find_resource_running_dlm
+    exec_on_node ${RNODE} "mdadm --detail --scan"
+    exec_on_node ${RNODE} "echo 'DEVICE /dev/${CLUSTERMDDEV1} /dev/${CLUSTERMDDEV2} /dev/${CLUSTERMDDEV3}' > /etc/mdadm.conf"
+    exec_on_node ${RNODE} "mdadm --detail --scan >> /etc/mdadm.conf"
 }
 
 check_cluster_md() {
-    echo "############ START check_cluster_md"
+    echo $I "############ START check_cluster_md" $O
     #exec_on_node ${NODEA} "mdadm --manage ${MDDEV} --add ${CLUSTERMDDEV1}"
     #exec_on_node ${NODEA} "mdadm --manage ${MDDEV} --add ${CLUSTERMDDEV2}"
     #exec_on_node ${NODEA} "mdadm --manage ${MDDEV} --add ${CLUSTERMDDEV3}"
@@ -128,7 +144,7 @@ check_cluster_md() {
 }
 
 back_to_begining() {
-    echo "############ START back_to_begining"
+    echo $I "############ START back_to_begining" $O
     umount_mnttest
     exec_on_node ${NODEA} "rm -rf ${MNTTEST}"
     exec_on_node ${NODEB} "rm -rf ${MNTTEST}"
@@ -138,7 +154,7 @@ back_to_begining() {
 }
 
 create_dlm_resource() {
-    echo "############ START create_dlm_resource"
+    echo $I "############ START create_dlm_resource" $O
     exec_on_node ${NODEA} "crm configure<<EOF
 primitive dlm ocf:pacemaker:controld op monitor interval='60' timeout='60'
 group base-group dlm
@@ -148,7 +164,7 @@ EOF"
 }
 
 create_raider_primitive() {
-    echo "############ START create_raid1_primitive"
+    echo $I "############ START create_raid1_primitive" $O
     exec_on_node ${NODEA} "crm configure<<EOF
 primitive ${RESOURCEID} Raid1 params raidconf='/etc/mdadm.conf' raiddev=${MDDEV} force_clones=true op monitor timeout=20s interval=10 op start timeout=20s interval=0 op stop timeout=20s interval=0
 modgroup base-group add ${RESOURCEID}
@@ -165,7 +181,7 @@ EOF"
 }
 
 delete_all_resources() {
-    echo "############ START delete_all_resources"
+    echo $I "############ START delete_all_resources" $O
     exec_on_node ${NODEA} "crm resource<<EOF
 cleanup raider
 stop raider
@@ -192,37 +208,37 @@ EOF"
 }
 
 create_3shared_storage() {
-    echo "############ START create_3shared_storage"
+    echo $I "############ START create_3shared_storage" $O
     virsh pool-list --all | grep ${CLUSTERMD} > /dev/null
     if [ $? == "0" ]; then
-        echo "- Destroy current pool ${CLUSTERMD}"
+        echo $W "- Destroy current pool ${CLUSTERMD}" $O
         virsh pool-destroy ${CLUSTERMD}
-        echo "- Undefine current pool ${CLUSTERMD}"
+        echo $W "- Undefine current pool ${CLUSTERMD}" $O
         virsh pool-undefine ${CLUSTERMD}
         #rm -vf ${SBDDISK}
     else
-        echo "- ${CLUSTERMD} pool is not present"
+        echo $W "- ${CLUSTERMD} pool is not present" $O
     fi
-    echo "- Define pool ${CLUSTERMD}"
+    echo $I "- Define pool ${CLUSTERMD}" $O
     mkdir -p ${STORAGEP}/${CLUSTERMD}
     virsh pool-define-as --name ${CLUSTERMD} --type dir --target ${STORAGEP}/${CLUSTERMD}
-    echo "- Start and Autostart the pool"
+    echo $I "- Start and Autostart the pool" $O
     virsh pool-start ${CLUSTERMD}
     virsh pool-autostart ${CLUSTERMD}
 
     # Create 3 VOLUMES disk1 disk2 disk3
     for vol in `seq 1 3` 
     do
-	echo "- Create ${diskname}${vol}.img"
+	echo $I "- Create ${diskname}${vol}.img" $O
 	virsh vol-create-as --pool ${CLUSTERMD} --name ${diskname}${vol}.img --format raw --allocation 1024M --capacity 1024M
     done
 }
 
 delete_3shared_storage() {
-	echo "############ START delete_3shared_storage"
-	echo "- Destroy current pool ${CLUSTERMD}"
+	echo $I "############ START delete_3shared_storage"
+	echo $W "- Destroy current pool ${CLUSTERMD}" $O
 	virsh pool-destroy ${CLUSTERMD}
-	echo "- Undefine current pool ${CLUSTERMD}"
+	echo $W "- Undefine current pool ${CLUSTERMD}" $O
 	virsh pool-undefine ${CLUSTERMD}
 	rm -rv ${STORAGEP}/${CLUSTERMD}
 }
@@ -233,9 +249,10 @@ delete_3shared_storage() {
 ##########################
 ##########################
 
-echo "############ CLUSTER-MD / OSCFS2 SCENARIO #############"
+echo $I "############ CLUSTER-MD / OSCFS2 SCENARIO #############"
 echo "  !! WARNING !! "
 echo "  !! WARNING !! "
+echo "  Running this script will undefine previous scenario" $O
 #echo " NOT USABLE NOW .... please QUIT or debug :)"
 echo
 case $1 in
@@ -318,9 +335,9 @@ raid:		verify available disk for nodes
         	create the RAID device
 	        finish the mdadm configuration
 	        csync2 the configuration
+crmfinish:	create the raider primitive
 format:		format in OCFS2 the /dev/md0 device
 check:		various test on Raid1
-crmfinish:	create the raider primitive
 cleanup:	restore everything to initial statement
 "
 	;;

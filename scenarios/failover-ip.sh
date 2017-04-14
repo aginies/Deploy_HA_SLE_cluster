@@ -42,7 +42,7 @@ standby_node_running_resource() {
     echo $I "############ START standby_node_running_resource" $O
     exec_on_node ${NODENAME}1 "crm_resource -r ${RESOURCEID} -W" > /tmp/result
     # use one line, and remove \r
-    RNODE=`cat /tmp/result | tail -2 | cut -d ':' -f 2 | sed -e "s/\r// | head -1"`
+    RNODE=`cat /tmp/result | tail -2 | cut -d ':' -f 2 | sed -e "s/\r//" | head -1`
     echo $I "- Standby ${RNODE} from node ${NODENAME}1" $O
     exec_on_node ${NODENAME}1 "crm node standby ${RNODE}"
 }
