@@ -61,7 +61,7 @@ cluster_md_csync2() {
     find_resource_running_dlm
     exec_on_node ${RNODE} "perl -pi -e 's|usage-count.*|usage-count no;|' /etc/drbd.d/global_common.conf"
     exec_on_node ${RNODE} "grep /etc/mdadm.conf /etc/csync2/csync2.cfg"
-    if [ $? -eq 1 ]; then
+    if [ $? -ne 0 ]; then
     	exec_on_node ${RNODE} "perl -pi -e 's|}|\tinclude /etc/mdadm.conf;}|' /etc/csync2/csync2.cfg"
     else
         echo $W "- /etc/csync2/csync2.cfg already contains /etc/mdadm.conf files to sync" $O
@@ -282,6 +282,8 @@ case $1 in
 	check_cluster_md_resource
 	create_RAID
 	finish_mdadm_conf
+	;;
+    csync2)
 	cluster_md_csync2
 	;;
     crmfinish)
@@ -316,6 +318,7 @@ case $1 in
 	$0 attach
 	$0 crm
 	$0 raid
+	$0 csync2
 	$0 crmfinish
 	$0 format
 	$0 check
@@ -334,7 +337,7 @@ crm:		create a CIB cluster_md_ocfs2
 raid:		verify available disk for nodes 
         	create the RAID device
 	        finish the mdadm configuration
-	        csync2 the configuration
+csync2:	        csync2 the configuration
 crmfinish:	create the raider primitive
 format:		format in OCFS2 the /dev/md0 device
 check:		various test on Raid1
