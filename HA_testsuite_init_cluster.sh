@@ -39,7 +39,7 @@ check_cluster_status() {
     echo "############ START check_cluster_status"
     if [ "$1" != "force" ]; then
 	exec_on_node ${NODENAME}1 "systemctl -q is-active corosync.service"
-	if [ $? -eq 0 ]; then
+	if [ "$?" -ne "0" ]; then
             echo
             echo "! Cluster is active, need to stop it and reboot !"
             echo " This can not been done automatically"

@@ -59,7 +59,7 @@ restore_node_in_maintenance() {
 
 online_rnode() {
     echo $I "############ START online_rnode" $O
-    RNODE=`cat /tmp/result | tail -2 | cut -d ':' -f 2 | sed -e "s/\r// | head -1"`
+    RNODE=`cat /tmp/result | tail -2 | cut -d ':' -f 2 | sed -e "s/\r//" | head -1`
     echo $I "- Restore online ${RNODE}" $O
     exec_on_node ${NODENAME}1 "crm node online ${RNODE}"
 }
