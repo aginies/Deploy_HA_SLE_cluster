@@ -32,19 +32,25 @@ exec_on_node() {
     # first arg is NODE name, second arg is command
     if [ $# -lt 2 ]
     then
-	echo $F "! Two args needed (NODE CMD); Exiting" $O
+	echo $F "! Two args needed (NODE / CMD / OPTIONNAL_IGNORE); Exiting" $O
         exit 1
     fi
     NODE="$1"
     CMD="$2"
+    IGNORE="$3"
     # avoid: No pseudo-tty detected! Use -t option to ssh if calling remotely
     echo "${NODE}: ssh -T -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no ${NODE} \"${CMD}\"";
     ssh -q -T -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no ${NODE} "${CMD}"
     if [ "$?" -eq 0 ]
-	then
+    then
 	echo $S "- ssh command sucessful" $O
     else
-	echo $F "- ! Return of the ssh command is not 0" $O
+	if [ "${IGNORE}" == "" ]
+	then
+	    echo $F "- ! Return of the ssh command is not 0" $O
+	    echo $F "-  # PRESS [ENTER] TO CONTINUE # " $O
+	    read
+	fi
     fi
 }
 

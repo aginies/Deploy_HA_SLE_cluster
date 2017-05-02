@@ -66,12 +66,12 @@ online_rnode() {
 
 delete_cib_resource() {
     echo $I "############ START delete_cib_resource" $O
-    exec_on_node ${NODENAME}1 "crm cib list | grep ${CIBNAME}"
+    exec_on_node ${NODENAME}1 "crm cib list | grep ${CIBNAME}" IGNORE
     if [ $? -eq 0 ]; then
 	echo $W "- Deleting cib and resource ${RESOURCEID}" $O
 	exec_on_node ${NODENAME}1 "crm<<EOF
 resource stop ${RESOURCEID}
-EOF"
+EOF" IGNORE
 	echo $W "- Wait stop/clear/delete resource (10s)" $O
        sleep 10
        exec_on_node ${NODENAME}1 "crm<<EOF
@@ -81,7 +81,7 @@ cib delete ${CIBNAME}
 verify
 configure commit
 exit
-EOF"
+EOF" IGNORE
     else
 	echo $F "- cib ${CIBNAME} doesnt exist " $O
     fi

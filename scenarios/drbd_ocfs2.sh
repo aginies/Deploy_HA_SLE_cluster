@@ -70,7 +70,7 @@ drbdconf_csync2() {
     if [ $? -eq 1 ]; then
     	exec_on_node ${NODEA} "perl -pi -e 's|}|\tinclude /etc/drbd.conf;\n\tinclude /etc/drbd.d;\n}|' /etc/csync2/csync2.cfg"
     else
-        echo $F "- /etc/csync2/csync2.cfg already contains drbd files to sync" $O
+        echo $W "- /etc/csync2/csync2.cfg already contains drbd files to sync" $O
     fi
     exec_on_node ${NODEA} "csync2 -xv"
 }
@@ -101,8 +101,8 @@ format_ocfs2() {
 
 umount_mnttest() {
     echo $I "############ START umount_mnttest" $O
-    exec_on_node ${NODEA} "umount ${MNTTEST}"
-    exec_on_node ${NODEB} "umount ${MNTTEST}"
+    exec_on_node ${NODEA} "umount ${MNTTEST}" IGNORE
+    exec_on_node ${NODEB} "umount ${MNTTEST}" IGNORE
 }
 
 check_primary_secondary() {
@@ -155,7 +155,7 @@ back_to_begining() {
     exec_on_node ${NODEB} "drbdadm secondary drbdo2"
     exec_on_node ${NODEA} "drbdadm down drbdo2"
     exec_on_node ${NODEB} "drbdadm down drbdo2"
-    exec_on_node ${NODEA} "drbdadm disconnect drbdo2"
+    exec_on_node ${NODEA} "drbdadm disconnect drbdo2" IGNORE
     exec_on_node ${NODEA} "rm -vf /etc/drbd.d/drbdo2.res"
     exec_on_node ${NODEA} "csync2 -xv"
 }
