@@ -1,0 +1,33 @@
+node 1084755045: ha1 \
+	attributes maintenance=off
+node 1084755046: ha2
+node 1084755047: ha3
+primitive dlm ocf:pacemaker:controld \
+	op start interval=0 timeout=90 \
+	op start interval=0 timeout=90 \
+	op monitor interval=60 timeout=60
+primitive raider Raid1 \
+	params raidconf="/etc/mdadm.conf" raiddev="/dev/md0" force_clones=true \
+	op monitor timeout=20s interval=10 \
+	op start timeout=20s interval=0 \
+	op stop timeout=20s interval=0
+primitive stonith-sbd stonith:external/sbd \
+	params pcmk_delay_max=30s \
+	meta target-role=Started
+group base-group dlm raider
+clone base-clone base-group \
+	meta interleave=true target-role=Started
+property cib-bootstrap-options: \
+	have-watchdog=true \
+	dc-version=1.1.16-2.3-77ea74d \
+	cluster-infrastructure=corosync \
+	cluster-name=hacluster \
+	stonith-enabled=true \
+	placement-strategy=balanced \
+	last-lrm-refresh=1491385995
+rsc_defaults rsc-options: \
+	resource-stickiness=1 \
+	migration-threshold=3
+op_defaults op-options: \
+	timeout=600 \
+	record-pending=true
