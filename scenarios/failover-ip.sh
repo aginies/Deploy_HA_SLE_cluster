@@ -48,13 +48,23 @@ standby_node_running_resource() {
 }
 
 put_node_maintenance() {
+    if [ $# -lt 1 ];then
+	echo "! 1 arg needed (NODE); Exiting"
+        exit 1
+    fi
+    NODETOM=$1
     echo $I "############ START put_node_maintenance" $O
-    exec_on_node ${NODENAME}1 "crm node maintenance ${NODENAME}2"
+    exec_on_node ${NODENAME}1 "crm node maintenance ${NODETOM}"
 }
 
 restore_node_in_maintenance() {
+    if [ $# -lt 1 ];then
+	echo "! 1 arg needed (NODE); Exiting"
+        exit 1
+    fi
+    NODETOM=$1
     echo $I "############ START restore_node_in_maintenance" $O
-    exec_on_node ${NODENAME}1 "crm node ready ${NODENAME}2"
+    exec_on_node ${NODENAME}1 "crm node ready ${NODETOM}"
 }
 
 online_rnode() {
@@ -72,8 +82,8 @@ delete_cib_resource() {
 	exec_on_node ${NODENAME}1 "crm<<EOF
 resource stop ${RESOURCEID}
 EOF" IGNORE
-	echo $W "- Wait stop/clear/delete resource (10s)" $O
-       sleep 10
+	echo $W "- Wait stop/clear/delete resource (5s)" $O
+       sleep 5
        exec_on_node ${NODENAME}1 "crm<<EOF
 resource clear ${RESOURCEID}
 configure delete ${RESOURCEID}
@@ -123,10 +133,16 @@ delete_cib_resource
 failover_ip_cib
 check_failoverip_resource
 ping_virtual_ip
-standby_node_running_resource
-put_node_maintenance
-check_failoverip_resource
-ping_virtual_ip
-online_rnode
-restore_node_in_maintenance
+
+for nb in `seq 1 20`
+do
+    RDOM=`grep -m1 -ao '[1-3]' /dev/urandom | head -n1`
+    standby_node_running_resource
+    put_node_maintenance ${NODENAME}${RDOM}
+    check_failoverip_resource
+    ping_virtual_ip
+    online_rnode
+    restore_node_in_maintenance ${NODENAME}${RDOM}
+done
+
 delete_cib_resource ${NODEA} ${CIBNAME} ${RESOURCEID}
