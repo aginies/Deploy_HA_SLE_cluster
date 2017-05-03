@@ -14,7 +14,7 @@ fi
 check_load_config_file
 
 # global VAR
-LIBVIRTPOOL="hapool"
+LIBVIRTPOOL="nodes_images"
 DISKHAVM="${STORAGEP}/havm_xml.raw"
 EXTRAARGS="autoyast=device://vdc/havm.xml"
 
@@ -38,18 +38,18 @@ cleanup_vm() {
     read
     for nb in `seq 1 3`
     do 
-    NAME="${HANAME}${nb}"
-    virsh list --all | grep ${NAME} > /dev/null
-    if [ $? == "0" ]; then
-    	echo "- Destroy current VM: ${NAME}"
-    	virsh destroy ${NAME}
-    	echo "- Undefine current VM: ${NAME}"
-    	virsh undefine ${NAME}
-    else
-        echo "- ${NAME} is not present"
-    fi
-    echo "- Remove previous image file for VM ${NAME} (${NAME}.qcow2)"
-    rm -rvf ${STORAGEP}/${LIBVIRTPOOL}/${NAME}.qcow2
+	NAME="${HANAME}${nb}"
+	virsh list --all | grep ${NAME} > /dev/null
+	if [ $? == "0" ]; then
+    	    echo "- Destroy current VM: ${NAME}"
+    	    virsh destroy ${NAME}
+    	    echo "- Undefine current VM: ${NAME}"
+    	    virsh undefine ${NAME}
+	else
+            echo "- ${NAME} is not present"
+	fi
+	echo "- Remove previous image file for VM ${NAME} (${NAME}.qcow2)"
+	rm -rvf ${STORAGEP}/${LIBVIRTPOOL}/${NAME}.qcow2
     done
 }
 
