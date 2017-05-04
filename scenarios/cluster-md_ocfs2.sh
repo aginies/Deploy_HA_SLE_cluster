@@ -60,7 +60,7 @@ cluster_md_csync2() {
     echo $I "- Corosync2 /etc/mdadm.conf" $O
     find_resource_running_dlm
     exec_on_node ${RNODE} "perl -pi -e 's|usage-count.*|usage-count no;|' /etc/drbd.d/global_common.conf"
-    exec_on_node ${RNODE} "grep /etc/mdadm.conf /etc/csync2/csync2.cfg"
+    exec_on_node ${RNODE} "grep /etc/mdadm.conf /etc/csync2/csync2.cfg" IGNORE
     if [ $? -ne 0 ]; then
     	exec_on_node ${RNODE} "perl -pi -e 's|}|\tinclude /etc/mdadm.conf;}|' /etc/csync2/csync2.cfg"
     else
@@ -80,8 +80,8 @@ format_ocfs2() {
 
 umount_mnttest() {
     echo $I "############ START umount_mnttest" $O
-    exec_on_node ${NODEA} "umount ${MNTTEST}"
-    exec_on_node ${NODEB} "umount ${MNTTEST}"
+    exec_on_node ${NODEA} "umount ${MNTTEST}" IGNORE
+    exec_on_node ${NODEB} "umount ${MNTTEST}" IGNORE
 }
 
 monitor_progress() {
