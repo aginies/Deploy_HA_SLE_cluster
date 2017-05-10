@@ -219,22 +219,27 @@
 </software>
  <host>
     <hosts config:type="list">
-      <hosts_entry>
+       <hosts_entry>
+	  <host_address>127.0.0.1</host_address>
+        <names config:type="list">
+         <name>localhost</name>
+       </hosts_entry>
+       <hosts_entry>
           <host_address>NETWORK.101</host_address>
         <names config:type="list">
-          <name>NODENAME1.NODEDOMAIN NODENAME1</name>
+          <name>NODENAME1.NODEDOMAIN NODENAME1 FHN1</name>
         </names>
       </hosts_entry>
       <hosts_entry>
         <host_address>NETWORK.102</host_address>
         <names config:type="list">
-          <name>NODENAME2.NODEDOMAIN NODENAME2</name>
+          <name>NODENAME2.NODEDOMAIN NODENAME2 FHN2 </name>
         </names>
       </hosts_entry>
       <hosts_entry>
         <host_address>NETWORK.103</host_address>
         <names config:type="list">
-          <name>NODENAME3.NODEDOMAIN NODENAME3</name>
+          <name>NODENAME3.NODEDOMAIN NODENAME3 FHN3</name>
         </names>
       </hosts_entry>
     </hosts>

@@ -142,9 +142,11 @@ prepare_auto_deploy_image() {
     perl -pi -e "s/NETWORK/${NETWORK}/g" ${WDIR2}/havm.xml
     perl -pi -e "s/NODEDOMAIN/${NODEDOMAIN}/g" ${WDIR2}/havm.xml
     perl -pi -e "s/NODENAME/${NODENAME}/g" ${WDIR2}/havm.xml
+    perl -pi -e "s/FHN/${DISTRO}${NODENAME}/g" ${WDIR2}/havm.xml
     perl -pi -e "s/NETWORK/${NETWORK}/g" ${WDIR2}/havm_mini.xml
     perl -pi -e "s/NODEDOMAIN/${NODEDOMAIN}/g" ${WDIR2}/havm_mini.xml
     perl -pi -e "s/NODENAME/${NODENAME}/g" ${WDIR2}/havm_mini.xml
+    perl -pi -e "s/FHN/${DISTRO}${NODENAME}/g" ${WDIR2}/havm_mini.xml
     qemu-img create havm_xml.raw -f raw 2M
     mkfs.ext3 havm_xml.raw
     mount havm_xml.raw ${WDIRMOUNT}
