@@ -219,6 +219,7 @@
 	  <host_address>127.0.0.1</host_address>
         <names config:type="list">
          <name>localhost</name>
+        </names>
        </hosts_entry>
       <hosts_entry>
         <host_address>NETWORK.101</host_address>
