@@ -64,7 +64,6 @@ start_drbd() {
 check_primary_secondary() {
     echo $I "############ START check_primary_secondary"
     if [ $# -lt 1 ];then echo "! 1 arg needed: DRBD_NAME; Exiting" ; exit 1; fi
-    DRBD_NAME="$0"
     echo "- Create ${MNTTEST} directory" $O
     exec_on_node ${NODEA} "mkdir ${MNTTEST}"
     exec_on_node ${NODEB} "mkdir ${MNTTEST}"
