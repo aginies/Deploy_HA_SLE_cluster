@@ -24,6 +24,7 @@ check_load_config_file other
 # SOME VARS
 NODEA="${DISTRO}${NODENAME}1"
 NODEB="${DISTRO}${NODENAME}2"
+NODEC="${DISTRO}${NODENAME}3"
 CIBNAME="cluster_md_ocfs2"
 RESOURCEID="raider"
 CLUSTERMD="CLUSTERMD"
