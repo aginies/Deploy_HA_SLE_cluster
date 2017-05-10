@@ -14,19 +14,20 @@ else
 fi
 
 # SOME VARS
+DRBD_NAME="drbd"
 CIBNAME="drbd_ext3"
 DRBDRESOURCE="${NODENAME}2"
 TARGETVD="vdd"
 
 create_drbd_resource() {
     echo $I "############ START create_drbd_resource"
-    echo "- Create /etc/drbd.d/drbd.res file" $O
+    echo "- Create /etc/drbd.d/${DRBD_NAME}.res file" $O
     check_targetvd_on_node ${NODEA} vdd e > /tmp/check_targetvd_on_node_${NODEA}
     export REALTARGETVDA=`cat /tmp/check_targetvd_on_node_${NODEA} | tail -2 | awk -F "/dev/" '{print $2}'`
     check_targetvd_on_node ${NODEB} vdd e > /tmp/check_targetvd_on_node_${NODEB}
     export REALTARGETVDB=`cat /tmp/check_targetvd_on_node_${NODEB} | tail -2 | awk -F "/dev/" '{print $2}'`
-    exec_on_node ${NODEA} "cat >/etc/drbd.d/drbd.res<<EOF
-resource drbd {
+    exec_on_node ${NODEA} "cat >/etc/drbd.d/${DRBD_NAME}.res<<EOF
+resource ${DRBD_NAME} {
     device ${DRBDDEV};
     meta-disk internal;
     on ${NODEA} {
@@ -40,40 +41,9 @@ resource drbd {
 EOF"
 }
 
-finalize_DRBD_setup() {
-    echo $I "############ START finalize_DRBD_setup"
-    echo "- Initializes the metadata storage" $O
-    exec_on_node ${NODEA} "yes yes | drbdadm create-md drbd"
-    exec_on_node ${NODEB} "yes yes | drbdadm create-md drbd"
-    echo $I "- Create the /dev/drbd" $O
-    exec_on_node ${NODEA} "drbdadm up drbd"
-    exec_on_node ${NODEB} "drbdadm up drbd"
-    #echo "- Create a new UUID to shorten the initial resynchronization of the DRBD resource"
-    #exec_on_node ${NODEA} "drbdadm new-current-uuid drbd/0"
-    echo $I "- Make ${NODEA} primary" $O
-    exec_on_node ${NODEA} "drbdadm primary --force drbd"
-    echo $I "- Check the DRBD status" $O
-    exec_on_node ${NODEA} "cat /proc/drbd"
-    #echo "- Start the resynchronization process on your intended primary node"
-    #exec_on_node ${NODEA} "drbdadm -- --overwrite-data-of-peer primary drbd"
-}
-
 format_ext3() {
     echo $I "############ START format_ext3" $O
     exec_on_node ${NODEA} "mkfs.ext3 -F ${DRBDDEV}"
-}
-
-back_to_begining() {
-    echo $I "############ START back_to_begining" $O
-    umount_mnttest
-    exec_on_node ${NODEA} "rm -rf ${MNTTEST}"
-    exec_on_node ${NODEB} "rm -rf ${MNTTEST}"
-    exec_on_node ${NODEB} "drbdadm secondary drbd"
-    exec_on_node ${NODEA} "drbdadm down drbd"
-    exec_on_node ${NODEB} "drbdadm down drbd"
-    exec_on_node ${NODEA} "drbdadm disconnect drbd" IGNORE
-    exec_on_node ${NODEA} "rm -vf /etc/drbd.d/drbd.res"
-    exec_on_node ${NODEA} "csync2 -xv"
 }
 
 ##########################
@@ -102,12 +72,13 @@ attach_disk_to_node ${NODEA} DRBD DRBD${NODEA} ${TARGETVD} qcow2
 attach_disk_to_node ${NODEB} DRBD DRBD${NODEB} ${TARGETVD} qcow2
 create_drbd_resource
 drbdconf_csync2
-finalize_DRBD_setup
+
+finalize_DRBD_setup ${DRBD_NAME}
 format_ext3
-check_primary_secondary
+check_primary_secondary ${DRBD_NAME}
 
 # restore before runnning the test
-back_to_begining
+back_to_begining ${DRBD_NAME}
 stop_drbd
 disable_drbd
 

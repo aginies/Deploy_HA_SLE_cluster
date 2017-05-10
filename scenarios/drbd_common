@@ -63,6 +63,8 @@ start_drbd() {
 
 check_primary_secondary() {
     echo $I "############ START check_primary_secondary"
+    if [ $# -lt 1 ];then echo "! 1 arg needed: DRBD_NAME; Exiting" ; exit 1; fi
+    DRBD_NAME="$0"
     echo "- Create ${MNTTEST} directory" $O
     exec_on_node ${NODEA} "mkdir ${MNTTEST}"
     exec_on_node ${NODEB} "mkdir ${MNTTEST}"
@@ -74,7 +76,7 @@ check_primary_secondary() {
     exec_on_node ${NODEA} "dd if=/dev/random of=${MNTTEST}/random count=20240"
     exec_on_node ${NODEA} "s${NODENAME}1sum  ${MNTTEST}/testing ${MNTTEST}/random > ${MNTTEST}/sha1sum"
     exec_on_node ${NODEA} "drbdadm status"
-    exec_on_node ${NODEA} "drbdadm dstate drbdo2"
+    exec_on_node ${NODEA} "drbdadm dstate ${DRBD_NAME}"
     echo $I "- Wait to get drbd sync" $O
     start=`date +%s`
     exec_on_node ${NODEA} "while (drbdadm status | grep Inconsistent); do sleep 5s; done"
@@ -84,8 +86,8 @@ check_primary_secondary() {
     exec_on_node ${NODEA} "drbdadm status"
     exec_on_node ${NODEA} "umount ${MNTTEST}"
     echo $I "- Switch ${NODEA} to secondary" $O
-    exec_on_node ${NODEA} "drbdadm secondary drbdo2"
-    exec_on_node ${NODEB} "drbdadm primary drbdo2"
+    exec_on_node ${NODEA} "drbdadm secondary ${DRBD_NAME}"
+    exec_on_node ${NODEB} "drbdadm primary ${DRBD_NAME}"
     exec_on_node ${NODEB} "mount /dev/drbd0 ${MNTTEST}"
     exec_on_node ${NODEB} "cat ${MNTTEST}/s${NODENAME}1sum"
     exec_on_node ${NODEB} "s${NODENAME}1sum ${MNTTEST}/testing ${MNTTEST}/random > /mnt/testing_from_${NODEB}"
@@ -96,14 +98,14 @@ check_primary_secondary() {
         echo $S "- Same S${NODENAME}1 from ${NODEA} and ${NODEB}: TEST OK" $O
     fi
     echo $I "- Test pause/resume sync " $O
-    exec_on_node ${NODEB} "drbdadm pause-sync drbdo2"
+    exec_on_node ${NODEB} "drbdadm pause-sync ${DRBD_NAME}"
     exec_on_node ${NODEB} "dd if=/dev/zero of=${MNTTEST}/testing2 bs=1M count=24"
     exec_on_node ${NODEA} "touch ${MNTTEST}/bspl{0001..10001}.c"
     #exec_on_node ${NODEA} "ls ${MNTTEST}/*.c"
     exec_on_node ${NODEB} "chmod -R 777 ${MNTTEST}/"
     exec_on_node ${NODEA} "chmod -R 775 ${MNTTEST}/"
     exec_on_node ${NODEB} "drbdadm status"
-    exec_on_node ${NODEB} "drbdadm resume-sync drbdo2"
+    exec_on_node ${NODEB} "drbdadm resume-sync ${DRBD_NAME}"
     exec_on_node ${NODEB} "drbdadm status"
 }
 
@@ -126,3 +128,35 @@ drbdconf_csync2() {
     exec_on_node ${NODEA} "csync2 -xv"
 }
 
+finalize_DRBD_setup() {
+    echo $I "############ START finalize_DRBD_setup"
+    if [ $# -lt 1 ];then echo "! 1 arg needed: DRBD_NAME; Exiting" ; exit 1; fi
+    echo "- Initializes the metadata storage" $O
+    exec_on_node ${NODEA} "yes yes | drbdadm create-md ${DRBD_NAME}"
+    exec_on_node ${NODEB} "yes yes | drbdadm create-md ${DRBD_NAME}"
+    echo $I "- Create the /dev/drbd" $O
+    exec_on_node ${NODEA} "drbdadm up ${DRBD_NAME}"
+    exec_on_node ${NODEB} "drbdadm up ${DRBD_NAME}"
+#    echo "- Create a new UUID to shorten the initial resynchronization of the DRBD resource"
+    exec_on_node ${NODEA} "drbdadm new-current-uuid ${DRBD_NAME}/0"
+    echo $I "- Make ${NODEA} primary" $O
+    exec_on_node ${NODEA} "drbdadm primary --force ${DRBD_NAME}"
+    echo $I "- Check the DRBD status" $O
+    exec_on_node ${NODEA} "cat /proc/drbd"
+    #echo "- Start the resynchronization process on your intended primary node"
+    #exec_on_node ${NODEA} "drbdadm -- --overwrite-data-of-peer primary ${DRBD_NAME}"
+}
+
+back_to_begining() {
+    echo $I "############ START back_to_begining" $O
+    if [ $# -lt 1 ];then echo "! 1 arg needed: DRBD_NAME; Exiting" ; exit 1; fi
+    umount_mnttest
+    exec_on_node ${NODEA} "rm -rf ${MNTTEST}"
+    exec_on_node ${NODEB} "rm -rf ${MNTTEST}"
+    exec_on_node ${NODEB} "drbdadm secondary ${DRBD_NAME}"
+    exec_on_node ${NODEA} "drbdadm down ${DRBD_NAME}"
+    exec_on_node ${NODEB} "drbdadm down ${DRBD_NAME}"
+    exec_on_node ${NODEA} "drbdadm disconnect ${DRBD_NAME}" IGNORE
+    exec_on_node ${NODEA} "rm -vf /etc/drbd.d/${DRBD_NAME}.res"
+    exec_on_node ${NODEA} "csync2 -xv"
+}

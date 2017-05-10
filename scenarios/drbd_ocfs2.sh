@@ -14,6 +14,7 @@ else
 fi
 
 # SOME VARS
+DRBD_NAME="drbdo2"
 CIBNAME="drbd_ocfs2"
 DRBDRESOURCE="${NODENAME}2"
 TARGETVD="vdd"
@@ -31,13 +32,13 @@ EOF"
 
 create_drbd_resource() {
     echo $I "############ START create_drbd_resource"
-    echo "- Create /etc/drbd.d/drbdo2.res file" $O
+    echo "- Create /etc/drbd.d/${DRBD_NAME}.res file" $O
     check_targetvd_on_node ${NODEA} vdd d > /tmp/check_targetvd_on_node_${NODEA}
     export REALTARGETVDA=`cat /tmp/check_targetvd_on_node_${NODEA} | tail -2 | awk -F "/dev/" '{print $2}'`
     check_targetvd_on_node ${NODEB} vdd d > /tmp/check_targetvd_on_node_${NODEB}
     export REALTARGETVDB=`cat /tmp/check_targetvd_on_node_${NODEB} | tail -2 | awk -F "/dev/" '{print $2}'`
-    exec_on_node ${NODEA} "cat >/etc/drbd.d/drbdo2.res<<EOF
-resource drbdo2 {
+    exec_on_node ${NODEA} "cat >/etc/drbd.d/${DRBD_NAME}.res<<EOF
+resource ${DRBD_NAME} {
   startup {
     become-primary-on both;
   }
@@ -62,41 +63,11 @@ resource drbdo2 {
 EOF"
 }
 
-finalize_DRBD_setup() {
-    echo $I "############ START finalize_DRBD_setup"
-    echo "- Initializes the metadata storage" $O
-    exec_on_node ${NODEA} "yes yes | drbdadm create-md drbdo2"
-    exec_on_node ${NODEB} "yes yes | drbdadm create-md drbdo2"
-    echo $I "- Create the /dev/drbd" $O
-    exec_on_node ${NODEA} "drbdadm up drbdo2"
-    exec_on_node ${NODEB} "drbdadm up drbdo2"
-#    echo "- Create a new UUID to shorten the initial resynchronization of the DRBD resource"
-    exec_on_node ${NODEA} "drbdadm new-current-uuid drbdo2/0"
-    echo $I "- Make ${NODEA} primary" $O
-    exec_on_node ${NODEA} "drbdadm primary --force drbdo2"
-    echo $I "- Check the DRBD status" $O
-    exec_on_node ${NODEA} "cat /proc/drbd"
-    #echo "- Start the resynchronization process on your intended primary node"
-    #exec_on_node ${NODEA} "drbdadm -- --overwrite-data-of-peer primary drbdo2"
-}
 
 format_ocfs2() {
     # need DLM
     echo $I "############ START format_ocfs2" $O
     exec_on_node ${NODEA} "mkfs.ocfs2 --force --cluster-stack pcmk -L 'VMtesting' --cluster-name hacluster ${DRBDDEV}"
-}
-
-back_to_begining() {
-    echo $I "############ START back_to_begining" $O
-    umount_mnttest
-    exec_on_node ${NODEA} "rm -rf ${MNTTEST}"
-    exec_on_node ${NODEB} "rm -rf ${MNTTEST}"
-    exec_on_node ${NODEB} "drbdadm secondary drbdo2"
-    exec_on_node ${NODEA} "drbdadm down drbdo2"
-    exec_on_node ${NODEB} "drbdadm down drbdo2"
-    exec_on_node ${NODEA} "drbdadm disconnect drbdo2" IGNORE
-    exec_on_node ${NODEA} "rm -vf /etc/drbd.d/drbdo2.res"
-    exec_on_node ${NODEA} "csync2 -xv"
 }
 
 create_dlm_resource() {
@@ -162,14 +133,13 @@ attach_disk_to_node ${NODEB} DRBD DRBD${NODEB} ${TARGETVD} qcow2
 create_drbd_resource
 create_dlm_resource
 drbdconf_csync2
-#start_drbd
-finalize_DRBD_setup
-format_ocfs2
 
-check_primary_secondary
+finalize_DRBD_setup ${DRBD_NAME}
+format_ocfs2
+check_primary_secondary ${DRBD_NAME}
 
 # restore before runnning the test
-back_to_begining
+back_to_begining ${DRBD_NAME}
 stop_drbd
 disable_drbd
 
