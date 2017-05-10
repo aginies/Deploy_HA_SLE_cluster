@@ -64,7 +64,7 @@ check_cluster_status() {
 # Init the cluster on node ${NODENAME}1
 init_ha_cluster() {
     echo "############ START init the cluster"
-    echo "- run ha-cluster-init on node ${NODENAME}1"
+    echo "- run ha-cluster-init on node ${DISTRO}${NODENAME}1"
     exec_on_node ${NODENAME}1 "ha-cluster-init -s /dev/vdb -y"
 }
 
@@ -86,11 +86,11 @@ add_remove_node_test() {
     echo "- Add Node ${NODENAME}2 ${NODENAME}3 to cluster"
     exec_on_node ${NODENAME}2 "ha-cluster-join -y -c ${NETWORK}.101"
     exec_on_node ${NODENAME}3 "ha-cluster-join -y -c ${NETWORK}.101"
-    echo "############ START remove node ${NODENAME}3 from cluster"
+    echo "############ START remove node ${DISTRO}${NODENAME}3 from cluster"
     echo "- Remove ${NODENAME}3 from cluster (from node ${NODENAME}1)"
-    exec_on_node ${NODENAME}1 "ha-cluster-remove -c ${NETWORK}.103"
+    exec_on_node ${NODENAME}1 "ha-cluster-remove -c ${DISTRO}${NETWORK}.103"
     crm_status
-    echo "############ START re-add node ${NODENAME}3 to cluster"
+    echo "############ START re-add node ${DISTRO}${NODENAME}3 to cluster"
     echo "- Add ${NODENAME}3 back to cluster"
     exec_on_node ${NODENAME}3 "ha-cluster-join -y -c ${NETWORK}.101"
     crm_status
@@ -100,10 +100,10 @@ add_remove_node_test() {
 sbd_test() {
     echo "############ START test SBD on ${NODENAME}1 (from ${NODENAME}2), reset ${NODENAME}3"
     echo "- Send a test message from ${NODENAME}2 to ${NODENAME}1"
-    exec_on_node ${NODENAME}2 "sbd -d /dev/vdb message ${NODENAME}1 test"
+    exec_on_node ${NODENAME}2 "sbd -d /dev/vdb message ${DISTRO}${NODENAME}1 test"
     exec_on_node ${NODENAME}1 "journalctl -u sbd --lines 10"
     echo "- Reset node ${NODENAME}3 from node ${NODENAME}1"
-    exec_on_node ${NODENAME}1 "sbd -d /dev/vdb message ${NODENAME}3 reset"
+    exec_on_node ${NODENAME}1 "sbd -d /dev/vdb message ${DISTRO}${NODENAME}3 reset"
     echo "- Waiting node back (30s) ...."
     sleep 30
 }
@@ -140,10 +140,10 @@ ocf_check() {
 maintenance_mode_check() {
     echo "############ START try Maintenance on node ${NODENAME}1"
     echo "- Switch ${NODENAME}1 in maintenance mode"
-    exec_on_node ${NODENAME}2 "crm node maintenance ${NODENAME}1"
+    exec_on_node ${NODENAME}2 "crm node maintenance ${DISTRO}${NODENAME}1"
     crm_status
     echo "- Switch ${NODENAME}1 in ready mode"
-    exec_on_node ${NODENAME}2 "crm node ready ${NODENAME}1"
+    exec_on_node ${NODENAME}2 "crm node ready ${DISTRO}${NODENAME}1"
     crm_status
 }
 
