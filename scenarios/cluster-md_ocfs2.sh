@@ -22,6 +22,8 @@ fi
 check_load_config_file other
 
 # SOME VARS
+NODEA="${DISTRO}${NODENAME}1"
+NODEB="${DISTRO}${NODENAME}2"
 CIBNAME="cluster_md_ocfs2"
 RESOURCEID="raider"
 CLUSTERMD="CLUSTERMD"
@@ -44,6 +46,7 @@ EOF"
 
 install_packages_cluster_md() {
     echo $I "############ START install_packages_cluster" $O
+    echo $I "- Installing cluster-md-kmp-default mdadm on all nodes" $O
     pssh -h ${PSSHCONF} "zypper in -y cluster-md-kmp-default mdadm"
 }
 
