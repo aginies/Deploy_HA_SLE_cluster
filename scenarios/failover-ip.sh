@@ -138,11 +138,11 @@ for nb in `seq 1 20`
 do
     RDOM=`grep -m1 -ao '[1-3]' /dev/urandom | head -n1`
     standby_node_running_resource
-    put_node_maintenance ${NODENAME}${RDOM}
+    put_node_maintenance ${DISTRO}${NODENAME}${RDOM}
     check_failoverip_resource
     ping_virtual_ip
     online_rnode
-    restore_node_in_maintenance ${NODENAME}${RDOM}
+    restore_node_in_maintenance ${DISTRO}${NODENAME}${RDOM}
 done
 
 delete_cib_resource ${NODEA} ${CIBNAME} ${RESOURCEID}
