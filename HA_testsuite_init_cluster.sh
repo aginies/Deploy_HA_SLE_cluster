@@ -76,8 +76,8 @@ copy_ssh_key_on_nodes() {
     scp_on_node "/tmp/id_rsa*" "${NODENAME}2:/root/.ssh/"
     scp_on_node "/tmp/id_rsa*" "${NODENAME}3:/root/.ssh/"
     rm -vf /tmp/id_rsa*
-    exec_on_node ${NODENAME}2 "grep 'Cluster Internal' /root/.ssh/authorized_keys || cat /tmp/id_rsa.pub >> /root/.ssh/authorized_keys"
-    exec_on_node ${NODENAME}3 "grep 'Cluster Internal' /root/.ssh/authorized_keys || cat /tmp/id_rsa.pub >> /root/.ssh/authorized_keys"
+    exec_on_node ${NODENAME}2 "grep 'Cluster Internal' /root/.ssh/authorized_keys || cat /root/.ssh/id_rsa.pub >> /root/.ssh/authorized_keys"
+    exec_on_node ${NODENAME}3 "grep 'Cluster Internal' /root/.ssh/authorized_keys || cat /root/.ssh/id_rsa.pub >> /root/.ssh/authorized_keys"
 }
 
 # ADD all other NODES (from HOST)
