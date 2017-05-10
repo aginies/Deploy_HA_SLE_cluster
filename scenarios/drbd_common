@@ -24,8 +24,8 @@ check_load_config_file other
 # SOME VARS
 DRBDDEV="/dev/drbd0"
 # by default DRBD
-NODEA="${NODENAME}1"
-NODEB="${NODENAME}2"
+NODEA="${DISTRO}${NODENAME}1"
+NODEB="${DISTRO}${NODENAME}2"
 MNTTEST="/mnt/test"
 
 install_packages_drbd() {
