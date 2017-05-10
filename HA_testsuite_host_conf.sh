@@ -62,9 +62,9 @@ prepare_etc_hosts() {
     if [ $? == "1" ]; then
         echo "- Prepare /etc/hosts (adding HA nodes)"
     cat >> /etc/hosts <<EOF
-${NETWORK}.101  ${NODENAME}1.${NODEDOMAIN} ${NODENAME}1
-${NETWORK}.102  ${NODENAME}2.${NODEDOMAIN} ${NODENAME}2
-${NETWORK}.103  ${NODENAME}3.${NODEDOMAIN} ${NODENAME}3
+${NETWORK}.101  ${NODENAME}1.${NODEDOMAIN} ${NODENAME}1 ${DISTRO}${NODENAME}1
+${NETWORK}.102  ${NODENAME}2.${NODEDOMAIN} ${NODENAME}2 ${DISTRO}${NODENAME}2
+${NETWORK}.103  ${NODENAME}3.${NODEDOMAIN} ${NODENAME}3 ${DISTRO}${NODENAME}3
 EOF
     else
         echo "- /etc/hosts already ok"
