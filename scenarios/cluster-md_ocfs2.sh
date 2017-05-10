@@ -298,19 +298,22 @@ case $1 in
     check)
 	check_cluster_md
 	;;
+    detach)
+        detach_disk_from_node ${NODEA} ${CLUSTERMDDEV1}
+        detach_disk_from_node ${NODEA} ${CLUSTERMDDEV2}
+        detach_disk_from_node ${NODEA} ${CLUSTERMDDEV3}
+        detach_disk_from_node ${NODEB} ${CLUSTERMDDEV1}
+        detach_disk_from_node ${NODEB} ${CLUSTERMDDEV2}
+        detach_disk_from_node ${NODEB} ${CLUSTERMDDEV3}
+        detach_disk_from_node ${NODEC} ${CLUSTERMDDEV1}
+        detach_disk_from_node ${NODEC} ${CLUSTERMDDEV2}
+        detach_disk_from_node ${NODEC} ${CLUSTERMDDEV3}
+	;;
     cleanup)
 	# restore before runnning the test
 	back_to_begining
 	# restore initial conf
-	detach_disk_from_node ${NODEA} ${CLUSTERMDDEV1}
-	detach_disk_from_node ${NODEA} ${CLUSTERMDDEV2}
-	detach_disk_from_node ${NODEA} ${CLUSTERMDDEV3}
-	detach_disk_from_node ${NODEB} ${CLUSTERMDDEV1}
-	detach_disk_from_node ${NODEB} ${CLUSTERMDDEV2}
-	detach_disk_from_node ${NODEB} ${CLUSTERMDDEV3}
-	detach_disk_from_node ${NODEC} ${CLUSTERMDDEV1}
-	detach_disk_from_node ${NODEC} ${CLUSTERMDDEV2}
-	detach_disk_from_node ${NODEC} ${CLUSTERMDDEV3}
+	$0 detach
 	delete_all_resources
 	delete_3shared_storage
 	delete_cib_resource ${NODEA} ${CIBNAME} ${RESOURCEID}
@@ -335,6 +338,7 @@ all:		do everything
 install:	install all needed packages on nodes
 prepare:	umount /mnt/test; create 3 shared storage
 attach:		attach disks to nodes
+detach:		detach disks to nodes
 crm:		create a CIB cluster_md_ocfs2
 	        create the dlm resource
 raid:		verify available disk for nodes 
