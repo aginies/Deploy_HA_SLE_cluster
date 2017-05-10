@@ -62,19 +62,6 @@ resource drbdo2 {
 EOF"
 }
 
-drbdconf_csync2() {
-    echo $I "###########²# START drbdconf_csync2"
-    echo "- Corosync2 drbd conf" $O
-    exec_on_node ${NODEA} "perl -pi -e 's|usage-count.*|usage-count no;|' /etc/drbd.d/global_common.conf"
-    exec_on_node ${NODEA} "grep /etc/drbd.conf /etc/csync2/csync2.cfg"
-    if [ $? -eq 1 ]; then
-    	exec_on_node ${NODEA} "perl -pi -e 's|}|\tinclude /etc/drbd.conf;\n\tinclude /etc/drbd.d;\n}|' /etc/csync2/csync2.cfg"
-    else
-        echo $W "- /etc/csync2/csync2.cfg already contains drbd files to sync" $O
-    fi
-    exec_on_node ${NODEA} "csync2 -xv"
-}
-
 finalize_DRBD_setup() {
     echo $I "############ START finalize_DRBD_setup"
     echo "- Initializes the metadata storage" $O
@@ -97,54 +84,6 @@ format_ocfs2() {
     # need DLM
     echo $I "############ START format_ocfs2" $O
     exec_on_node ${NODEA} "mkfs.ocfs2 --force --cluster-stack pcmk -L 'VMtesting' --cluster-name hacluster ${DRBDDEV}"
-}
-
-umount_mnttest() {
-    echo $I "############ START umount_mnttest" $O
-    exec_on_node ${NODEA} "umount ${MNTTEST}" IGNORE
-    exec_on_node ${NODEB} "umount ${MNTTEST}" IGNORE
-}
-
-check_primary_secondary() {
-    echo $I "############ START check_primary_secondary"
-    echo "- Create ${MNTTEST} directory" $O
-    exec_on_node ${NODEA} "mkdir ${MNTTEST}"
-    exec_on_node ${NODEB} "mkdir ${MNTTEST}"
-    echo $I "- Mount /dev/drbd0" $O
-    exec_on_node ${NODEA} "mount ${DRBDDEV} ${MNTTEST}"
-    exec_on_node ${NODEA} "df -h ${MNTTEST}"
-    echo $I "- Create a file in the FS" $O
-    exec_on_node ${NODEA} "dd if=/dev/zero of=${MNTTEST}/testing bs=1M count=24"
-    exec_on_node ${NODEA} "dd if=/dev/random of=${MNTTEST}/random count=20240"
-    exec_on_node ${NODEA} "s${NODENAME}1sum  ${MNTTEST}/testing ${MNTTEST}/random > ${MNTTEST}/sha1sum"
-    exec_on_node ${NODEA} "drbdadm status"
-    exec_on_node ${NODEA} "drbdadm dstate drbdo2"
-    echo $I "- Wait to get drbd sync" $O
-    exec_on_node ${NODEA} "while (drbdadm status | grep Inconsistent); do sleep 5s; done"
-    exec_on_node ${NODEA} "drbdadm status"
-    exec_on_node ${NODEA} "umount ${MNTTEST}"
-    echo $I "- Switch ${NODEA} to secondary" $O
-    exec_on_node ${NODEA} "drbdadm secondary drbdo2"
-    exec_on_node ${NODEB} "drbdadm primary drbdo2"
-    exec_on_node ${NODEB} "mount /dev/drbd0 ${MNTTEST}"
-    exec_on_node ${NODEB} "cat ${MNTTEST}/s${NODENAME}1sum"
-    exec_on_node ${NODEB} "s${NODENAME}1sum ${MNTTEST}/testing ${MNTTEST}/random > /mnt/testing_from_${NODEB}"
-    exec_on_node ${NODEB} "diff -au ${MNTTEST}/s${NODENAME}1sum /mnt/testing_from_${NODEB}"
-    if [ $? -eq 1 ]; then 
-	echo $W "- ! Warning; Corruption in FILES detected: s${NODENAME}1 are different" $O
-    else
-	echo $S "- Same S${NODENAME}1 from ${NODEA} and ${NODEB}: TEST OK" $O
-    fi
-    echo $I "- Test pause/resume sync " $O
-    exec_on_node ${NODEB} "drbdadm pause-sync drbdo2"
-    exec_on_node ${NODEB} "dd if=/dev/zero of=${MNTTEST}/testing2 bs=1M count=24"
-    exec_on_node ${NODEA} "touch ${MNTTEST}/bspl{0001..10001}.c"
-    #exec_on_node ${NODEA} "ls ${MNTTEST}/*.c"
-    exec_on_node ${NODEB} "chmod -R 777 ${MNTTEST}/" 
-    exec_on_node ${NODEA} "chmod -R 775 ${MNTTEST}/" 
-    exec_on_node ${NODEB} "drbdadm status"
-    exec_on_node ${NODEB} "drbdadm resume-sync drbdo2"
-    exec_on_node ${NODEB} "drbdadm status"
 }
 
 back_to_begining() {
