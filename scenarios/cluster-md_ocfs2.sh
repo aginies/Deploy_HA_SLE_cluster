@@ -32,7 +32,7 @@ CLUSTERMDDEV1="vdd"
 CLUSTERMDDEV2="vde"
 CLUSTERMDDEV3="vdf"
 diskname="disk"
-MDDEV="/dev/md0"
+MDDEV="/dev/md/md0"
 
 cluster_md_ocfs2_cib() {
     echo $I "############ START cluster_md_ocfs2_cib" $O
@@ -65,11 +65,11 @@ cluster_md_csync2() {
     find_resource_running_dlm
     exec_on_node ${RNODE} "perl -pi -e 's|usage-count.*|usage-count no;|' /etc/drbd.d/global_common.conf"
     exec_on_node ${RNODE} "grep /etc/mdadm.conf /etc/csync2/csync2.cfg" IGNORE
-    if [ $? -ne 0 ]; then
-    	exec_on_node ${RNODE} "perl -pi -e 's|}|\tinclude /etc/mdadm.conf;}|' /etc/csync2/csync2.cfg"
-    else
-        echo $W "- /etc/csync2/csync2.cfg already contains /etc/mdadm.conf files to sync" $O
-    fi
+#    if [ $? -ne 0 ]; then
+#    	exec_on_node ${RNODE} "perl -pi -e 's|}|\tinclude /etc/mdadm.conf;}|' /etc/csync2/csync2.cfg"
+#    else
+#        echo $W "- /etc/csync2/csync2.cfg already contains /etc/mdadm.conf files to sync" $O
+#    fi
     exec_on_node ${RNODE} "cat /etc/mdadm.conf"
     exec_on_node ${RNODE} "sync; csync2 -f /etc/mdadm.conf"
     exec_on_node ${RNODE} "csync2 -xv"
@@ -314,7 +314,15 @@ case $1 in
 	# restore before runnning the test
 	back_to_begining
 	# restore initial conf
-	$0 detach
+        detach_disk_from_node ${NODEA} ${CLUSTERMDDEV1}
+        detach_disk_from_node ${NODEA} ${CLUSTERMDDEV2}
+        detach_disk_from_node ${NODEA} ${CLUSTERMDDEV3}
+        detach_disk_from_node ${NODEB} ${CLUSTERMDDEV1}
+        detach_disk_from_node ${NODEB} ${CLUSTERMDDEV2}
+        detach_disk_from_node ${NODEB} ${CLUSTERMDDEV3}
+        detach_disk_from_node ${NODEC} ${CLUSTERMDDEV1}
+        detach_disk_from_node ${NODEC} ${CLUSTERMDDEV2}
+        detach_disk_from_node ${NODEC} ${CLUSTERMDDEV3}
 	delete_all_resources
 	delete_3shared_storage
 	delete_cib_resource ${NODEA} ${CIBNAME} ${RESOURCEID}
