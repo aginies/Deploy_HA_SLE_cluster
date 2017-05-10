@@ -23,7 +23,7 @@ if [ ! -f ${SLECDROM} ]; then echo "! ${SLECDROM} can not be found, needed for i
 
 # clean up previous VM
 cleanup_vm() {
-    HANAME="${DISTRO}HA"
+    HANAME="${DISTRO}${NODENAME}"
     echo "############ START cleanup_vm #############"
     echo "  !! WARNING !! "
     echo "  !! WARNING !! "
@@ -122,7 +122,7 @@ create_pool ${LIBVIRTPOOL}
 check_before_install
 
 # Install HA1 VM
-NAME="${NODENAME}1"
+NAME="${DISTRO}${NODENAME}1"
 MAC="${MACA}"
 VMDISK="${STORAGEP}/${LIBVIRTPOOL}/${NAME}.qcow2"
 install_vm
@@ -131,13 +131,13 @@ install_vm
 EXTRAARGS="autoyast=device://vdc/havm_mini.xml"
 
 # Install HA2 VM
-NAME="${NODENAME}2"
+NAME="${DISTRO}${NODENAME}2"
 MAC="${MACB}"
 VMDISK="${STORAGEP}/${LIBVIRTPOOL}/${NAME}.qcow2"
 install_vm
 
 # Install HA3 VM
-NAME="${NODENAME}3"
+NAME="${DISTRO}${NODENAME}3"
 MAC="${MACC}"
 VMDISK="${STORAGEP}/${LIBVIRTPOOL}/${NAME}.qcow2"
 install_vm
