@@ -87,9 +87,9 @@ prepare_virtual_HAnetwork() {
   <ip address='${NETWORK}.1' netmask='255.255.255.0'>
     <dhcp>
       <range start='${NETWORK}.128' end='${NETWORK}.254'/>
-      <host mac="${MACA}" name="${NODENAME}1.${NODEDOMAIN}" ip="${NETWORK}.101" />
-      <host mac="${MACB}" name="${NODENAME}2.${NODEDOMAIN}" ip="${NETWORK}.102" />
-      <host mac="${MACC}" name="${NODENAME}3.${NODEDOMAIN}" ip="${NETWORK}.103" />
+      <host mac="${MACA}" name="${DISTRO}${NODENAME}1.${NODEDOMAIN}" ip="${NETWORK}.101" />
+      <host mac="${MACB}" name="${DISTRO}${NODENAME}2.${NODEDOMAIN}" ip="${NETWORK}.102" />
+      <host mac="${MACC}" name="${DISTRO}${NODENAME}3.${NODEDOMAIN}" ip="${NETWORK}.103" />
     </dhcp>
   </ip>
 </network>
