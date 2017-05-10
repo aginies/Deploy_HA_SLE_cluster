@@ -44,7 +44,7 @@ EOF"
 
 install_packages_cluster_md() {
     echo $I "############ START install_packages_cluster" $O
-    pssh -h /etc/hanodes "zypper in -y cluster-md-kmp-default mdadm"
+    pssh -h ${PSSHCONF} "zypper in -y cluster-md-kmp-default mdadm"
 }
 
 check_cluster_md_resource() {
@@ -149,7 +149,7 @@ back_to_begining() {
     exec_on_node ${NODEA} "rm -rf ${MNTTEST}"
     exec_on_node ${NODEB} "rm -rf ${MNTTEST}"
     exec_on_node ${NODEC} "rm -rf ${MNTTEST}"
-    pssh -h /etc/hanodes "rm -vf /etc/mdadm.conf"
+    pssh -h ${PSSHCONF} "rm -vf /etc/mdadm.conf"
 
 }
 
