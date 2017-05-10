@@ -36,7 +36,7 @@ ssh_root_key() {
     ssh-keygen -t rsa -f ~/.ssh/${IDRSAHA} -N ""
     echo "- Create /root/.ssh/config for HA nodes access"
     cat > /root/.ssh/config<<EOF
-host ${NODENAME}1 ${NODENAME}2 ${NODENAME}3
+host ${NODENAME}1 ${NODENAME}2 ${NODENAME}3 ${DISTRO}${NODENAME}1 ${DISTRO}${NODENAME}2 ${DISTRO}${NODENAME}3
 IdentityFile /root/.ssh/${IDRSAHA}
 EOF
 }

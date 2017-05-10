@@ -38,7 +38,7 @@ enable_sbd_all_nodes() {
 check_cluster_status() {
     echo "############ START check_cluster_status"
     if [ "$1" != "force" ]; then
-	exec_on_node ${NODENAME}1 "systemctl -q is-active corosync.service"
+	exec_on_node ${NODENAME}1 "systemctl -q is-active corosync.service" IGNORE
 	if [ "$?" -ne "0" ]; then
             echo
             echo "! Cluster is active, need to stop it and reboot !"
