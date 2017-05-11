@@ -34,6 +34,12 @@ enable_sbd_all_nodes() {
     exec_pssh "systemctl enable sbd"
 }
 
+fix_hostname() {
+    echo "############ START fix_hostname"
+    exec_pssh "hostname > /etc/hostname"
+}
+
+
 # Check cluster Active
 check_cluster_status() {
     echo "############ START check_cluster_status"
@@ -170,10 +176,13 @@ crm_history() {
 
 case "$1" in
     status)
-    check_cluster_status $2
-    ;;
+	check_cluster_status $2
+	;;
+    hostname)
+	fix_hostname
+	;;
     sbd)
-    create_sbd_dev
+	create_sbd_dev
 	enable_sbd_all_nodes
         ;;
     init)
@@ -217,10 +226,13 @@ case "$1" in
 	;;
     *)
         echo "
-     Usage: $0 {status|sbd|init|sshkeynode|addremove|sbdtest|somechecks|maintenance|crmhist|all} [force]
+     Usage: $0 {status|hostname|sbd|init|sshkeynode|addremove|sbdtest|somechecks|maintenance|crmhist|all} [force]
 
  status
-	Check that the cluster is not running before config
+    Check that the cluster is not running before config
+
+ hostname
+    fix /etc/hostname on all nodes
 
  sbd
     Create an SBD device
