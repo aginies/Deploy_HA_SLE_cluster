@@ -32,7 +32,7 @@ CLUSTERMDDEV1="vdd"
 CLUSTERMDDEV2="vde"
 CLUSTERMDDEV3="vdf"
 diskname="disk"
-MDDEV="/dev/md/md0"
+MDDEV="/dev/md0"
 
 cluster_md_ocfs2_cib() {
     echo $I "############ START cluster_md_ocfs2_cib" $O
@@ -165,6 +165,12 @@ group base-group dlm
 commit
 exit
 EOF"
+    exec_on_node ${NODEA} "crm configure<<EOF
+clone base-clone base-group meta interleave=true target-role=Started
+show
+commit
+exit
+EOF"
 }
 
 create_raider_primitive() {
@@ -176,13 +182,8 @@ show
 commit
 exit
 EOF"
-    exec_on_node ${NODEA} "crm configure<<EOF
-clone base-clone base-group meta interleave=true target-role=Started
-show
-commit
-exit
-EOF"
 }
+
 
 delete_all_resources() {
     echo $I "############ START delete_all_resources" $O
