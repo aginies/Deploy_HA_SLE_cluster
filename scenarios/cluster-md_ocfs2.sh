@@ -178,11 +178,11 @@ create_raider_primitive() {
     echo $I "############ START create_raid1_primitive" $O
     exec_on_node ${NODEA} "crm configure<<EOF
 primitive ${RESOURCEID} Raid1 params raidconf='/etc/mdadm.conf' raiddev=${MDDEV} force_clones=true op monitor timeout=20s interval=10 op start timeout=20s interval=0 op stop timeout=20s interval=0
-modgroup base-group add ${RESOURCEID}
 show
 commit
 exit
 EOF"
+#modgroup base-group add ${RESOURCEID}
 }
 
 
