@@ -101,6 +101,7 @@ create_RAID() {
     echo "mdadm --create md0 --bitmap=clustered --raid-devices=2 --level=mirror --spare-devices=1 /dev/vdd /dev/vde /dev/vdf --metadata=1.2"
     find_resource_running_dlm
     exec_on_node ${RNODE} "mdadm --create md0 --bitmap=clustered --raid-devices=2 --level=mirror --spare-devices=1 /dev/vdd /dev/vde /dev/vdf --metadata=1.2"
+    exec_on_node ${RNODE} "ln -sf /dev/md/md0 /dev/md0"
     monitor_progress
 }
 
@@ -290,6 +291,8 @@ case $1 in
 	;;
     csync2)
 	cluster_md_csync2
+	# run it twice to avoid error due to VM sync
+	cluster_md_csync2
 	;;
     crmfinish)
 	create_raider_primitive
@@ -334,6 +337,8 @@ case $1 in
 	$0 attach
 	$0 crm
 	$0 raid
+	# run it twice to avoid error due to VM sync
+	$0 csync2
 	$0 csync2
 	$0 crmfinish
 	$0 format
