@@ -73,6 +73,10 @@ cluster_md_csync2() {
     exec_on_node ${RNODE} "cat /etc/mdadm.conf"
     exec_on_node ${RNODE} "sync; csync2 -f /etc/mdadm.conf"
     exec_on_node ${RNODE} "csync2 -xv"
+# dirty workaround....
+    exec_on_node ${RNODE} "scp -o StrictHostKeyChecking=no /etc/mdadm.conf ha1:/etc/"
+    exec_on_node ${RNODE} "scp -o StrictHostKeyChecking=no /etc/mdadm.conf ha2:/etc/"
+    exec_on_node ${RNODE} "scp -o StrictHostKeyChecking=no /etc/mdadm.conf ha3:/etc/"
 }
 
 format_ocfs2() {
@@ -290,8 +294,6 @@ case $1 in
 	finish_mdadm_conf
 	;;
     csync2)
-	cluster_md_csync2
-	# run it twice to avoid error due to VM sync
 	cluster_md_csync2
 	;;
     crmfinish)
