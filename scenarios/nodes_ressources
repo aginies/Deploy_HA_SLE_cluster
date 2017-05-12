@@ -68,7 +68,7 @@ attach_disk_to_node() {
     echo $I "- Attach volume ${POOLNAME} to ${NODE}, target is ${TARGETVD}" $O
     virsh attach-disk ${NODE} --live --cache none --type disk ${STORAGEP}/${POOLNAME}/${VOLNAME}.${EXT} --target ${TARGETVD}
     exec_on_node ${NODE} "fdisk -l /dev/${TARGETVD}"
-    if [ $? -eq 0 ]; then
+    if [ $? -ne 0 ]; then
         echo $F "- Target should be /dev/${TARGETVD}, this is not the case;" $O
         echo $F "! The ONLY WAY to fix this is to reboot the node $1" $O
         echo $F "-  # PRESS [ENTER] TO CONTINUE #" $0
