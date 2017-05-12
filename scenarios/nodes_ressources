@@ -128,7 +128,7 @@ cib delete ${CIBNAME}
 verify
 configure commit
 exit
-EOF"
+EOF" IGNORE
     else
         echo $F "- cib ${CIBNAME} doesnt exist " $O
     fi

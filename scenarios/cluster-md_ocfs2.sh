@@ -215,10 +215,10 @@ commit
 exit
 EOF"
     exec_on_node ${NODEB} "crm status"
-    exec_on_node ${NODEB} "crm resource restart base-clone"
-    exec_on_node ${NODEB} "crm resource restart dlm"
-    exec_on_node ${NODEB} "crm resource cleanup dlm"
-    exec_on_node ${NODEB} "crm resource cleanup raider"
+#    exec_on_node ${NODEB} "crm resource restart base-clone"
+#    exec_on_node ${NODEB} "crm resource restart dlm"
+#    exec_on_node ${NODEB} "crm resource cleanup dlm"
+#    exec_on_node ${NODEB} "crm resource cleanup raider"
     exec_on_node ${NODEB} "crm resource status"
 }
 
