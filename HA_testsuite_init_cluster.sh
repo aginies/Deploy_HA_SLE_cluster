@@ -211,6 +211,7 @@ case "$1" in
 	;;
     all)
     check_cluster_status $2
+	fix_hostname
 	create_sbd_dev
 	enable_sbd_all_nodes
 	init_ha_cluster
