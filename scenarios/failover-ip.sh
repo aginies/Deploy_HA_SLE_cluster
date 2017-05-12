@@ -12,6 +12,13 @@ else
     echo "! functions file needed! ; Exiting"
     exit 1
 fi
+if [ -f "${PWD}/nodes_ressources" ] ; then
+    . ${PWD}/nodes_ressources
+else
+    echo "! functions file nodes_ressources needed! ; Exiting"
+    exit 1
+fi
+
 check_load_config_file other
 
 # IP address of the vip
