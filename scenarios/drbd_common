@@ -30,7 +30,7 @@ MNTTEST="/mnt/test"
 
 install_packages_drbd() {
     echo $I "############ START install_packages_drbd" $O
-    echo $I "- Will install: drbd-kmp-default drbd drbd-utils on all nodes" $0
+    echo $I "- Will install: drbd-kmp-default drbd drbd-utils on all nodes" $O
     pssh -h ${PSSHCONF} "zypper in -y drbd-kmp-default drbd drbd-utils"
 }
 
