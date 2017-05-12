@@ -359,7 +359,6 @@ all:		do everything
 install:	install all needed packages on nodes
 prepare:	umount /mnt/test; create 3 shared storage
 attach:		attach disks to nodes
-detach:		detach disks to nodes
 crm:		create a CIB cluster_md_ocfs2
 	        create the dlm resource
 raid:		verify available disk for nodes 
@@ -369,6 +368,7 @@ csync2:	        csync2 the configuration
 crmfinish:	create the raider primitive
 format:		format in OCFS2 the /dev/md0 device
 check:		various test on Raid1
+detach:		detach disks to nodes
 cleanup:	restore everything to initial statement
 "
 	;;
