@@ -124,7 +124,7 @@ delete_cib_resource() {
         echo $W "- Deleting cib and resource ${RESOURCEID}" $O
         exec_on_node ${NODE} "crm<<EOF
 resource stop ${RESOURCEID}
-EOF"
+EOF" IGNORE
 echo $I "- Wait stop/clear/delete resource (10s)" $O
        sleep 10
        exec_on_node ${NODE} "crm<<EOF
@@ -134,7 +134,7 @@ cib delete ${CIBNAME}
 verify
 configure commit
 exit
-EOF" IGNORE
+EOF"
     else
         echo $F "- cib ${CIBNAME} doesnt exist " $O
     fi
