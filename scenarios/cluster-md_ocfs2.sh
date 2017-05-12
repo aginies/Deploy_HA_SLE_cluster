@@ -255,7 +255,7 @@ delete_3shared_storage() {
 	virsh pool-destroy ${CLUSTERMD}
 	echo $W "- Undefine current pool ${CLUSTERMD}" $O
 	virsh pool-undefine ${CLUSTERMD}
-	rm -rv ${STORAGEP}/${CLUSTERMD}
+	rm -rfv ${STORAGEP}/${CLUSTERMD}
 }
 
 ##########################
