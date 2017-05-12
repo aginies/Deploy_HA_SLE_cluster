@@ -94,13 +94,15 @@ check_targetvd_on_node() {
 	for LETTER in {${STARTLETTER}..z}; do
 	    #echo "- Testing /dev/vd${LETTER}"
 	    export REALTARGETVD="vd${LETTER}"
-	    exec_on_node ${NODE} "ls -la /dev/vd${LETTER}"
-	    if [ $? -eq 0 ]; then
-		#echo "- Switching target on HA node to vd${LETTER}"
+	    exec_on_node ${NODE} "ls -la /dev/vd${LETTER} ; echo \$? > /tmp/CODE"
+	    scp -q -o StrictHostKeyChecking=no ${NODE}:/tmp/CODE /tmp/CODE
+            VALUE=`cat /tmp/CODE`
+	    if [ $VALUE -eq 0 ]; then
+		echo "- Switching target on HA node to vd${LETTER}"
 		export REALTARGETVD="vd${LETTER}"
 		break
-	    #else
-	    #echo "- Trying another letter..."
+	    else
+	        echo "- Trying another letter..."
 	    fi
 	done
     fi
