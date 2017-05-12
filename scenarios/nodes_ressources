@@ -70,8 +70,10 @@ attach_disk_to_node() {
     exec_on_node ${NODE} "parted --script /dev/${TARGETVD} print ; echo \$? > /tmp/CODE"
     scp -q -o StrictHostKeyChecking=no ${NODE}:/tmp/CODE /tmp/CODE
     VALUE=`cat /tmp/CODE`
-    if [ $VALUE -ne 0 ]; then
-        echo $F "- Target should be /dev/${TARGETVD}, this is not the case;" $O
+    if [ $VALUE -eq 0 ]; then
+	echo $I "- Target is /dev/${TARGETVD} (as expected)" $O
+    else
+        echo $F "- Target should be /dev/${TARGETVD}, this is not the case" $O
         echo $F "! The ONLY WAY to fix this is to reboot the node $1" $O
         echo $F "-  # PRESS [ENTER] TO CONTINUE #" $0
         read
