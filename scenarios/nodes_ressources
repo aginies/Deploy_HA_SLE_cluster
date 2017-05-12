@@ -67,7 +67,7 @@ attach_disk_to_node() {
     if [ $# -ne 5 ]; then echo $F "- attach_disk_to_node needs 4args: NODE / POOL_NAME / VOL_NAME / TARGET VD / EXTENSION" $O ; exit 1; fi
     echo $I "- Attach volume ${POOLNAME} to ${NODE}, target is ${TARGETVD}" $O
     virsh attach-disk ${NODE} --live --cache none --type disk ${STORAGEP}/${POOLNAME}/${VOLNAME}.${EXT} --target ${TARGETVD}
-    exec_on_node ${NODE} "fdisk -l /dev/${TARGETVD}"
+    exec_on_node ${NODE} "parted --script /dev/${TARGETVD} print"
     if [ $? -ne 0 ]; then
         echo $F "- Target should be /dev/${TARGETVD}, this is not the case;" $O
         echo $F "! The ONLY WAY to fix this is to reboot the node $1" $O
