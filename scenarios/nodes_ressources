@@ -68,7 +68,7 @@ attach_disk_to_node() {
     echo $I "- Attach volume ${POOLNAME} to ${NODE}, target is ${TARGETVD}" $O
     virsh attach-disk ${NODE} --live --cache none --type disk ${STORAGEP}/${POOLNAME}/${VOLNAME}.${EXT} --target ${TARGETVD}
     exec_on_node ${NODE} "parted --script /dev/${TARGETVD} print ; echo \$? > /tmp/CODE"
-    scp -o StrictHostKeyChecking=no ${NODE}:/tmp/CODE /tmp/CODE
+    scp -q -o StrictHostKeyChecking=no ${NODE}:/tmp/CODE /tmp/CODE
     VALUE=`cat /tmp/CODE`
     if [ $VALUE -ne 0 ]; then
         echo $F "- Target should be /dev/${TARGETVD}, this is not the case;" $O
@@ -86,7 +86,7 @@ check_targetvd_on_node() {
     TARGETVD="$2"
     STARTLETTER="$3"
     exec_on_node ${NODE} "ls -la /dev/${TARGETVD} ; echo \$? > /tmp/CODE"
-    scp -o StrictHostKeyChecking=no ${NODE}:/tmp/CODE /tmp/CODE
+    scp -q -o StrictHostKeyChecking=no ${NODE}:/tmp/CODE /tmp/CODE
     VALUE=`cat /tmp/CODE`
     if [ $VALUE -eq 0 ]; then
 	export REALTARGETVD=${TARGETVD}
@@ -124,7 +124,7 @@ delete_cib_resource() {
     RESOURCEID="$3"
     echo $I "############ START delete_cib_resource" $O
     exec_on_node ${NODE} "crm cib list | grep ${CIBNAME} ; echo \$? > /tmp/CODE"
-    scp -o StrictHostKeyChecking=no ${NODE}:/tmp/CODE /tmp/CODE
+    scp -q -o StrictHostKeyChecking=no ${NODE}:/tmp/CODE /tmp/CODE
     VALUE=`cat /tmp/CODE`
     if [ $VALUE -eq 0 ]; then
         echo $W "- Deleting cib and resource ${RESOURCEID}" $O
