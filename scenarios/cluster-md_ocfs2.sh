@@ -192,6 +192,11 @@ show
 commit
 exit
 EOF"
+    echo $I "- Sleep 5sec until Raid is ready" $O
+    sleep 5
+    exec_on_node ${NODEA} "journalctl --lines 8 --no-pager"
+    exec_on_node ${NODEB} "crm status"
+
 }
 
 
