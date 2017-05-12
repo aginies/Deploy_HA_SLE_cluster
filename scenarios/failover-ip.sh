@@ -74,31 +74,6 @@ online_rnode() {
     exec_on_node ${NODENAME}1 "crm node online ${RNODE}"
 }
 
-delete_cib_resource() {
-    echo $I "############ START delete_cib_resource" $O
-    exec_on_node ${NODENAME}1 "crm cib list | grep ${CIBNAME}" IGNORE
-    if [ $? -eq 0 ]; then
-	echo $W "- Deleting cib and resource ${RESOURCEID}" $O
-	exec_on_node ${NODENAME}1 "crm<<EOF
-resource stop ${RESOURCEID}
-EOF" IGNORE
-	echo $W "- Wait stop/clear/delete resource (5s)" $O
-       sleep 5
-       exec_on_node ${NODENAME}1 "crm<<EOF
-resource clear ${RESOURCEID}
-configure delete ${RESOURCEID}
-cib delete ${CIBNAME}
-verify
-configure commit
-exit
-EOF" IGNORE
-    else
-	echo $F "- cib ${CIBNAME} doesnt exist " $O
-    fi
-    echo $I "- Show status" $O
-    exec_on_node ${NODENAME}1 "crm status"
-}
-
 ping_virtual_ip() {
     echo $I "############ START ping_virtual_ip" $O
     echo $I "- Flush ARP table for ${NETWORK}.${IPEND}" $O
@@ -129,12 +104,12 @@ read
 read
 
 
-delete_cib_resource
+delete_cib_resource ${NODEA} ${CIBNAME} ${RESOURCEID}
 failover_ip_cib
 check_failoverip_resource
 ping_virtual_ip
 
-for nb in `seq 1 20`
+for nb in `seq 1 10`
 do
     RDOM=`grep -m1 -ao '[1-3]' /dev/urandom | head -n1`
     standby_node_running_resource
