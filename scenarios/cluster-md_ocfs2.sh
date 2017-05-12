@@ -66,7 +66,7 @@ cluster_md_csync2() {
     exec_on_node ${RNODE} "perl -pi -e 's|usage-count.*|usage-count no;|' /etc/drbd.d/global_common.conf"
     exec_on_node ${RNODE} "grep /etc/mdadm.conf /etc/csync2/csync2.cfg" IGNORE
 #    if [ $? -ne 0 ]; then
-#    	exec_on_node ${RNODE} "perl -pi -e 's|}|\tinclude /etc/mdadm.conf;}|' /etc/csync2/csync2.cfg"
+    	exec_on_node ${RNODE} "perl -pi -e 's|}|\tinclude /etc/mdadm.conf;}|' /etc/csync2/csync2.cfg"
 #    else
 #        echo $W "- /etc/csync2/csync2.cfg already contains /etc/mdadm.conf files to sync" $O
 #    fi
@@ -90,6 +90,7 @@ umount_mnttest() {
     echo $I "############ START umount_mnttest" $O
     exec_on_node ${NODEA} "umount ${MNTTEST}" IGNORE
     exec_on_node ${NODEB} "umount ${MNTTEST}" IGNORE
+    exec_on_node ${NODEC} "umount ${MNTTEST}" IGNORE
 }
 
 monitor_progress() {
@@ -102,10 +103,9 @@ create_RAID() {
     echo $I "############ START create_RAID" $O
 #    exec_on_node ${NODEB} "mdadm --create md0 --bitmap=clustered --raid-devices=2 --level=mirror --spare-devices=1 /dev/${CLUSTERMDDEV1} /dev/${CLUSTERMDDEV2} /dev/${CLUSTERMDDEV3} --metadata=1.2"
     # exec_on_node ${NODEB} "yes| mdadm --create md0 --bitmap=clustered \
-    echo "mdadm --create md0 --bitmap=clustered --raid-devices=2 --level=mirror --spare-devices=1 /dev/vdd /dev/vde /dev/vdf --metadata=1.2"
+    echo "mdadm --create /dev/md0 --bitmap=clustered --raid-devices=2 --level=mirror --spare-devices=1 /dev/vdd /dev/vde /dev/vdf --metadata=1.2"
     find_resource_running_dlm
-    exec_on_node ${RNODE} "mdadm --create md0 --bitmap=clustered --raid-devices=2 --level=mirror --spare-devices=1 /dev/vdd /dev/vde /dev/vdf --metadata=1.2"
-    exec_on_node ${RNODE} "ln -sf /dev/md/md0 /dev/md0"
+    exec_on_node ${RNODE} "mdadm --create /dev/md0 --bitmap=clustered --raid-devices=2 --level=mirror --spare-devices=1 /dev/vdd /dev/vde /dev/vdf --metadata=1.2"
     monitor_progress
 }
 
@@ -132,9 +132,9 @@ check_cluster_md() {
     #exec_on_node ${NODEA} "mdadm --manage ${MDDEV} --add ${CLUSTERMDDEV2}"
     #exec_on_node ${NODEA} "mdadm --manage ${MDDEV} --add ${CLUSTERMDDEV3}"
     echo "- Create ${MNTTEST} directory"
-    exec_on_node ${NODEA} "mkdir ${MNTTEST}"
-    exec_on_node ${NODEB} "mkdir ${MNTTEST}"
-    exec_on_node ${NODEC} "mkdir ${MNTTEST}"
+    exec_on_node ${NODEA} "mkdir ${MNTTEST}" IGNORE
+    exec_on_node ${NODEB} "mkdir ${MNTTEST}" IGNORE
+    exec_on_node ${NODEC} "mkdir ${MNTTEST}" IGNORE
     echo "- Mount on node ${NODEA} ${MDDEV}"
     exec_on_node ${NODEA} "mount ${MDDEV} ${MNTTEST}"
     exec_on_node ${NODEB} "mount ${MDDEV} ${MNTTEST}"
@@ -146,10 +146,16 @@ check_cluster_md() {
     exec_on_node ${NODEA} "sha1sum  ${MNTTEST}/testing ${MNTTEST}/random > ${MNTTEST}/sha1sum"
     exec_on_node ${NODEB} "cat ${MNTTEST}/s${NODENAME}1sum"
     exec_on_node ${NODEB} "sha1sum ${MNTTEST}/testing ${MNTTEST}/random > /mnt/testing_from_${NODEB}"
-    exec_on_node ${NODEB} "dd if=/dev/zero of=${MNTTEST}/testing2 bs=1M count=24"
+    exec_on_node ${NODEB} "diff -au ${MNTTEST}/s${NODENAME}1sum /mnt/testing_from_${NODEB}"
+    if [ $? -eq 1 ]; then
+        echo $W "- ! Warning; Corruption in FILES detected: s${NODENAME}1 are different" $O
+    else
+        echo $S "- Same S${NODENAME}1 from ${NODEA} and ${NODEB}: TEST OK" $O
+    fi
     exec_on_node ${NODEA} "touch ${MNTTEST}/bspl{0001..10001}.c"
-    #exec_on_node ${NODEA} "ls ${MNTTEST}/*.c"
-    exec_on_node ${NODEA} "journalctl --lines 10 --no-pager"
+    exec_on_node ${NODEB} "ls ${MNTTEST}//bspl0001*.c"
+#    exec_on_node ${NODEA} "journalctl --lines 10 --no-pager"
+    umount_mnttest
 }
 
 back_to_begining() {
@@ -159,7 +165,6 @@ back_to_begining() {
     exec_on_node ${NODEB} "rm -rf ${MNTTEST}"
     exec_on_node ${NODEC} "rm -rf ${MNTTEST}"
     pssh -h ${PSSHCONF} "rm -vf /etc/mdadm.conf"
-
 }
 
 create_dlm_resource() {
@@ -182,11 +187,11 @@ create_raider_primitive() {
     echo $I "############ START create_raid1_primitive" $O
     exec_on_node ${NODEA} "crm configure<<EOF
 primitive ${RESOURCEID} Raid1 params raidconf='/etc/mdadm.conf' raiddev=${MDDEV} force_clones=true op monitor timeout=20s interval=10 op start timeout=20s interval=0 op stop timeout=20s interval=0
+modgroup base-group add ${RESOURCEID}
 show
 commit
 exit
 EOF"
-#modgroup base-group add ${RESOURCEID}
 }
 
 
@@ -340,7 +345,6 @@ case $1 in
 	$0 crm
 	$0 raid
 	# run it twice to avoid error due to VM sync
-	$0 csync2
 	$0 csync2
 	$0 crmfinish
 	$0 format
