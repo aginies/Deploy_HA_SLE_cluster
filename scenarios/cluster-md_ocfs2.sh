@@ -346,17 +346,51 @@ case $1 in
 	delete_cib_resource ${NODEA} ${CIBNAME} ${RESOURCEID}
 	;;
     all)
-	$0 install
-	$0 prepare
-	$0 attach
-	$0 crm
-	$0 raid
-	# run it twice to avoid error due to VM sync
-	$0 csync2
-	$0 crmfinish
-	$0 format
-	$0 check
-	$0 cleanup
+	install_packages_cluster_md
+	umount_mnttest
+	create_3shared_storage
+	attach_disk_to_node ${NODEA} ${CLUSTERMD} ${diskname}1 ${CLUSTERMDDEV1} img
+	attach_disk_to_node ${NODEA} ${CLUSTERMD} ${diskname}2 ${CLUSTERMDDEV2} img
+	attach_disk_to_node ${NODEA} ${CLUSTERMD} ${diskname}3 ${CLUSTERMDDEV3} img
+	attach_disk_to_node ${NODEB} ${CLUSTERMD} ${diskname}1 ${CLUSTERMDDEV1} img
+	attach_disk_to_node ${NODEB} ${CLUSTERMD} ${diskname}2 ${CLUSTERMDDEV2} img
+	attach_disk_to_node ${NODEB} ${CLUSTERMD} ${diskname}3 ${CLUSTERMDDEV3} img
+	attach_disk_to_node ${NODEC} ${CLUSTERMD} ${diskname}1 ${CLUSTERMDDEV1} img
+	attach_disk_to_node ${NODEC} ${CLUSTERMD} ${diskname}2 ${CLUSTERMDDEV2} img
+	attach_disk_to_node ${NODEC} ${CLUSTERMD} ${diskname}3 ${CLUSTERMDDEV3} img
+	cluster_md_ocfs2_cib
+	create_dlm_resource
+	check_cluster_md_resource
+	create_RAID
+	finish_mdadm_conf
+	cluster_md_csync2
+	create_raider_primitive
+	format_ocfs2
+	check_cluster_md
+        detach_disk_from_node ${NODEA} ${CLUSTERMDDEV1}
+        detach_disk_from_node ${NODEA} ${CLUSTERMDDEV2}
+        detach_disk_from_node ${NODEA} ${CLUSTERMDDEV3}
+        detach_disk_from_node ${NODEB} ${CLUSTERMDDEV1}
+        detach_disk_from_node ${NODEB} ${CLUSTERMDDEV2}
+        detach_disk_from_node ${NODEB} ${CLUSTERMDDEV3}
+        detach_disk_from_node ${NODEC} ${CLUSTERMDDEV1}
+        detach_disk_from_node ${NODEC} ${CLUSTERMDDEV2}
+        detach_disk_from_node ${NODEC} ${CLUSTERMDDEV3}
+	# restore before runnning the test
+	back_to_begining
+	# restore initial conf
+        detach_disk_from_node ${NODEA} ${CLUSTERMDDEV1}
+        detach_disk_from_node ${NODEA} ${CLUSTERMDDEV2}
+        detach_disk_from_node ${NODEA} ${CLUSTERMDDEV3}
+        detach_disk_from_node ${NODEB} ${CLUSTERMDDEV1}
+        detach_disk_from_node ${NODEB} ${CLUSTERMDDEV2}
+        detach_disk_from_node ${NODEB} ${CLUSTERMDDEV3}
+        detach_disk_from_node ${NODEC} ${CLUSTERMDDEV1}
+        detach_disk_from_node ${NODEC} ${CLUSTERMDDEV2}
+        detach_disk_from_node ${NODEC} ${CLUSTERMDDEV3}
+	delete_all_resources
+	delete_3shared_storage
+	delete_cib_resource ${NODEA} ${CIBNAME} ${RESOURCEID}
 	;;
     *)
 	echo "

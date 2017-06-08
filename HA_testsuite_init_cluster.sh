@@ -92,6 +92,7 @@ add_remove_node_test() {
     echo "- Add Node ${NODENAME}2 ${NODENAME}3 to cluster"
     exec_on_node ${NODENAME}2 "ha-cluster-join -y -c ${NETWORK}.101"
     exec_on_node ${NODENAME}3 "ha-cluster-join -y -c ${NETWORK}.101"
+    coroysnc2_test
     echo "############ START remove node ${DISTRO}${NODENAME}3 from cluster"
     echo "- Remove ${NODENAME}3 from cluster (from node ${NODENAME}1)"
     exec_on_node ${NODENAME}1 "ha-cluster-remove -c ${NETWORK}.103"
