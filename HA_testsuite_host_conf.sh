@@ -35,10 +35,20 @@ ssh_root_key() {
     echo "- Generate ~/.ssh/${IDRSAHA} without password"
     ssh-keygen -t rsa -f ~/.ssh/${IDRSAHA} -N ""
     echo "- Create /root/.ssh/config for HA nodes access"
-    cat > /root/.ssh/config<<EOF
+    CONFIGSSH="/root/.ssh/config"
+    grep ${DISTRO}${NODENAME}2 $CONFIGSSH
+    if [ "$?" -ne "0" ]; then
+	cat >> $CONFIGSSH<<EOF
 host ${NODENAME}1 ${NODENAME}2 ${NODENAME}3 ${DISTRO}${NODENAME}1 ${DISTRO}${NODENAME}2 ${DISTRO}${NODENAME}3
 IdentityFile /root/.ssh/${IDRSAHA}
 EOF
+	else
+	echo "- seems $CONFIGSSH already contains needed modification"
+	echo "- Should be something like:
+host ${NODENAME}1 ${NODENAME}2 ${NODENAME}3 ${DISTRO}${NODENAME}1 ${DISTRO}${NODENAME}2 ${DISTRO}${NODENAME}3
+IdentityFile /root/.ssh/${IDRSAHA}
+"
+    fi
 }
 
 # Connect as root in VMguest without Password, copy root host key

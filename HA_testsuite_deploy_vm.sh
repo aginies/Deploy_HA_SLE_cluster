@@ -134,12 +134,14 @@ EXTRAARGS="autoyast=device://vdc/havm_mini.xml"
 NAME="${DISTRO}${NODENAME}2"
 MAC="${MACB}"
 VMDISK="${STORAGEP}/${LIBVIRTPOOL}/${NAME}.qcow2"
+sleep 5
 install_vm
 
 # Install HA3 VM
 NAME="${DISTRO}${NODENAME}3"
 MAC="${MACC}"
 VMDISK="${STORAGEP}/${LIBVIRTPOOL}/${NAME}.qcow2"
+sleep 5
 install_vm
 
 # Check VM HA1, HA2, HA3
