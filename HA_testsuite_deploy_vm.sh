@@ -67,6 +67,7 @@ install_vm() {
 	   --ram ${RAM} \
 	   --vcpus ${VCPU} \
 	   --virt-type kvm \
+	   --os-variant sles12sp3 \
 	   --graphics vnc,keymap=${KEYMAP} \
 	   --network network=${NETWORKNAME},mac=${MAC} \
 	   --disk path=${VMDISK},format=qcow2,bus=virtio,cache=none \
