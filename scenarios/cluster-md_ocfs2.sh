@@ -76,9 +76,8 @@ cluster_md_csync2() {
     exec_on_node ${RNODE} "sync; csync2 -f /etc/mdadm.conf"
     exec_on_node ${RNODE} "csync2 -xv"
 # dirty workaround....
-    exec_on_node ${RNODE} "scp -o StrictHostKeyChecking=no /etc/mdadm.conf ha1:/etc/"
-    exec_on_node ${RNODE} "scp -o StrictHostKeyChecking=no /etc/mdadm.conf ha2:/etc/"
-    exec_on_node ${RNODE} "scp -o StrictHostKeyChecking=no /etc/mdadm.conf ha3:/etc/"
+    exec_on_node ${RNODE} "scp -o StrictHostKeyChecking=no /etc/mdadm.conf ${NODEA}:/etc/"
+    exec_on_node ${RNODE} "scp -o StrictHostKeyChecking=no /etc/mdadm.conf ${NODEB}:/etc/"
 }
 
 format_ocfs2() {
