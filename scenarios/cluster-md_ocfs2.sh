@@ -145,9 +145,9 @@ check_cluster_md() {
     exec_on_node ${NODEA} "dd if=/dev/zero of=${MNTTEST}/testing bs=1M count=24"
     exec_on_node ${NODEA} "dd if=/dev/random of=${MNTTEST}/random count=20240"
     exec_on_node ${NODEA} "sha1sum  ${MNTTEST}/testing ${MNTTEST}/random > ${MNTTEST}/sha1sum"
-    exec_on_node ${NODEB} "cat ${MNTTEST}/s${NODENAME}1sum"
+    exec_on_node ${NODEB} "cat ${MNTTEST}/sha1sum"
     exec_on_node ${NODEB} "sha1sum ${MNTTEST}/testing ${MNTTEST}/random > /mnt/testing_from_${NODEB}"
-    exec_on_node ${NODEB} "diff -au ${MNTTEST}/s${NODENAME}1sum /mnt/testing_from_${NODEB}"
+    exec_on_node ${NODEB} "diff -au ${MNTTEST}/sha1sum /mnt/testing_from_${NODEB}"
     if [ $? -eq 1 ]; then
         echo $W "- ! Warning; Corruption in FILES detected: s${NODENAME}1 are different" $O
     else

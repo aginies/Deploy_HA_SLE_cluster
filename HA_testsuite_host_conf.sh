@@ -147,7 +147,8 @@ prepare_auto_deploy_image() {
     WDIRMOUNT="/mnt/tmp_ha"
     mkdir ${WDIRMOUNT} ${WDIR2}
     cd ${STORAGEP}
-    cp -avf ${WDIR}/havm*.xml ${WDIR2}
+    cp -avf ${WDIR}/${HAVMXML} ${WDIR2}/havm.xml
+    cp -avf ${WDIR}/${HAVMMINIXML} ${WDIR2}/havm_mini.xml
     sleep 1
     perl -pi -e "s/NETWORK/${NETWORK}/g" ${WDIR2}/havm.xml
     perl -pi -e "s/NODEDOMAIN/${NODEDOMAIN}/g" ${WDIR2}/havm.xml

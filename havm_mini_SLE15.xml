@@ -8,6 +8,11 @@
         <product>sle-ha</product>
         <product_dir>/</product_dir>
       </listentry>
+    <listentry>
+        <media_url><![CDATA[dvd:///?devices=/dev/sr0]]></media_url>
+        <product>server-applications</product>
+        <product_dir>/</product_dir>
+      </listentry>
     </add_on_products>
   </add-on>
   <bootloader>
@@ -107,59 +112,84 @@
       <ipv6_forward config:type="boolean">false</ipv6_forward>
     </routing>
   </networking>
- <partitioning config:type="list">
+  <partitioning config:type="list">
     <drive>
-      <initialize config:type="boolean">true</initialize>
-      <disklabel>gpt</disklabel>
       <device>/dev/vda</device>
-      <use>all</use>
+      <disklabel>msdos</disklabel>
+      <enable_snapshots config:type="boolean">true</enable_snapshots>
+      <initialize config:type="boolean">true</initialize>
       <partitions config:type="list">
         <partition>
+          <create config:type="boolean">true</create>
+          <crypt_fs config:type="boolean">false</crypt_fs>
+          <filesystem config:type="symbol">swap</filesystem>
+          <format config:type="boolean">true</format>
+          <fstopt>defaults</fstopt>
+          <loop_fs config:type="boolean">false</loop_fs>
           <mount>swap</mount>
-          <size>2048M</size>
+          <mountby config:type="symbol">uuid</mountby>
+          <partition_id config:type="integer">130</partition_id>
           <partition_nr config:type="integer">1</partition_nr>
+          <resize config:type="boolean">false</resize>
+          <size>2145549824</size>
         </partition>
         <partition>
-          <mount>/</mount>
-          <label>SLES</label>
-          <filesystem config:type="symbol">btrfs</filesystem>
+          <create config:type="boolean">true</create>
+          <crypt_fs config:type="boolean">false</crypt_fs>
+          <filesystem config:type="symbol">ext3</filesystem>
           <format config:type="boolean">true</format>
-          <size>all</size>
-          <partition_nr config:type="integer">3</partition_nr>
-        </partition>
+          <fstopt>defaults</fstopt>
+          <loop_fs config:type="boolean">false</loop_fs>
+          <mount>/</mount>
+          <mountby config:type="symbol">uuid</mountby>
+          <partition_id config:type="integer">131</partition_id>
+          <partition_nr config:type="integer">2</partition_nr>
+          <resize config:type="boolean">false</resize>
+          <size>max</size>
+	</partition>
       </partitions>
+      <pesize/>
+      <type config:type="symbol">CT_DISK</type>
+<!--      <use>all</use>-->
     </drive>
   </partitioning>
+<!--
+  <partitioning config:type="list">
+       <drive>
+       <use>all</use>
+       </drive>
+  </partitioning>
+-->
   <services-manager>
     <default_target>graphical</default_target>
     <services>
       <disable config:type="list"/>
-        <service>postfix</service>
+      <service>postfix</service>
       <enable config:type="list">
-        <service>btrfsmaintenance-refresh</service>
-        <service>corosync</service>
-        <service>cron</service>
-        <service>display-manager</service>
-        <service>getty@tty1</service>
-        <service>getty@tty7</service>
-        <service>haveged</service>
-        <service>irqbalance</service>
-        <service>iscsi</service>
-        <service>mcelog</service>
-        <service>nscd</service>
-        <service>purge-kernels</service>
-        <service>rollback</service>
-        <service>rsyslog</service>
-        <service>smartd</service>
-        <service>sshd</service>
-        <service>ntpd</service>
-        <service>wicked</service>
-        <service>wickedd-auto4</service>
-        <service>wickedd-dhcp4</service>
-        <service>wickedd-dhcp6</service>
-        <service>wickedd-nanny</service>
-        <service>YaST2-Firstboot</service>
-        <service>YaST2-Second-Stage</service>
+	<service>btrfsmaintenance-refresh</service>
+	<service>corosync</service>
+	<service>cron</service>
+	<service>display-manager</service>
+	<service>getty@tty1</service>
+	<service>getty@tty7</service>
+	<service>haveged</service>
+	<service>irqbalance</service>
+	<service>iscsi</service>
+	<service>mcelog</service>
+	<service>nscd</service>
+	<service>purge-kernels</service>
+	<service>rollback</service>
+	<service>rsyslog</service>
+	<service>smartd</service>
+	<service>sshd</service>
+	<service>ntpd</service>
+	<service>wicked</service>
+	<service>wickedd-auto4</service>
+	<service>wickedd-dhcp4</service>
+	<service>wickedd-dhcp6</service>
+	<service>wickedd-nanny</service>
+	<service>YaST2-Firstboot</service>
+	<service>YaST2-Second-Stage</service>
       </enable>
     </services>
   </services-manager>
@@ -185,12 +215,12 @@
       <gid>100</gid>
       <home>/home/aginies</home>
       <password_settings>
-        <expire/>
-        <flag/>
-        <inact/>
-        <max>99999</max>
-        <min>0</min>
-        <warn>7</warn>
+	<expire/>
+	<flag/>
+	<inact/>
+	<max>99999</max>
+	<min>0</min>
+	<warn>7</warn>
       </password_settings>
       <shell>/bin/bash</shell>
       <uid>1000</uid>
@@ -203,59 +233,62 @@
       <gid>0</gid>
       <home>/root</home>
       <password_settings>
-        <expire/>
-        <flag/>
-        <inact/>
-        <max/>
-        <min/>
-        <warn/>
+	<expire/>
+	<flag/>
+	<inact/>
+	<max/>
+	<min/>
+	<warn/>
       </password_settings>
       <shell>/bin/bash</shell>
       <uid>0</uid>
       <user_password>$6$Wa9BNOQh5cjJ$0G99sgb1WtqYaCZulBBkPzHrmEj49zumisslpcitXmasNeFj63Yl97w.ODcxhNWix.XWYhbf9BLsnJjNZOdO8/</user_password>
       <username>root</username>
     </user>
-</users>
+  </users>
   <software>
-<!--
-    <install_recommended config:type="boolean">false</install_recommended>
--->
+    <!--
+	<install_recommended config:type="boolean">false</install_recommended>
+    -->
+    <products config:type="list">
+     <product>SLES15</product>
+    </products>
     <patterns config:type="list">
       <pattern>Minimal</pattern>
     </patterns>
     <packages config:type="list">
       <package>openssh</package>
       <package>vim</package>
-      <package>autoyast2</package>
       <package>ntp</package>
+      <package>autoyast2</package>
       <package>patterns-ha-ha_sles</package>
     </packages>
-</software>
- <host>
+  </software>
+  <host>
     <hosts config:type="list">
-       <hosts_entry>
-	  <host_address>127.0.0.1</host_address>
-        <names config:type="list">
-         <name>localhost</name>
-        </names>
-       </hosts_entry>
       <hosts_entry>
-        <host_address>NETWORK.101</host_address>
-        <names config:type="list">
+	<host_address>127.0.0.1</host_address>
+	<names config:type="list">
+          <name>localhost</name>
+	</names>
+      </hosts_entry>
+      <hosts_entry>
+	<host_address>NETWORK.101</host_address>
+	<names config:type="list">
           <name>NODENAME1.NODEDOMAIN NODENAME1 FHN1</name>
-        </names>
+	</names>
       </hosts_entry>
       <hosts_entry>
-        <host_address>NETWORK.102</host_address>
-        <names config:type="list">
-          <name>NODENAME2.NODEDOMAIN NODENAME2 FHN2</name>
-        </names>
+	<host_address>NETWORK.102</host_address>
+	<names config:type="list">
+          <name>NODENAME2.NODEDOMAIN NODENAME2 FHN2 </name>
+	</names>
       </hosts_entry>
       <hosts_entry>
-        <host_address>NETWORK.103</host_address>
-        <names config:type="list">
+	<host_address>NETWORK.103</host_address>
+	<names config:type="list">
           <name>NODENAME3.NODEDOMAIN NODENAME3 FHN3</name>
-        </names>
+	</names>
       </hosts_entry>
     </hosts>
   </host>
