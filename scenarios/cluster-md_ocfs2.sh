@@ -31,7 +31,7 @@ CLUSTERMD="CLUSTERMD"
 CLUSTERMDDEV1="vdd"
 CLUSTERMDDEV2="vde"
 CLUSTERMDDEV3="vdf"
-CLUSTERMDDEV3="vdg"
+CLUSTERMDDEV4="vdg"
 diskname="disk"
 MDDEV="/dev/md0"
 
@@ -77,8 +77,8 @@ cluster_md_csync2() {
     exec_on_node ${RNODE} "sync; csync2 -f /etc/mdadm.conf"
     exec_on_node ${RNODE} "csync2 -xv"
 # dirty workaround....
-    exec_on_node ${RNODE} "scp -o StrictHostKeyChecking=no /etc/mdadm.conf ${NODEA}:/etc/"
     exec_on_node ${RNODE} "scp -o StrictHostKeyChecking=no /etc/mdadm.conf ${NODEB}:/etc/"
+    exec_on_node ${RNODE} "scp -o StrictHostKeyChecking=no /etc/mdadm.conf ${NODEC}:/etc/"
 }
 
 format_ocfs2() {
@@ -124,7 +124,7 @@ finish_mdadm_conf() {
     echo $I "############ START finish_mdadm_conf" $O
     find_resource_running_dlm
     exec_on_node ${RNODE} "mdadm --detail --scan"
-    exec_on_node ${RNODE} "echo 'DEVICE /dev/${CLUSTERMDDEV1} /dev/${CLUSTERMDDEV2} /dev/${CLUSTERMDDEV3}' > /etc/mdadm.conf"
+    exec_on_node ${RNODE} "echo 'DEVICE /dev/${CLUSTERMDDEV1} /dev/${CLUSTERMDDEV2} /dev/${CLUSTERMDDEV3} /dev/${CLUSTERMDDEV4}' > /etc/mdadm.conf"
     exec_on_node ${RNODE} "mdadm --detail --scan >> /etc/mdadm.conf"
 }
 
@@ -249,11 +249,12 @@ create_shared_storage() {
     virsh pool-autostart ${CLUSTERMD}
 
     # Create 4 VOLUMES disk1 disk2 disk3 disk4
-    for vol in `seq 1 4` 
+    for vol in `seq 1 3` 
     do
 	echo $I "- Create ${diskname}${vol}.img" $O
 	virsh vol-create-as --pool ${CLUSTERMD} --name ${diskname}${vol}.img --format raw --allocation 1024M --capacity 1024M
     done
+    virsh vol-create-as --pool ${CLUSTERMD} --name ${diskname}4.img --format raw --allocation 2048M --capacity 2048M
 }
 
 delete_shared_storage() {
@@ -354,6 +355,9 @@ case $1 in
 	delete_shared_storage
 	delete_cib_resource ${NODEA} ${CIBNAME} ${RESOURCEID}
 	;;
+    reboot)
+        pssh -h ${PSSHCONF} "reboot"
+	;;
     all)
 	install_packages_cluster_md
 	umount_mnttest
@@ -429,6 +433,7 @@ format:		format in OCFS2 the /dev/md0 device
 check:		various test on Raid1
 detach:		detach disks to nodes
 cleanup:	restore everything to initial statement
+reboot:		reboot all nodes (mandatory in case of error in storage name)
 "
 	;;
 esac
