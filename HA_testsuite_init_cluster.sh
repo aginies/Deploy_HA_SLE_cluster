@@ -95,7 +95,7 @@ add_remove_node_test() {
     coroysnc2_test
     echo "############ START remove node ${DISTRO}${NODENAME}3 from cluster"
     echo "- Remove ${NODENAME}3 from cluster (from node ${NODENAME}1)"
-    exec_on_node ${NODENAME}1 "ha-cluster-remove -c ${NETWORK}.103"
+    exec_on_node ${NODENAME}1 "ha-cluster-remove -c ${NODENAME}3"
     crm_status
     echo "############ START re-add node ${DISTRO}${NODENAME}3 to cluster"
     echo "- Add ${NODENAME}3 back to cluster"

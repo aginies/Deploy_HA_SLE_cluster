@@ -31,6 +31,7 @@ CLUSTERMD="CLUSTERMD"
 CLUSTERMDDEV1="vdd"
 CLUSTERMDDEV2="vde"
 CLUSTERMDDEV3="vdf"
+CLUSTERMDDEV3="vdg"
 diskname="disk"
 MDDEV="/dev/md0"
 
@@ -228,8 +229,8 @@ EOF"
     exec_on_node ${NODEB} "crm resource status"
 }
 
-create_3shared_storage() {
-    echo $I "############ START create_3shared_storage" $O
+create_shared_storage() {
+    echo $I "############ START create_shared_storage" $O
     virsh pool-list --all | grep ${CLUSTERMD} > /dev/null
     if [ $? == "0" ]; then
         echo $W "- Destroy current pool ${CLUSTERMD}" $O
@@ -247,16 +248,16 @@ create_3shared_storage() {
     virsh pool-start ${CLUSTERMD}
     virsh pool-autostart ${CLUSTERMD}
 
-    # Create 3 VOLUMES disk1 disk2 disk3
-    for vol in `seq 1 3` 
+    # Create 4 VOLUMES disk1 disk2 disk3 disk4
+    for vol in `seq 1 4` 
     do
 	echo $I "- Create ${diskname}${vol}.img" $O
 	virsh vol-create-as --pool ${CLUSTERMD} --name ${diskname}${vol}.img --format raw --allocation 1024M --capacity 1024M
     done
 }
 
-delete_3shared_storage() {
-	echo $I "############ START delete_3shared_storage"
+delete_shared_storage() {
+	echo $I "############ START delete_shared_storage"
 	echo $W "- Destroy current pool ${CLUSTERMD}" $O
 	virsh pool-destroy ${CLUSTERMD}
 	echo $W "- Undefine current pool ${CLUSTERMD}" $O
@@ -282,18 +283,21 @@ case $1 in
 	;;
     prepare)
 	umount_mnttest
-	create_3shared_storage
+	create_shared_storage
 	;;
    attach)
 	attach_disk_to_node ${NODEA} ${CLUSTERMD} ${diskname}1 ${CLUSTERMDDEV1} img
 	attach_disk_to_node ${NODEA} ${CLUSTERMD} ${diskname}2 ${CLUSTERMDDEV2} img
 	attach_disk_to_node ${NODEA} ${CLUSTERMD} ${diskname}3 ${CLUSTERMDDEV3} img
+	attach_disk_to_node ${NODEA} ${CLUSTERMD} ${diskname}4 ${CLUSTERMDDEV4} img
 	attach_disk_to_node ${NODEB} ${CLUSTERMD} ${diskname}1 ${CLUSTERMDDEV1} img
 	attach_disk_to_node ${NODEB} ${CLUSTERMD} ${diskname}2 ${CLUSTERMDDEV2} img
 	attach_disk_to_node ${NODEB} ${CLUSTERMD} ${diskname}3 ${CLUSTERMDDEV3} img
+	attach_disk_to_node ${NODEB} ${CLUSTERMD} ${diskname}4 ${CLUSTERMDDEV4} img
 	attach_disk_to_node ${NODEC} ${CLUSTERMD} ${diskname}1 ${CLUSTERMDDEV1} img
 	attach_disk_to_node ${NODEC} ${CLUSTERMD} ${diskname}2 ${CLUSTERMDDEV2} img
 	attach_disk_to_node ${NODEC} ${CLUSTERMD} ${diskname}3 ${CLUSTERMDDEV3} img
+	attach_disk_to_node ${NODEC} ${CLUSTERMD} ${diskname}4 ${CLUSTERMDDEV4} img
 	;;
     crm)
 	cluster_md_ocfs2_cib
@@ -320,12 +324,15 @@ case $1 in
         detach_disk_from_node ${NODEA} ${CLUSTERMDDEV1}
         detach_disk_from_node ${NODEA} ${CLUSTERMDDEV2}
         detach_disk_from_node ${NODEA} ${CLUSTERMDDEV3}
+        detach_disk_from_node ${NODEA} ${CLUSTERMDDEV4}
         detach_disk_from_node ${NODEB} ${CLUSTERMDDEV1}
         detach_disk_from_node ${NODEB} ${CLUSTERMDDEV2}
         detach_disk_from_node ${NODEB} ${CLUSTERMDDEV3}
+        detach_disk_from_node ${NODEB} ${CLUSTERMDDEV4}
         detach_disk_from_node ${NODEC} ${CLUSTERMDDEV1}
         detach_disk_from_node ${NODEC} ${CLUSTERMDDEV2}
         detach_disk_from_node ${NODEC} ${CLUSTERMDDEV3}
+        detach_disk_from_node ${NODEC} ${CLUSTERMDDEV4}
 	;;
     cleanup)
 	# restore before runnning the test
@@ -334,29 +341,35 @@ case $1 in
         detach_disk_from_node ${NODEA} ${CLUSTERMDDEV1}
         detach_disk_from_node ${NODEA} ${CLUSTERMDDEV2}
         detach_disk_from_node ${NODEA} ${CLUSTERMDDEV3}
+        detach_disk_from_node ${NODEA} ${CLUSTERMDDEV4}
         detach_disk_from_node ${NODEB} ${CLUSTERMDDEV1}
         detach_disk_from_node ${NODEB} ${CLUSTERMDDEV2}
         detach_disk_from_node ${NODEB} ${CLUSTERMDDEV3}
+        detach_disk_from_node ${NODEB} ${CLUSTERMDDEV4}
         detach_disk_from_node ${NODEC} ${CLUSTERMDDEV1}
         detach_disk_from_node ${NODEC} ${CLUSTERMDDEV2}
         detach_disk_from_node ${NODEC} ${CLUSTERMDDEV3}
+        detach_disk_from_node ${NODEC} ${CLUSTERMDDEV4}
 	delete_all_resources
-	delete_3shared_storage
+	delete_shared_storage
 	delete_cib_resource ${NODEA} ${CIBNAME} ${RESOURCEID}
 	;;
     all)
 	install_packages_cluster_md
 	umount_mnttest
-	create_3shared_storage
+	create_shared_storage
 	attach_disk_to_node ${NODEA} ${CLUSTERMD} ${diskname}1 ${CLUSTERMDDEV1} img
 	attach_disk_to_node ${NODEA} ${CLUSTERMD} ${diskname}2 ${CLUSTERMDDEV2} img
 	attach_disk_to_node ${NODEA} ${CLUSTERMD} ${diskname}3 ${CLUSTERMDDEV3} img
+	attach_disk_to_node ${NODEA} ${CLUSTERMD} ${diskname}4 ${CLUSTERMDDEV4} img
 	attach_disk_to_node ${NODEB} ${CLUSTERMD} ${diskname}1 ${CLUSTERMDDEV1} img
 	attach_disk_to_node ${NODEB} ${CLUSTERMD} ${diskname}2 ${CLUSTERMDDEV2} img
 	attach_disk_to_node ${NODEB} ${CLUSTERMD} ${diskname}3 ${CLUSTERMDDEV3} img
+	attach_disk_to_node ${NODEB} ${CLUSTERMD} ${diskname}4 ${CLUSTERMDDEV4} img
 	attach_disk_to_node ${NODEC} ${CLUSTERMD} ${diskname}1 ${CLUSTERMDDEV1} img
 	attach_disk_to_node ${NODEC} ${CLUSTERMD} ${diskname}2 ${CLUSTERMDDEV2} img
 	attach_disk_to_node ${NODEC} ${CLUSTERMD} ${diskname}3 ${CLUSTERMDDEV3} img
+	attach_disk_to_node ${NODEC} ${CLUSTERMD} ${diskname}4 ${CLUSTERMDDEV4} img
 	cluster_md_ocfs2_cib
 	create_dlm_resource
 	check_cluster_md_resource
@@ -369,26 +382,32 @@ case $1 in
         detach_disk_from_node ${NODEA} ${CLUSTERMDDEV1}
         detach_disk_from_node ${NODEA} ${CLUSTERMDDEV2}
         detach_disk_from_node ${NODEA} ${CLUSTERMDDEV3}
+        detach_disk_from_node ${NODEA} ${CLUSTERMDDEV4}
         detach_disk_from_node ${NODEB} ${CLUSTERMDDEV1}
         detach_disk_from_node ${NODEB} ${CLUSTERMDDEV2}
         detach_disk_from_node ${NODEB} ${CLUSTERMDDEV3}
+        detach_disk_from_node ${NODEB} ${CLUSTERMDDEV4}
         detach_disk_from_node ${NODEC} ${CLUSTERMDDEV1}
         detach_disk_from_node ${NODEC} ${CLUSTERMDDEV2}
         detach_disk_from_node ${NODEC} ${CLUSTERMDDEV3}
+        detach_disk_from_node ${NODEC} ${CLUSTERMDDEV4}
 	# restore before runnning the test
 	back_to_begining
 	# restore initial conf
         detach_disk_from_node ${NODEA} ${CLUSTERMDDEV1}
         detach_disk_from_node ${NODEA} ${CLUSTERMDDEV2}
         detach_disk_from_node ${NODEA} ${CLUSTERMDDEV3}
+        detach_disk_from_node ${NODEA} ${CLUSTERMDDEV4}
         detach_disk_from_node ${NODEB} ${CLUSTERMDDEV1}
         detach_disk_from_node ${NODEB} ${CLUSTERMDDEV2}
         detach_disk_from_node ${NODEB} ${CLUSTERMDDEV3}
+        detach_disk_from_node ${NODEB} ${CLUSTERMDDEV4}
         detach_disk_from_node ${NODEC} ${CLUSTERMDDEV1}
         detach_disk_from_node ${NODEC} ${CLUSTERMDDEV2}
         detach_disk_from_node ${NODEC} ${CLUSTERMDDEV3}
+        detach_disk_from_node ${NODEC} ${CLUSTERMDDEV4}
 	delete_all_resources
-	delete_3shared_storage
+	delete_shared_storage
 	delete_cib_resource ${NODEA} ${CIBNAME} ${RESOURCEID}
 	;;
     *)
@@ -397,7 +416,7 @@ usage of $0
 
 all:		do everything
 install:	install all needed packages on nodes
-prepare:	umount /mnt/test; create 3 shared storage
+prepare:	umount /mnt/test; create 4 shared storage (one not used)
 attach:		attach disks to nodes
 crm:		create a CIB cluster_md_ocfs2
 	        create the dlm resource
