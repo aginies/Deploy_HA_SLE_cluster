@@ -32,6 +32,8 @@ CLUSTERMDDEV1="vdd"
 CLUSTERMDDEV2="vde"
 CLUSTERMDDEV3="vdf"
 CLUSTERMDDEV4="vdg"
+CLUSTERMDDEV5="vdh"
+CLUSTERMDDEV6="vdi"
 diskname="disk"
 MDDEV="/dev/md0"
 
@@ -77,6 +79,7 @@ cluster_md_csync2() {
     exec_on_node ${RNODE} "sync; csync2 -f /etc/mdadm.conf"
     exec_on_node ${RNODE} "csync2 -xv"
 # dirty workaround....
+    exec_on_node ${RNODE} "scp -o StrictHostKeyChecking=no /etc/mdadm.conf ${NODEA}:/etc/"
     exec_on_node ${RNODE} "scp -o StrictHostKeyChecking=no /etc/mdadm.conf ${NODEB}:/etc/"
     exec_on_node ${RNODE} "scp -o StrictHostKeyChecking=no /etc/mdadm.conf ${NODEC}:/etc/"
 }
@@ -124,7 +127,7 @@ finish_mdadm_conf() {
     echo $I "############ START finish_mdadm_conf" $O
     find_resource_running_dlm
     exec_on_node ${RNODE} "mdadm --detail --scan"
-    exec_on_node ${RNODE} "echo 'DEVICE /dev/${CLUSTERMDDEV1} /dev/${CLUSTERMDDEV2} /dev/${CLUSTERMDDEV3} /dev/${CLUSTERMDDEV4}' > /etc/mdadm.conf"
+    exec_on_node ${RNODE} "echo 'DEVICE /dev/${CLUSTERMDDEV1} /dev/${CLUSTERMDDEV2} /dev/${CLUSTERMDDEV3} /dev/${CLUSTERMDDEV4} /dev/${CLUSTERMDDEV5} /dev/${CLUSTERMDDEV6}' > /etc/mdadm.conf"
     exec_on_node ${RNODE} "mdadm --detail --scan >> /etc/mdadm.conf"
 }
 
@@ -248,13 +251,17 @@ create_shared_storage() {
     virsh pool-start ${CLUSTERMD}
     virsh pool-autostart ${CLUSTERMD}
 
-    # Create 4 VOLUMES disk1 disk2 disk3 disk4
+    # Create 5 VOLUMES disk1 disk2 disk3 disk4 disk5 disk 6
     for vol in `seq 1 3` 
     do
-	echo $I "- Create ${diskname}${vol}.img" $O
+	echo $I "- Create ${diskname}${vol}.img 1024M" $O
 	virsh vol-create-as --pool ${CLUSTERMD} --name ${diskname}${vol}.img --format raw --allocation 1024M --capacity 1024M
     done
-    virsh vol-create-as --pool ${CLUSTERMD} --name ${diskname}4.img --format raw --allocation 2048M --capacity 2048M
+    for vol in `seq 4 6` 
+    do
+	echo $I "- Create ${diskname}${vol}.img 2048M" $O
+    	virsh vol-create-as --pool ${CLUSTERMD} --name ${diskname}${vol}.img --format raw --allocation 2048M --capacity 2048M
+    done
 }
 
 delete_shared_storage() {
@@ -291,14 +298,20 @@ case $1 in
 	attach_disk_to_node ${NODEA} ${CLUSTERMD} ${diskname}2 ${CLUSTERMDDEV2} img
 	attach_disk_to_node ${NODEA} ${CLUSTERMD} ${diskname}3 ${CLUSTERMDDEV3} img
 	attach_disk_to_node ${NODEA} ${CLUSTERMD} ${diskname}4 ${CLUSTERMDDEV4} img
+	attach_disk_to_node ${NODEA} ${CLUSTERMD} ${diskname}5 ${CLUSTERMDDEV5} img
+	attach_disk_to_node ${NODEA} ${CLUSTERMD} ${diskname}6 ${CLUSTERMDDEV6} img
 	attach_disk_to_node ${NODEB} ${CLUSTERMD} ${diskname}1 ${CLUSTERMDDEV1} img
 	attach_disk_to_node ${NODEB} ${CLUSTERMD} ${diskname}2 ${CLUSTERMDDEV2} img
 	attach_disk_to_node ${NODEB} ${CLUSTERMD} ${diskname}3 ${CLUSTERMDDEV3} img
 	attach_disk_to_node ${NODEB} ${CLUSTERMD} ${diskname}4 ${CLUSTERMDDEV4} img
+	attach_disk_to_node ${NODEB} ${CLUSTERMD} ${diskname}5 ${CLUSTERMDDEV5} img
+	attach_disk_to_node ${NODEB} ${CLUSTERMD} ${diskname}6 ${CLUSTERMDDEV6} img
 	attach_disk_to_node ${NODEC} ${CLUSTERMD} ${diskname}1 ${CLUSTERMDDEV1} img
 	attach_disk_to_node ${NODEC} ${CLUSTERMD} ${diskname}2 ${CLUSTERMDDEV2} img
 	attach_disk_to_node ${NODEC} ${CLUSTERMD} ${diskname}3 ${CLUSTERMDDEV3} img
 	attach_disk_to_node ${NODEC} ${CLUSTERMD} ${diskname}4 ${CLUSTERMDDEV4} img
+	attach_disk_to_node ${NODEC} ${CLUSTERMD} ${diskname}5 ${CLUSTERMDDEV5} img
+	attach_disk_to_node ${NODEC} ${CLUSTERMD} ${diskname}6 ${CLUSTERMDDEV6} img
 	;;
     crm)
 	cluster_md_ocfs2_cib
@@ -326,14 +339,20 @@ case $1 in
         detach_disk_from_node ${NODEA} ${CLUSTERMDDEV2}
         detach_disk_from_node ${NODEA} ${CLUSTERMDDEV3}
         detach_disk_from_node ${NODEA} ${CLUSTERMDDEV4}
+        detach_disk_from_node ${NODEA} ${CLUSTERMDDEV5}
+        detach_disk_from_node ${NODEA} ${CLUSTERMDDEV6}
         detach_disk_from_node ${NODEB} ${CLUSTERMDDEV1}
         detach_disk_from_node ${NODEB} ${CLUSTERMDDEV2}
         detach_disk_from_node ${NODEB} ${CLUSTERMDDEV3}
         detach_disk_from_node ${NODEB} ${CLUSTERMDDEV4}
+        detach_disk_from_node ${NODEB} ${CLUSTERMDDEV5}
+        detach_disk_from_node ${NODEB} ${CLUSTERMDDEV6}
         detach_disk_from_node ${NODEC} ${CLUSTERMDDEV1}
         detach_disk_from_node ${NODEC} ${CLUSTERMDDEV2}
         detach_disk_from_node ${NODEC} ${CLUSTERMDDEV3}
         detach_disk_from_node ${NODEC} ${CLUSTERMDDEV4}
+        detach_disk_from_node ${NODEC} ${CLUSTERMDDEV5}
+        detach_disk_from_node ${NODEC} ${CLUSTERMDDEV6}
 	;;
     cleanup)
 	# restore before runnning the test
@@ -343,14 +362,20 @@ case $1 in
         detach_disk_from_node ${NODEA} ${CLUSTERMDDEV2}
         detach_disk_from_node ${NODEA} ${CLUSTERMDDEV3}
         detach_disk_from_node ${NODEA} ${CLUSTERMDDEV4}
+        detach_disk_from_node ${NODEA} ${CLUSTERMDDEV5}
+        detach_disk_from_node ${NODEA} ${CLUSTERMDDEV6}
         detach_disk_from_node ${NODEB} ${CLUSTERMDDEV1}
         detach_disk_from_node ${NODEB} ${CLUSTERMDDEV2}
         detach_disk_from_node ${NODEB} ${CLUSTERMDDEV3}
         detach_disk_from_node ${NODEB} ${CLUSTERMDDEV4}
+        detach_disk_from_node ${NODEB} ${CLUSTERMDDEV5}
+        detach_disk_from_node ${NODEB} ${CLUSTERMDDEV6}
         detach_disk_from_node ${NODEC} ${CLUSTERMDDEV1}
         detach_disk_from_node ${NODEC} ${CLUSTERMDDEV2}
         detach_disk_from_node ${NODEC} ${CLUSTERMDDEV3}
         detach_disk_from_node ${NODEC} ${CLUSTERMDDEV4}
+        detach_disk_from_node ${NODEC} ${CLUSTERMDDEV5}
+        detach_disk_from_node ${NODEC} ${CLUSTERMDDEV6}
 	delete_all_resources
 	delete_shared_storage
 	delete_cib_resource ${NODEA} ${CIBNAME} ${RESOURCEID}
@@ -366,14 +391,20 @@ case $1 in
 	attach_disk_to_node ${NODEA} ${CLUSTERMD} ${diskname}2 ${CLUSTERMDDEV2} img
 	attach_disk_to_node ${NODEA} ${CLUSTERMD} ${diskname}3 ${CLUSTERMDDEV3} img
 	attach_disk_to_node ${NODEA} ${CLUSTERMD} ${diskname}4 ${CLUSTERMDDEV4} img
+	attach_disk_to_node ${NODEA} ${CLUSTERMD} ${diskname}5 ${CLUSTERMDDEV5} img
+	attach_disk_to_node ${NODEA} ${CLUSTERMD} ${diskname}6 ${CLUSTERMDDEV6} img
 	attach_disk_to_node ${NODEB} ${CLUSTERMD} ${diskname}1 ${CLUSTERMDDEV1} img
 	attach_disk_to_node ${NODEB} ${CLUSTERMD} ${diskname}2 ${CLUSTERMDDEV2} img
 	attach_disk_to_node ${NODEB} ${CLUSTERMD} ${diskname}3 ${CLUSTERMDDEV3} img
 	attach_disk_to_node ${NODEB} ${CLUSTERMD} ${diskname}4 ${CLUSTERMDDEV4} img
+	attach_disk_to_node ${NODEB} ${CLUSTERMD} ${diskname}5 ${CLUSTERMDDEV5} img
+	attach_disk_to_node ${NODEB} ${CLUSTERMD} ${diskname}6 ${CLUSTERMDDEV6} img
 	attach_disk_to_node ${NODEC} ${CLUSTERMD} ${diskname}1 ${CLUSTERMDDEV1} img
 	attach_disk_to_node ${NODEC} ${CLUSTERMD} ${diskname}2 ${CLUSTERMDDEV2} img
 	attach_disk_to_node ${NODEC} ${CLUSTERMD} ${diskname}3 ${CLUSTERMDDEV3} img
 	attach_disk_to_node ${NODEC} ${CLUSTERMD} ${diskname}4 ${CLUSTERMDDEV4} img
+	attach_disk_to_node ${NODEC} ${CLUSTERMD} ${diskname}5 ${CLUSTERMDDEV5} img
+	attach_disk_to_node ${NODEC} ${CLUSTERMD} ${diskname}6 ${CLUSTERMDDEV6} img
 	cluster_md_ocfs2_cib
 	create_dlm_resource
 	check_cluster_md_resource
@@ -387,14 +418,20 @@ case $1 in
         detach_disk_from_node ${NODEA} ${CLUSTERMDDEV2}
         detach_disk_from_node ${NODEA} ${CLUSTERMDDEV3}
         detach_disk_from_node ${NODEA} ${CLUSTERMDDEV4}
+        detach_disk_from_node ${NODEA} ${CLUSTERMDDEV5}
+        detach_disk_from_node ${NODEA} ${CLUSTERMDDEV6}
         detach_disk_from_node ${NODEB} ${CLUSTERMDDEV1}
         detach_disk_from_node ${NODEB} ${CLUSTERMDDEV2}
         detach_disk_from_node ${NODEB} ${CLUSTERMDDEV3}
         detach_disk_from_node ${NODEB} ${CLUSTERMDDEV4}
+        detach_disk_from_node ${NODEB} ${CLUSTERMDDEV5}
+        detach_disk_from_node ${NODEB} ${CLUSTERMDDEV6}
         detach_disk_from_node ${NODEC} ${CLUSTERMDDEV1}
         detach_disk_from_node ${NODEC} ${CLUSTERMDDEV2}
         detach_disk_from_node ${NODEC} ${CLUSTERMDDEV3}
         detach_disk_from_node ${NODEC} ${CLUSTERMDDEV4}
+        detach_disk_from_node ${NODEC} ${CLUSTERMDDEV5}
+        detach_disk_from_node ${NODEC} ${CLUSTERMDDEV6}
 	# restore before runnning the test
 	back_to_begining
 	# restore initial conf
@@ -402,14 +439,20 @@ case $1 in
         detach_disk_from_node ${NODEA} ${CLUSTERMDDEV2}
         detach_disk_from_node ${NODEA} ${CLUSTERMDDEV3}
         detach_disk_from_node ${NODEA} ${CLUSTERMDDEV4}
+        detach_disk_from_node ${NODEA} ${CLUSTERMDDEV5}
+        detach_disk_from_node ${NODEA} ${CLUSTERMDDEV6}
         detach_disk_from_node ${NODEB} ${CLUSTERMDDEV1}
         detach_disk_from_node ${NODEB} ${CLUSTERMDDEV2}
         detach_disk_from_node ${NODEB} ${CLUSTERMDDEV3}
         detach_disk_from_node ${NODEB} ${CLUSTERMDDEV4}
+        detach_disk_from_node ${NODEB} ${CLUSTERMDDEV5}
+        detach_disk_from_node ${NODEB} ${CLUSTERMDDEV6}
         detach_disk_from_node ${NODEC} ${CLUSTERMDDEV1}
         detach_disk_from_node ${NODEC} ${CLUSTERMDDEV2}
         detach_disk_from_node ${NODEC} ${CLUSTERMDDEV3}
         detach_disk_from_node ${NODEC} ${CLUSTERMDDEV4}
+        detach_disk_from_node ${NODEC} ${CLUSTERMDDEV5}
+        detach_disk_from_node ${NODEC} ${CLUSTERMDDEV6}
 	delete_all_resources
 	delete_shared_storage
 	delete_cib_resource ${NODEA} ${CIBNAME} ${RESOURCEID}
@@ -420,7 +463,7 @@ usage of $0
 
 all:		do everything
 install:	install all needed packages on nodes
-prepare:	umount /mnt/test; create 4 shared storage (one not used)
+prepare:	umount /mnt/test; create 6 shared storage 1G (3 not used 2G)
 attach:		attach disks to nodes
 crm:		create a CIB cluster_md_ocfs2
 	        create the dlm resource
