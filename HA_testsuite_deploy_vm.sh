@@ -68,6 +68,7 @@ install_vm() {
 	   --vcpus ${VCPU} \
 	   --virt-type kvm \
 	   --os-variant sles12sp3 \
+	   --controller scsi,model=virtio-scsi \
 	   --graphics vnc,keymap=${KEYMAP} \
 	   --network network=${NETWORKNAME},mac=${MAC} \
 	   --disk path=${VMDISK},format=qcow2,bus=virtio,cache=none \
@@ -129,7 +130,7 @@ VMDISK="${STORAGEP}/${LIBVIRTPOOL}/${NAME}.qcow2"
 install_vm
 
 # Use a minimal installation without X for HA2 and HA3 etc...
-EXTRAARGS="autoyast=device://vdc/havm_mini.xml"
+#EXTRAARGS="autoyast=device://vdc/havm_mini.xml"
 
 # Install HA2 VM
 NAME="${DISTRO}${NODENAME}2"

@@ -36,6 +36,7 @@ CLUSTERMDDEV5="vdh"
 CLUSTERMDDEV6="vdi"
 diskname="disk"
 MDDEV="/dev/md0"
+DEMO="1"
 
 cluster_md_ocfs2_cib() {
     echo $I "############ START cluster_md_ocfs2_cib" $O
@@ -46,12 +47,15 @@ cib use live
 cib commit ${CIBNAME}
 exit
 EOF"
+    if [ "$DEMO" != "" ]; then read; fi
+
 }
 
 install_packages_cluster_md() {
     echo $I "############ START install_packages_cluster" $O
     echo $I "- Installing cluster-md-kmp-default mdadm on all nodes" $O
     pssh -h ${PSSHCONF} "zypper in -y cluster-md-kmp-default mdadm"
+    if [ "$DEMO" != "" ]; then read; fi
 }
 
 check_cluster_md_resource() {
@@ -70,7 +74,7 @@ cluster_md_csync2() {
     exec_on_node ${RNODE} "grep /etc/mdadm.conf /etc/csync2/csync2.cfg; echo \$? > /tmp/CODE "
     scp -q -o StrictHostKeyChecking=no ${RNODE}:/tmp/CODE /tmp/CODE
     VALUE=`cat /tmp/CODE`
-    if [ $vALUE -ne 0 ]; then
+    if [ $VALUE -ne 0 ]; then
     	exec_on_node ${RNODE} "perl -pi -e 's|}|\tinclude /etc/mdadm.conf;}|' /etc/csync2/csync2.cfg"
     else
         echo $W "- /etc/csync2/csync2.cfg already contains /etc/mdadm.conf files to sync" $O
@@ -78,10 +82,11 @@ cluster_md_csync2() {
     exec_on_node ${RNODE} "cat /etc/mdadm.conf"
     exec_on_node ${RNODE} "sync; csync2 -f /etc/mdadm.conf"
     exec_on_node ${RNODE} "csync2 -xv"
-# dirty workaround....
+    # dirty workaround....
     exec_on_node ${RNODE} "scp -o StrictHostKeyChecking=no /etc/mdadm.conf ${NODEA}:/etc/"
     exec_on_node ${RNODE} "scp -o StrictHostKeyChecking=no /etc/mdadm.conf ${NODEB}:/etc/"
     exec_on_node ${RNODE} "scp -o StrictHostKeyChecking=no /etc/mdadm.conf ${NODEC}:/etc/"
+    if [ "$DEMO" != "" ]; then read; fi
 }
 
 format_ocfs2() {
@@ -90,6 +95,14 @@ format_ocfs2() {
     find_resource_running_dlm
     exec_on_node ${RNODE} "mkfs.ocfs2 --force --cluster-stack pcmk -L 'VMtesting' --cluster-name hacluster ${MDDEV}"
 }
+
+format_gfs2() {
+    # need DLM
+    echo $I "############ START format_gfs2" $O
+    find_resource_running_dlm
+    exec_on_node ${RNODE} "mkfs.gfs2 -O -p lock_dlm -t hacluster:gfs2 ${MDDEV}"
+}
+
 
 umount_mnttest() {
     echo $I "############ START umount_mnttest" $O
@@ -106,12 +119,14 @@ monitor_progress() {
 
 create_RAID() {
     echo $I "############ START create_RAID" $O
-#    exec_on_node ${NODEB} "mdadm --create md0 --bitmap=clustered --raid-devices=2 --level=mirror --spare-devices=1 /dev/${CLUSTERMDDEV1} /dev/${CLUSTERMDDEV2} /dev/${CLUSTERMDDEV3} --metadata=1.2"
+    #    exec_on_node ${NODEB} "mdadm --create md0 --bitmap=clustered --raid-devices=2 --level=mirror --spare-devices=1 /dev/${CLUSTERMDDEV1} /dev/${CLUSTERMDDEV2} /dev/${CLUSTERMDDEV3} --metadata=1.2"
     # exec_on_node ${NODEB} "yes| mdadm --create md0 --bitmap=clustered \
     echo "mdadm --create /dev/md0 --bitmap=clustered --raid-devices=2 --level=mirror --spare-devices=1 /dev/vdd /dev/vde /dev/vdf --metadata=1.2"
+    if [ "$DEMO" != "" ]; then read; fi
     find_resource_running_dlm
     exec_on_node ${RNODE} "mdadm --create /dev/md0 --bitmap=clustered --raid-devices=2 --level=mirror --spare-devices=1 /dev/vdd /dev/vde /dev/vdf --metadata=1.2"
     monitor_progress
+    if [ "$DEMO" != "" ]; then read; fi
 }
 
 find_resource_running_dlm() {
@@ -127,8 +142,10 @@ finish_mdadm_conf() {
     echo $I "############ START finish_mdadm_conf" $O
     find_resource_running_dlm
     exec_on_node ${RNODE} "mdadm --detail --scan"
+    if [ "$DEMO" != "" ]; then read; fi
     exec_on_node ${RNODE} "echo 'DEVICE /dev/${CLUSTERMDDEV1} /dev/${CLUSTERMDDEV2} /dev/${CLUSTERMDDEV3} /dev/${CLUSTERMDDEV4} /dev/${CLUSTERMDDEV5} /dev/${CLUSTERMDDEV6}' > /etc/mdadm.conf"
     exec_on_node ${RNODE} "mdadm --detail --scan >> /etc/mdadm.conf"
+    if [ "$DEMO" != "" ]; then read; fi
 }
 
 check_cluster_md() {
@@ -136,6 +153,7 @@ check_cluster_md() {
     #exec_on_node ${NODEA} "mdadm --manage ${MDDEV} --add ${CLUSTERMDDEV1}"
     #exec_on_node ${NODEA} "mdadm --manage ${MDDEV} --add ${CLUSTERMDDEV2}"
     #exec_on_node ${NODEA} "mdadm --manage ${MDDEV} --add ${CLUSTERMDDEV3}"
+    show_md_status
     echo "- Create ${MNTTEST} directory"
     exec_on_node ${NODEA} "mkdir ${MNTTEST}" IGNORE
     exec_on_node ${NODEB} "mkdir ${MNTTEST}" IGNORE
@@ -157,10 +175,27 @@ check_cluster_md() {
     else
         echo $S "- Same S${NODENAME}1 from ${NODEA} and ${NODEB}: TEST OK" $O
     fi
-    exec_on_node ${NODEA} "touch ${MNTTEST}/bspl{0001..10001}.c"
-    exec_on_node ${NODEB} "ls ${MNTTEST}//bspl0001*.c"
-#    exec_on_node ${NODEA} "journalctl --lines 10 --no-pager"
+    exec_on_node ${NODEA} "touch ${MNTTEST}/bspl{001..1001}.c"
+    exec_on_node ${NODEB} "ls ${MNTTEST}//bspl001*.c"
+    #    exec_on_node ${NODEA} "journalctl --lines 10 --no-pager"
     umount_mnttest
+}
+
+spare_mode() {
+    SPARE=$1
+    echo $I "############ START spare_mode" $O
+    echo "- Declare /dev/${CLUSTERMDDEV2} as failed"
+    exec_on_node ${NODEA} "mdadm --manage ${MDDEV} --fail ${SPARE}"
+    show_md_status
+    if [ "$DEMO" != "" ]; then read; fi
+    echo "- Re-add /dev/${CLUSTERMDDEV2}"
+    exec_on_node ${NODEA} "mdadm --manage ${MDDEV} --re-add ${SPARE}"
+    show_md_status
+    if [ "$DEMO" != "" ]; then read; fi
+}
+
+show_md_status() {
+    exec_on_node ${NODEA} "mdadm --detail ${MDDEV}"
 }
 
 back_to_begining() {
@@ -174,18 +209,24 @@ back_to_begining() {
 
 create_dlm_resource() {
     echo $I "############ START create_dlm_resource" $O
+    exec_on_node ${NODEA} "OCF_ROOT=/usr/lib/ocf /usr/lib/ocf/resource.d/pacemaker/controld meta-data"
+    if [ "$DEMO" != "" ]; then read; fi
     exec_on_node ${NODEA} "crm configure<<EOF
 primitive dlm ocf:pacemaker:controld op monitor interval='60' timeout='60'
 group base-group dlm
 commit
 exit
 EOF"
+
+    if [ "$DEMO" != "" ]; then read; fi
+
     exec_on_node ${NODEA} "crm configure<<EOF
 clone base-clone base-group meta interleave=true target-role=Started
 show
 commit
 exit
 EOF"
+    if [ "$DEMO" != "" ]; then read; fi
 }
 
 create_raider_primitive() {
@@ -199,11 +240,49 @@ exit
 EOF"
     echo $I "- Sleep 5sec until Raid is ready" $O
     sleep 5
+    if [ "$DEMO" != "" ]; then read; fi
     exec_on_node ${NODEA} "journalctl --lines 8 --no-pager"
     exec_on_node ${NODEB} "crm status"
 
 }
 
+grow_device() {
+    echo $I "############ START grow_device" $O
+    echo $I "- Add more backend devices" $O
+    exec_on_node ${NODEA} "mdadm --manage ${MDDEV} --add /dev/vdg" $O
+    exec_on_node ${NODEA} "mdadm --manage ${MDDEV} --add /dev/vdh" $O
+    exec_on_node ${NODEA} "mdadm --manage ${MDDEV} --add /dev/vdi" $O
+    if [ "$DEMO" != "" ]; then read; fi
+    show_md_status
+    if [ "$DEMO" != "" ]; then read; fi
+    echo $I "- Declare as fail the spare, remove it" $O
+    exec_on_node ${NODEA} "mdadm --manage ${MDDEV} --fail /dev/vde" $O
+    exec_on_node ${NODEA} "mdadm --manage ${MDDEV} --fail /dev/vdf" $O
+    if [ "$DEMO" != "" ]; then read; fi
+    show_md_status
+    if [ "$DEMO" != "" ]; then read; fi
+    echo $I "- Remove the Faulty" $O
+    exec_on_node ${NODEA} "mdadm --manage ${MDDEV} --remove /dev/vde" $O
+    exec_on_node ${NODEA} "mdadm --manage ${MDDEV} --remove /dev/vdf" $O
+    if [ "$DEMO" != "" ]; then read; fi
+    show_md_status
+    if [ "$DEMO" != "" ]; then read; fi
+    echo $I "- Once Sync done, declare failed latest Active on 1Gb, 1 spare of 2Gb will replace it" $O
+    exec_on_node ${NODEA} "mdadm --manage ${MDDEV} --fail /dev/vdd" $O
+    if [ "$DEMO" != "" ]; then read; fi
+    echo $I "- Remove the latest fail device of 1Gb" $O
+    exec_on_node ${NODEA} "mdadm --manage ${MDDEV} --remove /dev/vdd" $O
+    show_md_status
+    if [ "$DEMO" != "" ]; then read; fi
+    echo $I "- Grow the size of ${MDDEV}" $O
+    exec_on_node ${NODEA} "mdadm --grow ${MDDEV} --size=max" $O
+    exec_on_node ${NODEA} "mdadm --grow ${MDDEV} --size=max" $O
+    if [ "$DEMO" != "" ]; then read; fi
+    echo $I "- Grow the size of the FS" $O
+    exec_on_node ${NODEA} "tunefs.ocfs2 -S -v ${MDDEV}" $O
+    if [ "$DEMO" != "" ]; then read; fi
+
+}
 
 delete_all_resources() {
     echo $I "############ START delete_all_resources" $O
@@ -225,10 +304,10 @@ commit
 exit
 EOF"
     exec_on_node ${NODEB} "crm status"
-#    exec_on_node ${NODEB} "crm resource restart base-clone"
-#    exec_on_node ${NODEB} "crm resource restart dlm"
-#    exec_on_node ${NODEB} "crm resource cleanup dlm"
-#    exec_on_node ${NODEB} "crm resource cleanup raider"
+    #    exec_on_node ${NODEB} "crm resource restart base-clone"
+    #    exec_on_node ${NODEB} "crm resource restart dlm"
+    #    exec_on_node ${NODEB} "crm resource cleanup dlm"
+    #    exec_on_node ${NODEB} "crm resource cleanup raider"
     exec_on_node ${NODEB} "crm resource status"
 }
 
@@ -265,12 +344,12 @@ create_shared_storage() {
 }
 
 delete_shared_storage() {
-	echo $I "############ START delete_shared_storage"
-	echo $W "- Destroy current pool ${CLUSTERMD}" $O
-	virsh pool-destroy ${CLUSTERMD}
-	echo $W "- Undefine current pool ${CLUSTERMD}" $O
-	virsh pool-undefine ${CLUSTERMD}
-	rm -rfv ${STORAGEP}/${CLUSTERMD}
+    echo $I "############ START delete_shared_storage"
+    echo $W "- Destroy current pool ${CLUSTERMD}" $O
+    virsh pool-destroy ${CLUSTERMD}
+    echo $W "- Undefine current pool ${CLUSTERMD}" $O
+    virsh pool-undefine ${CLUSTERMD}
+    rm -rfv ${STORAGEP}/${CLUSTERMD}
 }
 
 ##########################
@@ -293,7 +372,7 @@ case $1 in
 	umount_mnttest
 	create_shared_storage
 	;;
-   attach)
+    attach)
 	attach_disk_to_node ${NODEA} ${CLUSTERMD} ${diskname}1 ${CLUSTERMDDEV1} img
 	attach_disk_to_node ${NODEA} ${CLUSTERMD} ${diskname}2 ${CLUSTERMDDEV2} img
 	attach_disk_to_node ${NODEA} ${CLUSTERMD} ${diskname}3 ${CLUSTERMDDEV3} img
@@ -328,11 +407,27 @@ case $1 in
     crmfinish)
 	create_raider_primitive
 	;;
-    format)
+    formatocfs2)
 	format_ocfs2
+	;;
+    formatgfs2)
+	format_gfs2
+	;;
+    mdstatus)
+	show_md_status
 	;;
     check)
 	check_cluster_md
+	;;
+    status)
+    	exec_on_node ${NODEA} "crm status"
+	;;
+    spare)
+	if [ "$2" == "" ] ; then echo "Please Specify the device (/dev/vdX)"; exit 1; fi
+	spare_mode $2
+	;;
+    growdev)
+	grow_device
 	;;
     detach)
         detach_disk_from_node ${NODEA} ${CLUSTERMDDEV1}
@@ -472,10 +567,16 @@ raid:		verify available disk for nodes
 	        finish the mdadm configuration
 csync2:	        csync2 the configuration
 crmfinish:	create the raider primitive
-format:		format in OCFS2 the /dev/md0 device
-check:		various test on Raid1
-detach:		detach disks to nodes
+formatocfs2:	format in OCFS2 the ${MDDEV} device
+formatgfs2:	format in GFS2 the ${MDDEV} device
+check:		various test on RAID1
+spare:		test the spare functionality
 cleanup:	restore everything to initial statement
+growdev:	demo to Grow the device
+
+status:		show crm status
+mdstatus:	show md status
+detach:		detach disks to nodes
 reboot:		reboot all nodes (mandatory in case of error in storage name)
 "
 	;;

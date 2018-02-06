@@ -255,6 +255,8 @@
       <package>vim</package>
       <package>gdm</package>
       <package>ntp</package>
+      <package>strace</package>
+      <package>less</package>
       <package>autoyast2</package>
       <package>patterns-ha-ha_sles</package>
     </packages>

@@ -226,8 +226,11 @@
     <packages config:type="list">
       <package>openssh</package>
       <package>vim</package>
+      <package>gnome-terminal</package>
       <package>autoyast2</package>
       <package>ntp</package>
+      <package>strace</package>
+      <package>less</package>
       <package>patterns-ha-ha_sles</package>
     </packages>
 </software>
