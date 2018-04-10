@@ -130,7 +130,10 @@ VMDISK="${STORAGEP}/${LIBVIRTPOOL}/${NAME}.qcow2"
 install_vm
 
 # Use a minimal installation without X for HA2 and HA3 etc...
-#EXTRAARGS="autoyast=device://vdc/havm_mini.xml"
+#EXTRAARGS="autoyast=device://vdc/havm_mini_SLE15.xml"
+
+
+read
 
 # Install HA2 VM
 NAME="${DISTRO}${NODENAME}2"

@@ -5,13 +5,18 @@
     <add_on_products config:type="list">
       <listentry>
         <media_url><![CDATA[dvd:///?devices=/dev/sr0]]></media_url>
-        <product>sle-ha</product>
-        <product_dir>/</product_dir>
+        <product>sle-module-development-tools</product>
+        <product_dir>/Module-Development-Tools</product_dir>
       </listentry>
-    <listentry>
+      <listentry>
         <media_url><![CDATA[dvd:///?devices=/dev/sr0]]></media_url>
-        <product>server-applications</product>
-        <product_dir>/</product_dir>
+        <product>sle-module-desktop-applications</product>
+        <product_dir>/Module-Desktop-Applications</product_dir>
+      </listentry>
+      <listentry>
+        <media_url><![CDATA[dvd:///?devices=/dev/sr0]]></media_url>
+        <product>sle-module-basesystem</product>
+        <product_dir>/Module-Basesystem</product_dir>
       </listentry>
     </add_on_products>
   </add-on>
@@ -28,7 +33,7 @@
       <hiddenmenu>false</hiddenmenu>
       <os_prober>false</os_prober>
       <terminal>gfxterm</terminal>
-      <timeout config:type="integer">8</timeout>
+      <timeout config:type="integer">1</timeout>
       <trusted_grub>false</trusted_grub>
     </global>
     <loader_type>grub2</loader_type>
@@ -254,11 +259,14 @@
      <product>SLES15</product>
     </products>
     <patterns config:type="list">
-      <pattern>Minimal</pattern>
+      <pattern>minimal_base</pattern>
+      <pattern>ha_sles</pattern>
+      <pattern>enhanced_base</pattern>
     </patterns>
     <packages config:type="list">
       <package>openssh</package>
       <package>vim</package>
+      <package>gdm</package>
       <package>ntp</package>
       <package>autoyast2</package>
       <package>patterns-ha-ha_sles</package>
