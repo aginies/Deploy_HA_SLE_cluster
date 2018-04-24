@@ -137,6 +137,12 @@ drbdconf_csync2
 finalize_DRBD_setup ${DRBD_NAME}
 format_ocfs2
 check_primary_secondary ${DRBD_NAME}
+#
+
+echo " press [ENTER] twice TO Restore initial setting" $O
+read
+read
+
 
 # restore before runnning the test
 back_to_begining ${DRBD_NAME}

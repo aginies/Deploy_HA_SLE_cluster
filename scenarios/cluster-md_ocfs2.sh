@@ -36,7 +36,7 @@ CLUSTERMDDEV5="vdh"
 CLUSTERMDDEV6="vdi"
 diskname="disk"
 MDDEV="/dev/md0"
-DEMO="1"
+DEMO=""
 
 cluster_md_ocfs2_cib() {
     echo $I "############ START cluster_md_ocfs2_cib" $O
