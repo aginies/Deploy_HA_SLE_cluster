@@ -173,7 +173,7 @@ check_cluster_md() {
     if [ $? -eq 1 ]; then
         echo $W "- ! Warning; Corruption in FILES detected: s${NODENAME}1 are different" $O
     else
-        echo $S "- Same S${NODENAME}1 from ${NODEA} and ${NODEB}: TEST OK" $O
+        echo $S "- Same files from ${NODEA} and ${NODEB}: TEST OK" $O
     fi
     exec_on_node ${NODEA} "touch ${MNTTEST}/bspl{001..1001}.c"
     exec_on_node ${NODEB} "ls ${MNTTEST}//bspl001*.c"
@@ -294,7 +294,7 @@ stop base-group
 stop dlm
 status
 EOF"
-    sleep 10;
+    sleep 20;
     exec_on_node ${NODEA} "crm configure<<EOF
 delete raider
 delete base-clone
