@@ -168,6 +168,11 @@ crm_history() {
     exec_on_node ${NODENAME}2 "crm history info"
 }
 
+hb_report() {
+    echo "############ START crm history"
+    exec_on_node ${NODENAME}2 "hb_report -v"
+}
+
 ##########################
 ##########################
 ### MAIN
@@ -217,7 +222,7 @@ case "$1" in
 	enable_sbd_all_nodes
 	init_ha_cluster
 	copy_ssh_key_on_nodes
-	add_remove_node_test
+#	add_remove_node_test
 	sbd_test
 	list_ra_stonith
 	coroysnc2_test
@@ -225,6 +230,7 @@ case "$1" in
 	maintenance_mode_check
 	health_test
 	crm_history
+	hb_report
 	;;
     *)
         echo "
