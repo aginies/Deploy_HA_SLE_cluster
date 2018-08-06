@@ -187,7 +187,13 @@ spare_mode() {
     echo "- Declare /dev/${CLUSTERMDDEV2} as failed"
     exec_on_node ${NODEA} "mdadm --manage ${MDDEV} --fail ${SPARE}"
     show_md_status
-    if [ "$DEMO" != "" ]; then read; fi
+    if [ "$DEMO" != "" ]; then 
+	read
+    else
+	echo "- Waiting 30 seconds"
+	sleep 30
+	show_md_status
+    fi
     echo "- Re-add /dev/${CLUSTERMDDEV2}"
     exec_on_node ${NODEA} "mdadm --manage ${MDDEV} --re-add ${SPARE}"
     show_md_status
@@ -423,7 +429,7 @@ case $1 in
     	exec_on_node ${NODEA} "crm status"
 	;;
     spare)
-	if [ "$2" == "" ] ; then echo "Please Specify the device (/dev/vdX)"; exit 1; fi
+	if [ "$2" == "" ] ; then echo "Please Specify the device (/dev/vdX)"; show_md_status ; exit 1; fi
 	spare_mode $2
 	;;
     growdev)
