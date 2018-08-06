@@ -190,8 +190,45 @@ echo
 echo "  This will remove any previous Host configuration for HA VM guests and testing"
 echo
 echo " press [ENTER] twice OR Ctrl+C to abort"
-read
-read
+
+case "$1" in
+    ssh)
+        ssh_root_key
+        ;;
+    vtstack)
+	install_virtualization_stack
+        ;;
+    pssh)
+	prepare_remote_pssh
+	;;
+    etchosts)
+	prepare_etc_hosts
+	;;
+    virtualnet)
+	prepare_virtual_HAnetwork
+	;;
+    SBDpool)
+	prepare_SBD_pool
+	;;
+    autoyastimage)
+	prepare_auto_deploy_image
+	;;
+    checkhostconf)
+	check_host_config
+	;;
+    all)
+	ssh_root_key
+	install_virtualization_stack
+	prepare_remote_pssh
+	prepare_etc_hosts
+	prepare_virtual_HAnetwork
+	prepare_SBD_pool
+	prepare_auto_deploy_image
+	check_host_config
+        ;;
+    *)
+        echo "
+     Usage: $0 {ssh|vtstack|pssh|etchosts|virtualnet|SBDpool|autoyastimage|checkhostconf|all}
 
 ssh_root_key
 install_virtualization_stack
@@ -201,3 +238,6 @@ prepare_virtual_HAnetwork
 prepare_SBD_pool
 prepare_auto_deploy_image
 check_host_config
+"
+exit 1
+esac
