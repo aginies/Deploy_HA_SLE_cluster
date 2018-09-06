@@ -158,3 +158,5 @@ screen -list
 
 copy_ssh_key
 
+
+#EXTRA_SCRIPT_AFTER_INSTALL

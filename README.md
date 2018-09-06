@@ -2,8 +2,10 @@
 
 The goal was to easily and quickly deploy an HA cluster in Virtual
 Machine to be able to test latest release and test some scenarios.
+This is a semi-automatic script, which means that it will stop on some steps, and it will stop on errors to give
+you ability to fix the problem if needed.
 
-Videos: Presentation and a demo at Youtube:
+Videos: Presentation and a demo at Youtube (based on an old release so there will be few differences with current version)
 * https://www.youtube.com/watch?v=y0herkr6x-A
 * https://www.youtube.com/watch?v=vmUpaabYV-o
 * https://www.youtube.com/watch?v=k77sa9y6Lwk
@@ -14,23 +16,25 @@ This scripts will configure:
 
 All configurations files on the host are dedicated for this cluster, which means
 this should not interact or destroy any other configuration (pool, net, etc...)
+This is possible to get multiple instance of cluster from different product/SP, its just 
+a matter of taking care of path, variable and VM names in the configuration to avoid overlap.
 
 Please report any bugs or improvments to:
 https://github.com/aginies/Deploy_HA_SLE_cluster.git
 
 *NOTE*: default root password for Virtual Machine is: "a"
 
-* *WARNING* All guest installation will be done at the same time (4 nodes)
+* *WARNING* All guest installation will be done at the same time (3 nodes), time between install is 5 seconds)
 * *NOTE* You need an HA DVD rom and an SLE12SPX ISO DVD as source for Zypper
 * *NOTE* Host server should be a SLE or an openSUSE (will use zypper)
 * *NOTE* HA1 will be the node where ha-cluster-init will be launched
 * *WARNING* Running the script will erase all previous deployment configuration
-* *NOTE* Scripts are written in shell to simplify external contribution and modification, of course this choice lead to some technical limitation
+* *NOTE* Scripts are written in shell to simplify external contribution and modification, of course this choice lead to some technical limitation but the main advantage is to be able to deploy it quickly on any kind of product without any missing dependencies
 
 ## Install / HOWTO
 
 * Clone this repository
-* Adjust VARS in havm.conf file
+* Adjust VARS in havm.conf file (or create a link from your configuration to this link)
 * Prepare the host: HA_testsuite_host_conf.sh
 * Deploy HA VM: HA_testsuite_deploy_vm.sh
 * Init the cluster: HA_testsuite_init_cluster.sh
@@ -53,7 +57,7 @@ install_vm() function in HA_testsuite_deploy_vm.sh script.
 Configure the host:
 * install virtualization tools and restart libvirtd
 * generate an ssh root key, and prepare a config to connect to HA nodes
-* pre-configure pssh (generate an /etc/hanodes)
+* pre-configure pssh (generate an /etc/hanodes\_${CLUSTER})
 * add HA nodes in /etc/hosts
 * create a Virtual Network: DHCP with host/mac/name/ip for HA nodes
 * create an SBD pool
@@ -63,7 +67,7 @@ Configure the host:
 This script will install all nodes with needed data
 * clean-up all previous data: VM definition, VM images
 * create an hapool to store VM images
-* install all HA VM (using screen)
+* install all HA VM (using a screen)
 * display information how to copy host root key to HA nodes (VM)
 
 ### HA_testsuite_init_cluster.sh
@@ -82,7 +86,11 @@ a image file (havm_xml.raw) and used as a disk image under HA VM.
 This file is the autoyast profile with Graphical interface installation.
 
 ### havm_mini.xml
-This file is the autoyast profile (simple without GUI).
+This file is the autoyast profile (simple without GUI/X).
 
 ## functions
 Contains needed functions for all scripts.
+
+
+### scenarios directory
+This directory contains some scenarios you can run on you cluster to test it.

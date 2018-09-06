@@ -222,7 +222,7 @@ case "$1" in
 	enable_sbd_all_nodes
 	init_ha_cluster
 	copy_ssh_key_on_nodes
-#	add_remove_node_test
+	add_remove_node_test
 	sbd_test
 	list_ra_stonith
 	coroysnc2_test
