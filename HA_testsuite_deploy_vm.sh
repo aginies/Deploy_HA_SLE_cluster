@@ -67,7 +67,7 @@ install_vm() {
 	   --ram ${RAM} \
 	   --vcpus ${VCPU} \
 	   --virt-type kvm \
-	   --os-variant sles12sp3 \
+	   --os-variant sle15sp3 \
 	   --controller scsi,model=virtio-scsi \
 	   --graphics vnc,keymap=${KEYMAP} \
 	   --network network=${NETWORKNAME},mac=${MAC} \

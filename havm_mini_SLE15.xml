@@ -1,8 +1,8 @@
 <?xml version="1.0"?>
 <!DOCTYPE profile>
 <profile xmlns="http://www.suse.com/1.0/yast2ns" xmlns:config="http://www.suse.com/1.0/configns">
-  <add-on>
-    <add_on_products config:type="list">
+<add-on>
+  <add_on_products config:type="list">
       <listentry>
         <media_url><![CDATA[dvd:///?devices=/dev/sr0]]></media_url>
         <product>sle-module-development-tools</product>
@@ -30,11 +30,11 @@
       </listentry>
       <listentry>
         <media_url><![CDATA[dvd:///?devices=/dev/sr0]]></media_url>
-	<product>/module-desktop-applications</product>
-	<product_dir>/Module-Desktop-Applications</product_dir>
+        <product>module-web-scripting</product>
+        <product_dir>/Module-Web-Scripting</product_dir>
       </listentry>
     </add_on_products>
-  </add-on>
+</add-on>
   <bootloader>
     <global>
       <activate>true</activate>
@@ -49,41 +49,22 @@
       <os_prober>false</os_prober>
       <terminal>gfxterm</terminal>
       <timeout config:type="integer">1</timeout>
+      <cpu_mitigations>off</cpu_mitigations>
       <trusted_grub>false</trusted_grub>
     </global>
     <loader_type>grub2</loader_type>
   </bootloader>
+  <kdump>
+    <!-- memory reservation -->
+    <add_crash_kernel config:type="boolean">false</add_crash_kernel>
+  </kdump>
   <general>
     <ask-list config:type="list"/>
     <mode>
       <confirm config:type="boolean">false</confirm>
-      <final_halt config:type="boolean">false</final_halt>
-      <final_reboot config:type="boolean">false</final_reboot>
-      <halt config:type="boolean">false</halt>
-      <second_stage config:type="boolean">true</second_stage>
     </mode>
     <signature-handling/>
   </general>
-  <cluster>
-    <autoid config:type="boolean">true</autoid>
-    <bindnetaddr1>NETWORK.0</bindnetaddr1>
-    <bindnetaddr2/>
-    <cluster_name>cluster</cluster_name>
-    <csync2_host config:type="list"/>
-    <csync2_include config:type="list"/>
-    <enable2 config:type="boolean">false</enable2>
-    <expected_votes/>
-    <ip_version>ipv4</ip_version>
-    <mcastaddr1>239.255.1.1</mcastaddr1>
-    <mcastaddr2/>
-    <mcastport1>5405</mcastport1>
-    <mcastport2/>
-    <memberaddr config:type="list"/>
-    <rrpmode>none</rrpmode>
-    <secauth config:type="boolean">false</secauth>
-    <transport>udp</transport>
-    <two_node/>
-  </cluster>
   <deploy_image>
     <image_installation config:type="boolean">false</image_installation>
   </deploy_image>
@@ -98,7 +79,7 @@
     </dhcp_options>
     <dns>
       <dhcp_hostname config:type="boolean">true</dhcp_hostname>
-      <domain>HAnet</domain>
+      <domain>slenet</domain>
       <resolv_conf_policy>auto</resolv_conf_policy>
       <write_hostname config:type="boolean">false</write_hostname>
     </dns>
@@ -174,39 +155,36 @@
       </partitions>
       <pesize/>
       <type config:type="symbol">CT_DISK</type>
-<!--      <use>all</use>-->
+      <use>all</use>
     </drive>
   </partitioning>
-<!--
-  <partitioning config:type="list">
+  <!--  <partitioning config:type="list">
        <drive>
        <use>all</use>
        </drive>
-  </partitioning>
--->
+       </partitioning>
+  -->
   <services-manager>
     <default_target>graphical</default_target>
     <services>
-      <disable config:type="list"/>
+      <disable config:type="list">
       <service>postfix</service>
+      </disable>
       <enable config:type="list">
-	<service>btrfsmaintenance-refresh</service>
-	<service>corosync</service>
-	<service>cron</service>
-	<service>display-manager</service>
 	<service>getty@tty1</service>
 	<service>getty@tty7</service>
-	<service>haveged</service>
 	<service>irqbalance</service>
-	<service>iscsi</service>
 	<service>mcelog</service>
 	<service>nscd</service>
 	<service>purge-kernels</service>
 	<service>rollback</service>
+<!--	
 	<service>rsyslog</service>
+	<service>haveged</service>
+	<service>iscsi</service>
 	<service>smartd</service>
+-->	
 	<service>sshd</service>
-	<service>ntpd</service>
 	<service>wicked</service>
 	<service>wickedd-auto4</service>
 	<service>wickedd-dhcp4</service>
@@ -271,18 +249,29 @@
     </user>
   </users>
   <software>
+    <products config:type="list">
+      <product>SLES</product>
+    </products>
     <!--
 	<install_recommended config:type="boolean">false</install_recommended>
     -->
-    <products config:type="list">
-     <product>SLES</product>
-    </products>
-    <patterns config:type="list">
-      <pattern>minimal_base</pattern>
-      <pattern>ha_sles</pattern>
-      <pattern>enhanced_base</pattern>
-    </patterns>
+    <!--
+	<patterns config:type="list">
+	<pattern>Minimal</pattern>
+	<pattern>gnome-basic</pattern>
+	<pattern>x11</pattern>
+	</patterns>
+    -->
     <packages config:type="list">
+      <package>openssh</package>
+      <package>zypper</package>
+      <package>patterns-ha-ha_sles</package>
+      <package>vim</package>
+      <package>screen</package>
+      <package>strace</package>
+      <package>less</package>
+      <package>man</package>
+      <package>iputils</package>
       <package>autoyast2</package>
     </packages>
   </software>
@@ -312,13 +301,50 @@
           <name>NODENAME3.NODEDOMAIN NODENAME3 FHN3</name>
 	</names>
       </hosts_entry>
+      <hosts_entry>
+	<host_address>NETWORK.104</host_address>
+	<names config:type="list">
+          <name>NODENAME4.NODEDOMAIN NODENAME4 FHN4</name>
+	</names>
+      </hosts_entry>
+      <hosts_entry>
+	<host_address>NETWORK.105</host_address>
+	<names config:type="list">
+          <name>NODENAME5.NODEDOMAIN NODENAME5 FHN5</name>
+	</names>
+      </hosts_entry>
+      <hosts_entry>
+	<host_address>NETWORK.106</host_address>
+	<names config:type="list">
+          <name>NODENAME6.NODEDOMAIN NODENAME6 FHN6</name>
+	</names>
+      </hosts_entry>
+      <hosts_entry>
+	<host_address>NETWORK.107</host_address>
+	<names config:type="list">
+          <name>NODENAME7.NODEDOMAIN NODENAME7 FHN7</name>
+	</names>
+      </hosts_entry>
+      <hosts_entry>
+	<host_address>NETWORK.108</host_address>
+	<names config:type="list">
+          <name>NODENAME8.NODEDOMAIN NODENAME8 FHN8</name>
+	</names>
+      </hosts_entry>
+      <hosts_entry>
+	<host_address>NETWORK.109</host_address>
+	<names config:type="list">
+          <name>NODENAME9.NODEDOMAIN NODENAME9 FHN9</name>
+	</names>
+      </hosts_entry>
     </hosts>
   </host>
-  <sysconfig config:type="list">
-    <sysconfig_entry>
-      <sysconfig_key>SBD_DEVICE</sysconfig_key>
-      <sysconfig_path>/etc/sysconfig/sbd</sysconfig_path>
-      <sysconfig_value>/dev/vdb</sysconfig_value>
-    </sysconfig_entry>
-  </sysconfig>
+  <!--  <sysconfig config:type="list">
+       <sysconfig_entry>
+       <sysconfig_key>SBD_DEVICE</sysconfig_key>
+       <sysconfig_path>/etc/sysconfig/sbd</sysconfig_path>
+       <sysconfig_value>/dev/vdb</sysconfig_value>
+       </sysconfig_entry>
+       </sysconfig>
+  -->
 </profile>
